@@ -106,6 +106,10 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
                 CurrencyCode = account.CurrencyCode,
                 TransactionDate = row.TransactionDate!.Value,
                 Reference = row.Reference,
+                Source = row.Source,
+                FundName = row.FundName,
+                UnitCount = row.UnitCount,
+                UnitValue = row.UnitValue,
                 CreatedUtc = DateTime.UtcNow,
                 UpdatedUtc = DateTime.UtcNow
             });
