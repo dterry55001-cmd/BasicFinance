@@ -10,7 +10,7 @@
 else
 {
     <div class="table-card"><div class="table-scroll"><table>
-        <thead><tr><th>Uploaded</th><th>File</th><th>Account</th><th>Status</th><th>Rows</th><th></th></tr></thead>
-        <tbody>@foreach (var batch in Model) { <tr><td>@batch.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</td><td>@batch.FileName</td><td>@batch.Account.Name</td><td>@batch.Status</td><td>@batch.Rows.Count</td><td><a asp-action="Details" asp-route-id="@batch.Id">Review</a></td></tr> }</tbody>
+        <thead><tr><th>Uploaded</th><th>File</th><th>Institution</th><th>Account</th><th>Status</th><th>Rows</th><th>Needs review</th><th></th></tr></thead>
+        <tbody>@foreach (var batch in Model) { <tr><td>@batch.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</td><td>@batch.FileName</td><td>@batch.Profile</td><td>@batch.Account.Name</td><td>@batch.Status</td><td>@batch.Rows.Count</td><td>@batch.Rows.Count(x => x.RequiresReview || x.ValidationError is not null)</td><td><a asp-action="Details" asp-route-id="@batch.Id">Review</a></td></tr> }</tbody>
     </table></div></div>
 }
