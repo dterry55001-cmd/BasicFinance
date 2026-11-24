@@ -40,9 +40,16 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         ViewData["Accounts"] = new SelectList(
             await database.Accounts.AsNoTracking().Where(a => a.Status != AccountStatus.Archived).OrderBy(a => a.Name).ToListAsync(cancellationToken),
             "Id", "Name", accountId);
-        ViewData["Categories"] = new SelectList(
-            await database.TransactionCategories.AsNoTracking().OrderBy(c => c.Type).ThenBy(c => c.Name).ToListAsync(cancellationToken),
-            "Id", "Name", categoryId);
+        var filterCategories = await database.TransactionCategories.AsNoTracking()
+            .Include(category => category.ParentCategory)
+            .OrderBy(category => category.Type).ThenBy(category => category.ParentCategoryId)
+            .ThenBy(category => category.DisplayOrder).ThenBy(category => category.Name)
+            .ToListAsync(cancellationToken);
+        ViewData["Categories"] = new SelectList(filterCategories.Select(category => new
+        {
+            Id = category.Id,
+            Name = category.ParentCategory == null ? category.Name : $"{category.ParentCategory.Name} — {category.Name}"
+        }), "Id", "Name", categoryId);
         ViewData["AccountId"] = accountId;
         ViewData["CategoryId"] = categoryId;
         ViewData["From"] = from?.ToString("yyyy-MM-dd");
@@ -223,8 +230,14 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
             };
             if (categoryType.HasValue) categoryQuery = categoryQuery.Where(category => category.Type == categoryType.Value);
         }
-        var categories = await categoryQuery.OrderBy(category => category.DisplayOrder).ThenBy(category => category.Name).ToListAsync(cancellationToken);
-        ViewBag.Categories = new SelectList(categories, "Id", "Name", selectedCategoryId);
+        var categories = await categoryQuery.OrderBy(category => category.ParentCategoryId)
+            .ThenBy(category => category.DisplayOrder).ThenBy(category => category.Name)
+            .ToListAsync(cancellationToken);
+        ViewBag.Categories = new SelectList(categories.Select(category => new
+        {
+            Id = category.Id,
+            Name = category.ParentCategory == null ? category.Name : $"{category.ParentCategory.Name} — {category.Name}"
+        }), "Id", "Name", selectedCategoryId);
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
