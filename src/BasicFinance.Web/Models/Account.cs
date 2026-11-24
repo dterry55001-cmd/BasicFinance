@@ -74,10 +74,6 @@ public sealed class Account
     [StringLength(100)]
     public string? Institution { get; set; }
 
-    [StringLength(4, MinimumLength = 4)]
-    [RegularExpression(@"^[0-9]{4}$", ErrorMessage = "Enter only the last four digits.")]
-    public string? AccountNumberLast4 { get; set; }
-
     [Required, StringLength(3, MinimumLength = 3)]
     [RegularExpression(@"^[A-Z]{3}$", ErrorMessage = "Use a three-letter currency code, such as USD.")]
     public string CurrencyCode { get; set; } = "USD";
