@@ -19,12 +19,8 @@ public sealed class AccountInputModel
     public DebtAccountType? DebtType { get; set; }
 
     [StringLength(100)]
+    [Display(Name = "Institution / provider")]
     public string? Institution { get; set; }
-
-    [StringLength(4, MinimumLength = 4)]
-    [RegularExpression(@"^[0-9]{4}$", ErrorMessage = "Enter only the last four digits.")]
-    [Display(Name = "Account number (last 4 digits only)")]
-    public string? AccountNumberLast4 { get; set; }
 
     [Required, StringLength(3, MinimumLength = 3)]
     [RegularExpression(@"^[A-Z]{3}$", ErrorMessage = "Use a three-letter currency code, such as USD.")]
