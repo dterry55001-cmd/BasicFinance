@@ -4,6 +4,11 @@ namespace BasicFinance.Web.Models;
 
 public sealed class DebtPayoffInputModel
 {
+    [Required, StringLength(3, MinimumLength = 3)]
+    [RegularExpression(@"^[A-Z]{3}$")]
+    [Display(Name = "Currency")]
+    public string CurrencyCode { get; set; } = "USD";
+
     [Range(typeof(decimal), "0", "999999999999")]
     [Display(Name = "Additional monthly payment")]
     public decimal ExtraMonthlyPayment { get; set; }
