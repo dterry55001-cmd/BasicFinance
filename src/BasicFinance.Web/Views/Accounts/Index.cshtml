@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Accounts";
     var includeArchived = ViewData["IncludeArchived"] as bool? ?? false;
+    var balances = (IReadOnlyList<KeyValuePair<int, decimal>>)ViewData["Balances"]!;
 }
 <section class="page-heading">
     <div>
@@ -41,7 +42,7 @@ else
     <div class="table-card">
         <div class="table-scroll">
             <table>
-                <thead><tr><th>Account</th><th>Type</th><th>Institution</th><th>Opening balance</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+                <thead><tr><th>Account</th><th>Type</th><th>Institution</th><th>Current balance</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
                 <tbody>
                 @foreach (var account in Model)
                 {
@@ -49,7 +50,7 @@ else
                         <td><a class="table-link" asp-action="Details" asp-route-id="@account.Id">@account.Name</a><div class="table-subtext">@account.CurrencyCode@if (!string.IsNullOrEmpty(account.AccountNumberLast4)) { <text> · •••• @account.AccountNumberLast4</text> }</div></td>
                         <td>@account.Type</td>
                         <td>@(account.Institution ?? "—")</td>
-                        <td>@account.OpeningBalance.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</td>
+                        <td>@balances.FirstOrDefault(item => item.Key == account.Id).Value.ToString("N2") @account.CurrencyCode</td>
                         <td><span class="status-pill status-@account.Status.ToString().ToLowerInvariant()">@account.Status</span></td>
                         <td><a asp-action="Edit" asp-route-id="@account.Id">Edit</a></td>
                     </tr>
