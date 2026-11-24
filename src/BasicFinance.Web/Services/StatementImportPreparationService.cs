@@ -87,7 +87,7 @@ public sealed class StatementImportPreparationService(
     public static string NormalizeCategory(string? value) => string.Join(" ", (value ?? string.Empty)
         .Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
 
-    private static bool IsCompatible(TransactionCategoryType categoryType, TransactionType transactionType) => categoryType switch
+    public static bool IsCompatible(TransactionCategoryType categoryType, TransactionType transactionType) => categoryType switch
     {
         TransactionCategoryType.Income => transactionType is TransactionType.Income or TransactionType.Deposit,
         TransactionCategoryType.Expense => transactionType is TransactionType.Expense or TransactionType.Withdrawal,
