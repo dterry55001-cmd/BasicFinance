@@ -16,6 +16,18 @@
         <div><dt>Opening balance</dt><dd>@Model.OpeningBalance.ToString("N2") @Model.CurrencyCode</dd></div>
         @if (Model.RetirementType.HasValue) { <div><dt>Retirement account type</dt><dd>@Model.RetirementType.Value</dd></div> }
         @if (Model.DebtType.HasValue) { <div><dt>Debt account type</dt><dd>@Model.DebtType.Value</dd></div> }
+        @if (Model.InterestRatePercent.HasValue) { <div><dt>Interest rate / APY</dt><dd>@Model.InterestRatePercent.Value.ToString("0.###")%</dd></div> }
+        @if (Model.CreditLimit.HasValue) { <div><dt>Credit limit</dt><dd>@Model.CreditLimit.Value.ToString("N2") @Model.CurrencyCode</dd></div> }
+        @if (Model.MinimumPayment.HasValue) { <div><dt>Minimum payment</dt><dd>@Model.MinimumPayment.Value.ToString("N2") @Model.CurrencyCode</dd></div> }
+        @if (Model.PaymentDueDay.HasValue) { <div><dt>Payment due day</dt><dd>@Model.PaymentDueDay.Value</dd></div> }
+        @if (Model.OriginalLoanAmount.HasValue) { <div><dt>Original loan amount</dt><dd>@Model.OriginalLoanAmount.Value.ToString("N2") @Model.CurrencyCode</dd></div> }
+        @if (Model.LoanTermMonths.HasValue) { <div><dt>Loan term</dt><dd>@Model.LoanTermMonths.Value months</dd></div> }
+        @if (Model.MaturityDate.HasValue) { <div><dt>Maturity date</dt><dd>@Model.MaturityDate.Value.ToString("MMM d, yyyy")</dd></div> }
+        @if (!string.IsNullOrWhiteSpace(Model.EmployerName)) { <div><dt>Employer</dt><dd>@Model.EmployerName</dd></div> }
+        @if (Model.EmployerMatchPercent.HasValue) { <div><dt>Employer match</dt><dd>@Model.EmployerMatchPercent.Value.ToString("0.##")%</dd></div> }
+        @if (!string.IsNullOrWhiteSpace(Model.TaxTreatment)) { <div><dt>Tax treatment</dt><dd>@Model.TaxTreatment</dd></div> }
+        @if (!string.IsNullOrWhiteSpace(Model.BrokerageRegistrationType)) { <div><dt>Brokerage registration</dt><dd>@Model.BrokerageRegistrationType</dd></div> }
+        @if (!string.IsNullOrWhiteSpace(Model.Notes)) { <div class="detail-grid-wide"><dt>Notes</dt><dd>@Model.Notes</dd></div> }
         <div><dt>Currency</dt><dd>@Model.CurrencyCode</dd></div>
         <div><dt>Date opened</dt><dd>@(Model.OpenedOn?.ToString("MMM d, yyyy") ?? "Not provided")</dd></div>
         <div><dt>Status</dt><dd>@Model.Status</dd></div>
