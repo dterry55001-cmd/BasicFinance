@@ -10,6 +10,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<FinancialTransaction> Transactions => Set<FinancialTransaction>();
     public DbSet<StatementImport> StatementImports => Set<StatementImport>();
     public DbSet<StatementImportRow> StatementImportRows => Set<StatementImportRow>();
+    public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +67,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasIndex(transaction => transaction.TransactionDate);
             entity.HasIndex(transaction => transaction.AccountId);
             entity.HasIndex(transaction => transaction.RelatedAccountId);
+            entity.HasIndex(transaction => transaction.CategoryId);
             entity.HasOne(transaction => transaction.Account)
                 .WithMany()
                 .HasForeignKey(transaction => transaction.AccountId)
@@ -73,6 +75,22 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasOne(transaction => transaction.RelatedAccount)
                 .WithMany()
                 .HasForeignKey(transaction => transaction.RelatedAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(transaction => transaction.TransactionCategory)
+                .WithMany()
+                .HasForeignKey(transaction => transaction.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TransactionCategory>(entity =>
+        {
+            entity.Property(category => category.Name).HasMaxLength(80).IsRequired();
+            entity.Property(category => category.Description).HasMaxLength(300);
+            entity.HasIndex(category => new { category.Type, category.ParentCategoryId, category.Name }).IsUnique();
+            entity.HasIndex(category => new { category.Type, category.IsActive, category.DisplayOrder });
+            entity.HasOne(category => category.ParentCategory)
+                .WithMany(category => category.Children)
+                .HasForeignKey(category => category.ParentCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
