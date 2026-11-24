@@ -17,7 +17,7 @@ A clean, modular personal finance application.
 
 - Checking, savings, cash, credit card, brokerage, and retirement accounts
 - Institution, currency, opening balance, and optional opened date
-- Only the last four account-number digits may be stored
+- No routing numbers or bank account numbers are collected or required; users identify accounts by a name and optional institution label
 - Active, inactive, and archived account statuses
 - Account list, details, create, edit, and archive workflows
 - Archived accounts remain stored and can be included in the account list
