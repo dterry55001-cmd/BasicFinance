@@ -55,6 +55,7 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
         var batch = await database.StatementImports.AsNoTracking().Include(x => x.Account)
             .Include(x => x.Rows).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (batch is null) return NotFound();
+        await PopulateCategoriesAsync(null, cancellationToken);
         return View(batch);
     }
 
@@ -84,6 +85,7 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
                 Type = row.Type,
                 Description = row.Description,
                 Category = row.Category,
+                CategoryId = row.CategoryId,
                 Amount = row.Amount,
                 CurrencyCode = account.CurrencyCode,
                 TransactionDate = row.TransactionDate!.Value,
@@ -164,11 +166,97 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
         return RedirectToAction(nameof(Preview), new { id });
     }
 
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveCategoryMapping(
+        int id, int rowId, int? categoryId, bool applyToFutureImports, CancellationToken cancellationToken)
+    {
+        var batch = await database.StatementImports.Include(x => x.Rows)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (batch is null) return NotFound();
+        if (batch.Status != StatementImportStatus.Preview)
+            return BadRequest("Categories can only be changed while an import is awaiting confirmation.");
+
+        var row = batch.Rows.SingleOrDefault(item => item.Id == rowId);
+        if (row is null) return NotFound();
+        if (row.ValidationError is not null || row.IsDuplicate || row.IsImported)
+            return BadRequest("This row is not eligible for category assignment.");
+
+        TransactionCategory? category = null;
+        if (categoryId.HasValue)
+        {
+            category = await database.TransactionCategories
+                .FirstOrDefaultAsync(item => item.Id == categoryId.Value && item.IsActive, cancellationToken);
+            if (category is null || !CategoryMatchesTransaction(category.Type, row.Type))
+                return BadRequest("Choose an active category that matches the transaction type.");
+        }
+
+        row.CategoryId = category?.Id;
+        if (applyToFutureImports && category is not null && !string.IsNullOrWhiteSpace(row.SourceCategory)
+            && batch.Profile != StatementImportProfile.Unknown)
+        {
+            var normalized = StatementImportPreparationService.NormalizeCategory(row.SourceCategory);
+            var mapping = await database.TransactionCategoryMappings.FirstOrDefaultAsync(
+                item => item.Profile == batch.Profile && item.NormalizedSourceCategory == normalized,
+                cancellationToken);
+            if (mapping is null)
+            {
+                database.TransactionCategoryMappings.Add(new TransactionCategoryMapping
+                {
+                    Profile = batch.Profile,
+                    SourceCategory = row.SourceCategory.Trim(),
+                    NormalizedSourceCategory = normalized,
+                    TransactionCategoryId = category.Id,
+                    IsActive = true,
+                    CreatedUtc = DateTime.UtcNow,
+                    UpdatedUtc = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                mapping.SourceCategory = row.SourceCategory.Trim();
+                mapping.TransactionCategoryId = category.Id;
+                mapping.IsActive = true;
+                mapping.UpdatedUtc = DateTime.UtcNow;
+            }
+        }
+
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = applyToFutureImports && category is not null
+            ? "Category saved and source mapping will be used for future imports from this institution."
+            : "Import row category updated.";
+        return RedirectToAction(nameof(Preview), new { id });
+    }
+
+    private async Task PopulateCategoriesAsync(int? selected, CancellationToken cancellationToken)
+    {
+        var categories = await database.TransactionCategories.AsNoTracking()
+            .Include(category => category.ParentCategory)
+            .Where(category => category.IsActive)
+            .OrderBy(category => category.Type).ThenBy(category => category.ParentCategoryId)
+            .ThenBy(category => category.DisplayOrder).ThenBy(category => category.Name)
+            .ToListAsync(cancellationToken);
+        ViewBag.Categories = new SelectList(categories.Select(category => new
+        {
+            Id = category.Id,
+            Name = category.ParentCategory == null ? $"{category.Type}: {category.Name}" : $"{category.Type}: {category.ParentCategory.Name} — {category.Name}"
+        }), "Id", "Name", selected);
+    }
+
+    private static bool CategoryMatchesTransaction(TransactionCategoryType categoryType, TransactionType transactionType) => categoryType switch
+    {
+        TransactionCategoryType.Income => transactionType is TransactionType.Income or TransactionType.Deposit,
+        TransactionCategoryType.Expense => transactionType is TransactionType.Expense or TransactionType.Withdrawal,
+        TransactionCategoryType.Transfer => transactionType == TransactionType.Transfer,
+        _ => false
+    };
+
     public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
     {
         var batch = await database.StatementImports.AsNoTracking().Include(x => x.Account)
             .Include(x => x.Rows).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        return batch is null ? NotFound() : View("Preview", batch);
+        if (batch is null) return NotFound();
+        await PopulateCategoriesAsync(null, cancellationToken);
+        return View("Preview", batch);
     }
 
     private void PopulateProfiles(StatementSourceProfile selected)
