@@ -12,6 +12,7 @@ builder.Services.AddScoped<CsvStatementParser>();
 builder.Services.AddScoped<InstitutionStatementParser>();
 builder.Services.AddScoped<StatementImportPreparationService>();
 builder.Services.AddScoped<TransactionCategorySeeder>();
+builder.Services.AddScoped<TransactionRuleService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
