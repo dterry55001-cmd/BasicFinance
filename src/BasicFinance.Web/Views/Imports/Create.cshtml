@@ -1,0 +1,13 @@
+@{ ViewData["Title"] = "Import statement"; }
+<section class="page-heading"><div><p class="eyebrow">STATEMENT IMPORT</p><h1>Import CSV statement</h1><p class="page-description">Choose the account and upload a CSV file. The import will be staged for review.</p></div></section>
+<form asp-action="Create" method="post" enctype="multipart/form-data" class="form-card">
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <div class="form-grid">
+        <div class="form-field"><label for="accountId">Account</label><select id="accountId" name="accountId" asp-items="ViewBag.Accounts"><option value="">Choose account</option></select><span class="field-error">@Html.ValidationMessage("accountId")</span></div>
+        <div class="form-field"><label for="file">CSV statement</label><input id="file" name="file" type="file" accept=".csv,text/csv" required /><small>Maximum 10 MB. Supported required headers: Date, Description, Amount. Optional: Type, Category, Reference.</small><span class="field-error">@Html.ValidationMessage("file")</span></div>
+    </div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Upload and preview</button><a class="button button-secondary" asp-action="Index">Cancel</a></div>
+</form>
+<section class="section-block"><h2>CSV example</h2><pre class="code-sample">Date,Description,Amount,Type,Category,Reference
+2026-01-02,Paycheck,2500.00,Income,Salary,PAY-001
+2026-01-03,Grocery store,-84.25,Expense,Groceries,</pre><p class="muted">If Type is omitted, positive amounts are treated as income and negative amounts as expenses. Amounts are stored as positive values with the transaction type determining their effect on the balance.</p></section>
