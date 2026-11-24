@@ -20,6 +20,11 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(account => account.Name).HasMaxLength(100).IsRequired();
             entity.Property(account => account.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.Property(account => account.OpeningBalance).HasColumnType("TEXT");
+            entity.Property(account => account.InterestRatePercent).HasColumnType("TEXT");
+            entity.Property(account => account.CreditLimit).HasColumnType("TEXT");
+            entity.Property(account => account.MinimumPayment).HasColumnType("TEXT");
+            entity.Property(account => account.OriginalLoanAmount).HasColumnType("TEXT");
+            entity.Property(account => account.EmployerMatchPercent).HasColumnType("TEXT");
             entity.HasIndex(account => account.Status);
         });
 
