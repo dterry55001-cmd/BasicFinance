@@ -31,14 +31,14 @@ The parser is now connected to the upload, durable preview, duplicate review, an
 - Duplicate fingerprints are deterministic SHA-256 hashes scoped by profile and selected internal account key. Atomic's transaction ID is used as the preferred stable identity when present.
 - Generic Date/Description/Amount headers are not auto-detected as Robinhood Bank because they do not uniquely identify that institution; users must select that profile explicitly.
 - Atomic pending, void, rejected and reversed statuses are flagged for review.
-- Robinhood Brokerage rows are held for review until a transaction-code mapping is configured; the parser does not guess transaction semantics.
+- Robinhood Brokerage rows are held for review until a user explicitly maps each row to Income, Expense, Deposit, or Withdrawal; the parser does not guess transaction semantics. Atomic pending, void, rejected, and reversed rows remain held and cannot be manually released.
 - Rows with a column count exceeding the header are rejected at row level.
 - Unknown Robinhood transaction codes are retained as source data; this parser does not guess normalized investment action semantics.
 - The parser validates the selected profile's required headers.
 
 ## Remaining work
 
-1. Configure Robinhood transaction-code mappings and provide a user workflow to review and release held rows.
+1. Add reusable provider transaction-code mappings so repeated Robinhood codes do not need row-by-row review. Atomic held rows should be re-imported after the provider updates their posting status.
 2. Add reconciliation screens using Atomic running balances and investment unit/price details.
 3. Validate every layout against actual sanitized exports, including institution-specific date and decimal edge cases.
 4. Add end-to-end tests for database migration, durable preview, duplicate detection, and confirmation.
@@ -58,7 +58,8 @@ The account key passed to the parser should be the internal selected account ide
 - [x] EF Core migrations added for institution-specific fields and duplicate fingerprints.
 - [x] Automated parser tests added for all six layouts and key safety rules.
 - [x] CI build and 8 automated tests pass, including migration execution against a clean in-memory SQLite database.
-- [ ] Add a workflow to resolve held-for-review rows.
+- [x] Add manual row-level classification and release for Robinhood Brokerage rows.
+- [ ] Add reusable Robinhood transaction-code mappings and Atomic status refresh handling.
 - [ ] Add reconciliation and audit features.
 
 ## Dependency security
