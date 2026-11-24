@@ -44,10 +44,24 @@ public sealed class StatementImportPreparationService(
             CreatedUtc = DateTime.UtcNow
         };
 
+        var modelProfile = ToModelProfile(profile);
+        var mappings = await database.TransactionCategoryMappings.AsNoTracking()
+            .Include(mapping => mapping.TransactionCategory)
+            .Where(mapping => mapping.Profile == modelProfile && mapping.IsActive && mapping.TransactionCategory.IsActive)
+            .ToListAsync(cancellationToken);
+        var mappingLookup = mappings.ToDictionary(
+            mapping => mapping.NormalizedSourceCategory,
+            mapping => mapping.TransactionCategory,
+            StringComparer.OrdinalIgnoreCase);
+
         var seenInFile = new HashSet<string>(StringComparer.Ordinal);
         foreach (var parsed in parsedRows)
         {
             var row = StatementImportRowMapper.ToImportRow(parsed, 0, profile);
+            var sourceCategory = NormalizeCategory(row.SourceCategory);
+            if (sourceCategory.Length > 0 && mappingLookup.TryGetValue(sourceCategory, out var mappedCategory)
+                && IsCompatible(mappedCategory.Type, row.Type))
+                row.CategoryId = mappedCategory.Id;
             if (!string.IsNullOrWhiteSpace(row.DuplicateFingerprint))
             {
                 row.IsDuplicate = !seenInFile.Add(row.DuplicateFingerprint)
@@ -69,6 +83,17 @@ public sealed class StatementImportPreparationService(
         await database.SaveChangesAsync(cancellationToken);
         return import;
     }
+
+    public static string NormalizeCategory(string? value) => string.Join(" ", (value ?? string.Empty)
+        .Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
+
+    private static bool IsCompatible(TransactionCategoryType categoryType, TransactionType transactionType) => categoryType switch
+    {
+        TransactionCategoryType.Income => transactionType is TransactionType.Income or TransactionType.Deposit,
+        TransactionCategoryType.Expense => transactionType is TransactionType.Expense or TransactionType.Withdrawal,
+        TransactionCategoryType.Transfer => transactionType == TransactionType.Transfer,
+        _ => false
+    };
 
     private static StatementImportProfile ToModelProfile(StatementSourceProfile profile) => profile switch
     {
