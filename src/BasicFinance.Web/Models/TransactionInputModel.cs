@@ -18,8 +18,8 @@ public sealed class TransactionInputModel : IValidatableObject
     [Required, StringLength(160)]
     public string Description { get; set; } = string.Empty;
 
-    [StringLength(80)]
-    public string? Category { get; set; }
+    [Display(Name = "Category")]
+    public int? CategoryId { get; set; }
 
     [Range(typeof(decimal), "0.01", "999999999999")]
     public decimal Amount { get; set; }
@@ -44,6 +44,8 @@ public sealed class TransactionInputModel : IValidatableObject
                 yield return new ValidationResult("Choose the destination account for this transfer.", [nameof(RelatedAccountId)]);
             else if (RelatedAccountId == AccountId)
                 yield return new ValidationResult("A transfer must use two different accounts.", [nameof(RelatedAccountId)]);
+            if (CategoryId is null)
+                yield return new ValidationResult("Choose a transfer category.", [nameof(CategoryId)]);
         }
         else if (RelatedAccountId is not null)
         {
