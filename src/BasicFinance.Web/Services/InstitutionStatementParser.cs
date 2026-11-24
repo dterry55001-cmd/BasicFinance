@@ -32,6 +32,8 @@ public sealed class ParsedStatementRow
     public DateTime? SettlementDate { get; set; }
     public string? Description { get; set; }
     public string? SourceType { get; set; }
+    public string? SourceSubType { get; set; }
+    public string? ExtendedDescription { get; set; }
     public string? SourceStatus { get; set; }
     public string? SourceCategory { get; set; }
     public string? SourceReference { get; set; }
@@ -143,6 +145,7 @@ public sealed class InstitutionStatementParser
                         row.ExternalAccountNumberLast4 = accountDigits.Length >= 4 ? accountDigits[^4..] : null;
                         row.FriendlyAccountName = Get("Friendly Account Name");
                         row.Description = FirstNonEmpty(Get("Description"), Get("Activity"));
+                        row.SourceSubType = Get("Type");
                         row.SourceType = Get("Type");
                         row.SourceCategory = Get("Activity");
                         row.Symbol = Get("Symbol");
@@ -167,6 +170,7 @@ public sealed class InstitutionStatementParser
                         row.PostingDate = Date("Posting Date");
                         row.EffectiveDate = Date("Effective Date");
                         row.SourceType = Get("Transaction Type");
+                        row.SourceSubType = Get("Type");
                         row.SourceStatus = Get("Posting Status");
                         row.PostingStatus = Get("Posting Status");
                         row.SignedAmount = Number("Amount");
@@ -174,7 +178,8 @@ public sealed class InstitutionStatementParser
                         row.ReferenceNumber = Get("Reference Number");
                         row.Description = Get("Description");
                         row.SourceCategory = Get("Transaction Category");
-                        row.Memo = FirstNonEmpty(Get("Memo"), Get("Extended Description"));
+                        row.Memo = Get("Memo");
+                        row.ExtendedDescription = Get("Extended Description");
                         row.RunningBalance = Number("Balance");
                         break;
                     case StatementSourceProfile.RobinhoodBrokerage:
