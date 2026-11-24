@@ -1,0 +1,11 @@
+@model IReadOnlyList<BasicFinance.Web.Models.TransactionRule>
+@{ ViewData["Title"] = "Transaction Rules"; }
+<section class="page-heading"><div><p class="eyebrow">TRANSACTION LEDGER</p><h1>Transaction rules</h1><p class="page-description">Suggest categories from descriptions you recognize. Rules never post or change transactions automatically.</p></div><a class="button button-primary" asp-action="Create">Add rule</a></section>
+@if (TempData["SuccessMessage"] is string message) { <div class="notice notice-success" role="status">@message</div> }
+<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Priority</th><th>Rule</th><th>Match</th><th>Scope</th><th>Transaction type</th><th>Suggested category</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+@foreach (var rule in Model)
+{
+<tr><td>@rule.Priority</td><td><strong>@rule.Name</strong></td><td>@rule.MatchType: <code>@rule.MatchText</code></td><td>@(rule.Account?.Name ?? "All accounts")</td><td>@(rule.TransactionType?.ToString() ?? "Any")</td><td>@rule.TransactionCategory.Name</td><td>@(rule.IsActive ? "Active" : "Inactive")</td><td><div class="table-actions"><a asp-action="Edit" asp-route-id="@rule.Id">Edit</a><form asp-action="Toggle" asp-route-id="@rule.Id" method="post"><button class="text-button" type="submit">@(rule.IsActive ? "Deactivate" : "Activate")</button></form></div></td></tr>
+}
+</tbody></table></div></div>
+<p class="page-description">Lower priority numbers run first. Account-specific rules are checked alongside global rules. When multiple rules match, the first compatible category is suggested.</p>
