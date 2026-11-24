@@ -6,28 +6,41 @@ namespace BasicFinance.Web.Services;
 
 public sealed class AccountBalanceService(ApplicationDbContext database)
 {
-    public async Task<decimal> GetBalanceAsync(int accountId, CancellationToken cancellationToken = default)
+    public Task<decimal> GetBalanceAsync(int accountId, CancellationToken cancellationToken = default) =>
+        GetBalanceAtAsync(accountId, DateTime.MaxValue, cancellationToken);
+
+    public async Task<decimal> GetBalanceAtAsync(int accountId, DateTime asOfDate, CancellationToken cancellationToken = default)
     {
-        var opening = await database.Accounts.AsNoTracking()
-            .Where(account => account.Id == accountId)
-            .Select(account => (decimal?)account.OpeningBalance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0m;
+        var account = await database.Accounts.AsNoTracking()
+            .Where(item => item.Id == accountId)
+            .Select(item => new { item.OpeningBalance, item.Type })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (account is null) return 0m;
 
         var entries = await database.Transactions.AsNoTracking()
-            .Where(transaction => transaction.AccountId == accountId || transaction.RelatedAccountId == accountId)
+            .Where(transaction => (transaction.AccountId == accountId || transaction.RelatedAccountId == accountId)
+                && transaction.TransactionDate <= asOfDate)
             .Select(transaction => new
             {
                 transaction.AccountId,
-                transaction.RelatedAccountId,
                 transaction.Type,
                 transaction.Amount
             })
             .ToListAsync(cancellationToken);
 
-        return opening + entries.Sum(entry =>
+        return account.OpeningBalance + entries.Sum(entry =>
         {
             if (entry.Type == TransactionType.Transfer)
+            {
+                if (account.Type is AccountType.Debt or AccountType.CreditCard)
+                    return entry.AccountId == accountId ? entry.Amount : -entry.Amount;
                 return entry.AccountId == accountId ? -entry.Amount : entry.Amount;
+            }
+
+            if (account.Type is AccountType.Debt or AccountType.CreditCard)
+                return entry.Type is TransactionType.Expense or TransactionType.Withdrawal
+                    ? entry.Amount
+                    : -entry.Amount;
 
             return entry.Type is TransactionType.Income or TransactionType.Deposit
                 ? entry.Amount
