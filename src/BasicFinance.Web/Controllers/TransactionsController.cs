@@ -157,6 +157,8 @@ public sealed class TransactionsController(
     {
         if (account is null || account.Status == AccountStatus.Archived)
             ModelState.AddModelError(nameof(input.AccountId), "Choose an existing, non-archived account.");
+        else if (!string.Equals(account.CurrencyCode, input.CurrencyCode?.Trim(), StringComparison.OrdinalIgnoreCase))
+            ModelState.AddModelError(nameof(input.CurrencyCode), "Transaction currency must match the selected account currency.");
 
         if (input.Type == TransactionType.Transfer)
         {
