@@ -117,10 +117,10 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         account.RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null;
         account.DebtType = input.Type == AccountType.Debt ? input.DebtType : null;
         account.Institution = CleanOptional(input.Institution);
-        account.InterestRatePercent = input.Type is AccountType.Debt or AccountType.Checking or AccountType.Savings ? input.InterestRatePercent : null;
-        account.CreditLimit = input.Type == AccountType.Debt ? input.CreditLimit : null;
-        account.MinimumPayment = input.Type == AccountType.Debt ? input.MinimumPayment : null;
-        account.PaymentDueDay = input.Type == AccountType.Debt ? input.PaymentDueDay : null;
+        account.InterestRatePercent = input.Type is AccountType.Debt or AccountType.CreditCard or AccountType.Checking or AccountType.Savings ? input.InterestRatePercent : null;
+        account.CreditLimit = input.Type is AccountType.Debt or AccountType.CreditCard ? input.CreditLimit : null;
+        account.MinimumPayment = input.Type is AccountType.Debt or AccountType.CreditCard ? input.MinimumPayment : null;
+        account.PaymentDueDay = input.Type is AccountType.Debt or AccountType.CreditCard ? input.PaymentDueDay : null;
         account.OriginalLoanAmount = input.Type == AccountType.Debt ? input.OriginalLoanAmount : null;
         account.LoanTermMonths = input.Type == AccountType.Debt ? input.LoanTermMonths : null;
         account.MaturityDate = input.Type == AccountType.Debt ? input.MaturityDate : null;
