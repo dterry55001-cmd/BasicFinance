@@ -55,6 +55,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(transaction => transaction.Price).HasColumnType("TEXT");
             entity.Property(transaction => transaction.SourceSignedAmount).HasColumnType("TEXT");
             entity.Property(transaction => transaction.RunningBalance).HasColumnType("TEXT");
+            entity.Property(transaction => transaction.SourceFieldsJson).HasColumnType("TEXT").IsRequired();
             entity.HasIndex(transaction => transaction.ImportFingerprint).IsUnique().HasFilter("\"ImportFingerprint\" IS NOT NULL");
             entity.Property(transaction => transaction.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(transaction => transaction.TransactionDate);
