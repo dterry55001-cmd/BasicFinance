@@ -42,7 +42,8 @@ The application starts with no user financial records. No legacy finance applica
 - Common statement aliases for contributions, employer matches, purchases, payments, dividends, and interest
 - Duplicate detection against existing transactions and within each uploaded file
 - Import history with row-level validation status
-- LifeSight-style contribution metadata: source, fund name, unit count, and unit value
+- LifeSight statement CSV support using Transaction Type, Date, Source, Fund Name, Unit Count, Unit Value, and Transaction Amount
+- LifeSight contribution types map to retirement deposits while preserving the original type label, source, fund, units, and unit value
 - UBS brokerage statement support: account number (last four digits only), date, activity, description, symbol, CUSIP, security type, quantity, price, amount, and friendly account name
 - Confirmed imports preserve brokerage activity and security details on ledger transactions
 - Search transactions by symbol, CUSIP, and brokerage activity
