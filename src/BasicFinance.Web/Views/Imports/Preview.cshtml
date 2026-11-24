@@ -1,0 +1,33 @@
+@model BasicFinance.Web.Models.StatementImport
+@using BasicFinance.Web.Models
+@{ ViewData["Title"] = "Import preview"; var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate); var errors = Model.Rows.Count(x => x.ValidationError is not null); var duplicates = Model.Rows.Count(x => x.IsDuplicate); }
+<section class="page-heading"><div><p class="eyebrow">IMPORT REVIEW</p><h1>@Model.FileName</h1><p class="page-description">@Model.Account.Name · Uploaded @Model.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</p></div><a class="button button-secondary" asp-action="Index">Back to imports</a></section>
+<div class="summary-grid">
+    <div class="summary-card"><span>Rows detected</span><strong>@Model.Rows.Count</strong></div>
+    <div class="summary-card"><span>Ready to import</span><strong>@valid</strong></div>
+    <div class="summary-card"><span>Duplicates</span><strong>@duplicates</strong></div>
+    <div class="summary-card"><span>Errors</span><strong>@errors</strong></div>
+</div>
+@if (Model.Status == StatementImportStatus.Preview)
+{
+    <div class="notice">Review the rows below. Only valid, non-duplicate rows will be posted after confirmation. This action cannot be undone from the import screen; individual ledger entries can be deleted later.</div>
+}
+else
+{
+    <div class="notice notice-success">Import status: @Model.Status. Completed @Model.CompletedUtc?.ToLocalTime().ToString("MMM d, yyyy h:mm tt").</div>
+}
+<div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>CSV row</th><th>Date</th><th>Description</th><th>Type</th><th>Category</th><th>Amount</th><th>Review status</th></tr></thead>
+    <tbody>@foreach (var row in Model.Rows.OrderBy(x => x.RowNumber))
+    {
+        <tr><td>@row.RowNumber</td><td>@(row.TransactionDate?.ToString("MMM d, yyyy") ?? "—")</td><td>@row.Description</td><td>@row.Type</td><td>@(row.Category ?? "—")</td><td>@row.Amount.ToString("N2") @Model.Account.CurrencyCode</td>
+        <td>@if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> } else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> } else if (row.IsImported) { <span class="status-success">Imported</span> } else { <span class="status-ready">Ready</span> }</td></tr>
+    }</tbody>
+</table></div></div>
+@if (Model.Status == StatementImportStatus.Preview)
+{
+    <form asp-action="Confirm" asp-route-id="@Model.Id" method="post" class="form-actions confirm-import" onsubmit="return confirm('Import all valid, non-duplicate rows into the selected account?');">
+        <button type="submit" class="button button-primary" disabled="@(valid == 0)">Confirm import (@valid rows)</button>
+        <a class="button button-secondary" asp-action="Index">Cancel</a>
+    </form>
+}
