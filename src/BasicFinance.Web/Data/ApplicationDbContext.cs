@@ -12,6 +12,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<StatementImportRow> StatementImportRows => Set<StatementImportRow>();
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
     public DbSet<TransactionCategoryMapping> TransactionCategoryMappings => Set<TransactionCategoryMapping>();
+    public DbSet<TransactionRule> TransactionRules => Set<TransactionRule>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -108,6 +109,21 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasOne(mapping => mapping.TransactionCategory)
                 .WithMany()
                 .HasForeignKey(mapping => mapping.TransactionCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TransactionRule>(entity =>
+        {
+            entity.Property(rule => rule.Name).HasMaxLength(100).IsRequired();
+            entity.Property(rule => rule.MatchText).HasMaxLength(160).IsRequired();
+            entity.HasIndex(rule => new { rule.IsActive, rule.Priority });
+            entity.HasOne(rule => rule.Account)
+                .WithMany()
+                .HasForeignKey(rule => rule.AccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(rule => rule.TransactionCategory)
+                .WithMany()
+                .HasForeignKey(rule => rule.TransactionCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
