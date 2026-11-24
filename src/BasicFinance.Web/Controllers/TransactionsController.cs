@@ -30,7 +30,10 @@ public sealed class TransactionsController(
             var term = search.Trim();
             query = query.Where(transaction => transaction.Description.Contains(term)
                 || (transaction.Category != null && transaction.Category.Contains(term))
-                || (transaction.Reference != null && transaction.Reference.Contains(term)));
+                || (transaction.Reference != null && transaction.Reference.Contains(term))
+                || (transaction.Symbol != null && transaction.Symbol.Contains(term))
+                || (transaction.Cusip != null && transaction.Cusip.Contains(term))
+                || (transaction.Activity != null && transaction.Activity.Contains(term)));
         }
 
         ViewData["Accounts"] = new SelectList(
