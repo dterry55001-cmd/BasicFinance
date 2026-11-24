@@ -11,6 +11,7 @@ builder.Services.AddScoped<AccountBalanceService>();
 builder.Services.AddScoped<CsvStatementParser>();
 builder.Services.AddScoped<InstitutionStatementParser>();
 builder.Services.AddScoped<StatementImportPreparationService>();
+builder.Services.AddScoped<TransactionCategorySeeder>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
@@ -28,6 +29,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await database.Database.MigrateAsync();
+    var categorySeeder = scope.ServiceProvider.GetRequiredService<TransactionCategorySeeder>();
+    await categorySeeder.SeedAsync();
 }
 
 app.UseHttpsRedirection();
