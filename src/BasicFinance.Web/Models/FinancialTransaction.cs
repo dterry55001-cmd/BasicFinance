@@ -1,0 +1,47 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace BasicFinance.Web.Models;
+
+public enum TransactionType
+{
+    Income,
+    Expense,
+    Deposit,
+    Withdrawal,
+    Transfer
+}
+
+public sealed class FinancialTransaction
+{
+    public int Id { get; set; }
+
+    public int AccountId { get; set; }
+    public Account Account { get; set; } = null!;
+
+    public int? RelatedAccountId { get; set; }
+    public Account? RelatedAccount { get; set; }
+
+    [Required]
+    public TransactionType Type { get; set; }
+
+    [Required, StringLength(160)]
+    public string Description { get; set; } = string.Empty;
+
+    [StringLength(80)]
+    public string? Category { get; set; }
+
+    [Range(typeof(decimal), "0.01", "999999999999")]
+    public decimal Amount { get; set; }
+
+    [Required, StringLength(3, MinimumLength = 3)]
+    public string CurrencyCode { get; set; } = "USD";
+
+    [DataType(DataType.Date)]
+    public DateTime TransactionDate { get; set; } = DateTime.Today;
+
+    [StringLength(100)]
+    public string? Reference { get; set; }
+
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
