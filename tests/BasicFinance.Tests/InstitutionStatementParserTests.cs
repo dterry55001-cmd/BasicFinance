@@ -129,6 +129,20 @@ public sealed class InstitutionStatementParserTests
         Assert.Contains("PostingDate", columns);
         Assert.Contains("SettlementDate", columns);
         Assert.Contains("RequiresReview", columns);
+        Assert.Contains("DebtType", columns);
+    }
+
+
+    [Fact]
+    public void DebtAccountTypeOptionsIncludeCommonLiabilities()
+    {
+        Assert.Contains(DebtAccountType.CreditCard, Enum.GetValues<DebtAccountType>());
+        Assert.Contains(DebtAccountType.Mortgage, Enum.GetValues<DebtAccountType>());
+        Assert.Contains(DebtAccountType.HomeEquityLineOfCredit, Enum.GetValues<DebtAccountType>());
+        Assert.Contains(DebtAccountType.AutoLoan, Enum.GetValues<DebtAccountType>());
+        Assert.Contains(DebtAccountType.StudentLoan, Enum.GetValues<DebtAccountType>());
+        Assert.Contains(DebtAccountType.PersonalLoan, Enum.GetValues<DebtAccountType>());
+        Assert.Contains(DebtAccountType.OtherDebt, Enum.GetValues<DebtAccountType>());
     }
 
 }
