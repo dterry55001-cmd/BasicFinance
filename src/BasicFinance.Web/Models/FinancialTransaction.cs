@@ -49,6 +49,8 @@ public sealed class FinancialTransaction
     public DateTime? ProcessDate { get; set; }
     public DateTime? SettlementDate { get; set; }
     [StringLength(100)] public string? SourceType { get; set; }
+    [StringLength(100)] public string? SourceSubType { get; set; }
+    [StringLength(200)] public string? ExtendedDescription { get; set; }
     [StringLength(100)] public string? SourceStatus { get; set; }
     [StringLength(100)] public string? SourceCategory { get; set; }
     [StringLength(120)] public string? SourceReference { get; set; }
@@ -60,6 +62,7 @@ public sealed class FinancialTransaction
     public decimal? SourceSignedAmount { get; set; }
     public decimal? RunningBalance { get; set; }
     [StringLength(64)] public string? ImportFingerprint { get; set; }
+    public string SourceFieldsJson { get; set; } = "{}";
     [StringLength(20)] public string? Cusip { get; set; }
     [StringLength(40)] public string? SecurityType { get; set; }
     public decimal? Quantity { get; set; }
