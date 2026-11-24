@@ -1,4 +1,3 @@
-using System.Text;
 using BasicFinance.Web.Data;
 using BasicFinance.Web.Models;
 using BasicFinance.Web.Services;
@@ -8,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BasicFinance.Web.Controllers;
 
-public sealed class ImportsController(ApplicationDbContext database, CsvStatementParser parser) : Controller
+public sealed class ImportsController(ApplicationDbContext database, StatementImportPreparationService preparation) : Controller
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
@@ -20,13 +19,15 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
     public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
         await PopulateAccountsAsync(null, cancellationToken);
+        PopulateProfiles(StatementSourceProfile.Unknown);
         return View();
     }
 
     [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(10_000_000)]
-    public async Task<IActionResult> Create(int accountId, IFormFile? file, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(int accountId, IFormFile? file, StatementSourceProfile profile, CancellationToken cancellationToken)
     {
         await PopulateAccountsAsync(accountId, cancellationToken);
+        PopulateProfiles(profile);
         var account = await database.Accounts.FirstOrDefaultAsync(x => x.Id == accountId && x.Status != AccountStatus.Archived, cancellationToken);
         if (account is null) ModelState.AddModelError(nameof(accountId), "Choose an existing, non-archived account.");
         if (file is null || file.Length == 0) ModelState.AddModelError("file", "Choose a CSV statement file.");
@@ -37,33 +38,12 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
 
         try
         {
-            using var reader = new StreamReader(file!.OpenReadStream(), Encoding.UTF8, true);
+            using var reader = new StreamReader(file!.OpenReadStream(), System.Text.Encoding.UTF8, true);
             var csv = await reader.ReadToEndAsync(cancellationToken);
-            var rows = parser.Parse(csv);
-            var batch = new StatementImport
-            {
-                FileName = Path.GetFileName(file.FileName),
-                AccountId = accountId,
-                Status = StatementImportStatus.Preview,
-                CreatedUtc = DateTime.UtcNow,
-                ExternalAccountNumberLast4 = rows.Select(x => x.ExternalAccountNumberLast4).FirstOrDefault(x => x is not null),
-                FriendlyAccountName = rows.Select(x => x.FriendlyAccountName).FirstOrDefault(x => x is not null),
-                Rows = rows
-            };
-            var seenInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var row in rows.Where(x => x.ValidationError is null))
-            {
-                var key = $"{row.TransactionDate:yyyy-MM-dd}|{row.Amount}|{row.Description.Trim()}";
-                var exists = await database.Transactions.AnyAsync(t =>
-                    t.AccountId == accountId && t.TransactionDate == row.TransactionDate &&
-                    t.Amount == row.Amount && t.Description == row.Description, cancellationToken);
-                row.IsDuplicate = exists || !seenInFile.Add(key);
-            }
-            database.StatementImports.Add(batch);
-            await database.SaveChangesAsync(cancellationToken);
+            var batch = await preparation.PrepareAsync(accountId, file.FileName, csv, profile, cancellationToken);
             return RedirectToAction(nameof(Preview), new { id = batch.Id });
         }
-        catch (InvalidDataException ex)
+        catch (Exception ex) when (ex is InvalidDataException or ArgumentException or InvalidOperationException)
         {
             ModelState.AddModelError("file", ex.Message);
             return View();
@@ -90,7 +70,7 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
         if (account is null) return BadRequest("The selected account is no longer available.");
 
         var seenDuringConfirmation = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var row in batch.Rows.Where(x => x.ValidationError is null && !x.IsDuplicate))
+        foreach (var row in batch.Rows.Where(x => x.ValidationError is null && !x.IsDuplicate && !x.RequiresReview))
         {
             var key = $"{row.TransactionDate:yyyy-MM-dd}|{row.Amount}|{row.Description.Trim()}";
             var exists = await database.Transactions.AnyAsync(t =>
@@ -120,13 +100,30 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
                 FundName = row.FundName,
                 UnitCount = row.UnitCount,
                 UnitValue = row.UnitValue,
+                PostingDate = row.PostingDate,
+                EffectiveDate = row.EffectiveDate,
+                ActivityDate = row.ActivityDate,
+                ProcessDate = row.ProcessDate,
+                SettlementDate = row.SettlementDate,
+                SourceType = row.SourceType,
+                SourceStatus = row.SourceStatus,
+                SourceCategory = row.SourceCategory,
+                SourceReference = row.SourceReference,
+                Instrument = row.Instrument,
+                Memo = row.Memo,
+                CheckNumber = row.CheckNumber,
+                ReferenceNumber = row.ReferenceNumber,
+                TransactionCode = row.TransactionCode,
+                SourceSignedAmount = row.SourceSignedAmount,
+                RunningBalance = row.RunningBalance,
+                ImportFingerprint = row.DuplicateFingerprint,
                 CreatedUtc = DateTime.UtcNow,
                 UpdatedUtc = DateTime.UtcNow
             });
             row.IsImported = true;
         }
 
-        batch.Status = batch.Rows.Any(x => x.ValidationError is not null)
+        batch.Status = batch.Rows.Any(x => x.ValidationError is not null || x.RequiresReview)
             ? StatementImportStatus.CompletedWithErrors : StatementImportStatus.Completed;
         batch.CompletedUtc = DateTime.UtcNow;
         await database.SaveChangesAsync(cancellationToken);
@@ -139,6 +136,15 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
         var batch = await database.StatementImports.AsNoTracking().Include(x => x.Account)
             .Include(x => x.Rows).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return batch is null ? NotFound() : View("Preview", batch);
+    }
+
+    private void PopulateProfiles(StatementSourceProfile selected)
+    {
+        ViewBag.Profiles = new SelectList(
+            Enum.GetValues<StatementSourceProfile>()
+                .Where(x => x != StatementSourceProfile.Unknown)
+                .Select(x => new { Value = x, Text = x.ToString() }),
+            "Value", "Text", selected);
     }
 
     private async Task PopulateAccountsAsync(int? selected, CancellationToken cancellationToken)
