@@ -191,3 +191,9 @@ public sealed class AccountManagementRow
     public decimal Balance { get; set; }
     public decimal? UtilizationPercent { get; set; }
 }
+
+public sealed class DebtCurrencyTotal
+{
+    public string CurrencyCode { get; set; } = "USD";
+    public decimal Amount { get; set; }
+}
