@@ -153,6 +153,26 @@ public sealed class CategoriesController(ApplicationDbContext database) : Contro
                 ModelState.AddModelError(nameof(input.ParentCategoryId), "A category cannot be its own parent.");
         }
 
+        if (currentId.HasValue)
+        {
+            var hasTransactions = await database.Transactions.AnyAsync(
+                transaction => transaction.CategoryId == currentId.Value, cancellationToken);
+            var hasChildren = await database.TransactionCategories.AnyAsync(
+                item => item.ParentCategoryId == currentId.Value, cancellationToken);
+
+            if (hasTransactions && await database.TransactionCategories.AnyAsync(
+                item => item.Id == currentId.Value && item.Type != input.Type, cancellationToken))
+                ModelState.AddModelError(nameof(input.Type), "A category used by transactions cannot change type.");
+
+            if (hasChildren && input.Type != await database.TransactionCategories
+                .Where(item => item.Id == currentId.Value)
+                .Select(item => item.Type).FirstAsync(cancellationToken))
+                ModelState.AddModelError(nameof(input.Type), "A parent category with subcategories cannot change type.");
+
+            if (hasChildren && input.ParentCategoryId.HasValue)
+                ModelState.AddModelError(nameof(input.ParentCategoryId), "A category with subcategories cannot become a subcategory.");
+        }
+
         if (currentId.HasValue && await database.TransactionCategories.AnyAsync(
             item => item.ParentCategoryId == currentId && item.Id == input.ParentCategoryId, cancellationToken))
             ModelState.AddModelError(nameof(input.ParentCategoryId), "This parent selection would create a category cycle.");
