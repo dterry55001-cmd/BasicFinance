@@ -1,7 +1,7 @@
 @model BasicFinance.Web.Models.StatementImport
 @using BasicFinance.Web.Models
-@{ ViewData["Title"] = "Import preview"; var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate); var errors = Model.Rows.Count(x => x.ValidationError is not null); var duplicates = Model.Rows.Count(x => x.IsDuplicate); }
-<section class="page-heading"><div><p class="eyebrow">IMPORT REVIEW</p><h1>@Model.FileName</h1><p class="page-description">@Model.Account.Name · Uploaded @Model.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</p></div><a class="button button-secondary" asp-action="Index">Back to imports</a></section>
+@{ ViewData["Title"] = "Import preview"; var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate && !x.RequiresReview); var errors = Model.Rows.Count(x => x.ValidationError is not null); var duplicates = Model.Rows.Count(x => x.IsDuplicate); var review = Model.Rows.Count(x => x.RequiresReview && x.ValidationError is null); }
+<section class="page-heading"><div><p class="eyebrow">IMPORT REVIEW</p><h1>@Model.FileName</h1><p class="page-description">@Model.Account.Name · @Model.Profile · Uploaded @Model.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</p></div><a class="button button-secondary" asp-action="Index">Back to imports</a></section>
 @if (Model.FriendlyAccountName is not null || Model.ExternalAccountNumberLast4 is not null)
 {
     <div class="notice">Statement account: <strong>@(Model.FriendlyAccountName ?? Model.Account.Name)</strong> · Account ending in @(Model.ExternalAccountNumberLast4 ?? "unknown")</div>
@@ -11,10 +11,11 @@
     <div class="summary-card"><span>Ready to import</span><strong>@valid</strong></div>
     <div class="summary-card"><span>Duplicates</span><strong>@duplicates</strong></div>
     <div class="summary-card"><span>Errors</span><strong>@errors</strong></div>
+    <div class="summary-card"><span>Needs review</span><strong>@review</strong></div>
 </div>
 @if (Model.Status == StatementImportStatus.Preview)
 {
-    <div class="notice">Review the rows below. Only valid, non-duplicate rows will be posted after confirmation. This action cannot be undone from the import screen; individual ledger entries can be deleted later.</div>
+    <div class="notice">Review the rows below. Only valid, non-duplicate rows that do not require additional review will be posted after confirmation. This action cannot be undone from the import screen; individual ledger entries can be deleted later.</div>
 }
 else
 {
@@ -25,7 +26,7 @@ else
     <tbody>@foreach (var row in Model.Rows.OrderBy(x => x.RowNumber))
     {
         <tr><td>@row.RowNumber</td><td>@(row.TransactionDate?.ToString("MMM d, yyyy") ?? "—")</td><td>@(row.Activity ?? row.Type.ToString())</td><td>@row.Description<div class="table-subtext">@(row.Source ?? "")<div class="table-subtext">@(row.FundName ?? "")</div></div></td><td>@(row.Symbol ?? "—")<div class="table-subtext">@(row.Cusip ?? "")</div></td><td>@(row.SecurityType ?? "—")</td><td>@(row.Quantity?.ToString("N6") ?? row.UnitCount?.ToString("N6") ?? "—")</td><td>@(row.Price?.ToString("N4") ?? row.UnitValue?.ToString("N6") ?? "—")</td><td>@row.Amount.ToString("N2") @Model.Account.CurrencyCode</td>
-        <td>@if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> } else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> } else if (row.IsImported) { <span class="status-success">Imported</span> } else { <span class="status-ready">Ready</span> }</td></tr>
+        <td>@if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> } else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> } else if (row.IsImported) { <span class="status-success">Imported</span> } else if (row.RequiresReview) { <span class="status-warning">Needs review — not posted</span> } else { <span class="status-ready">Ready</span> }</td></tr>
     }</tbody>
 </table></div></div>
 @if (Model.Status == StatementImportStatus.Preview)
