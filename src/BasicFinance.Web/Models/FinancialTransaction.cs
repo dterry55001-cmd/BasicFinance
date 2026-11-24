@@ -43,6 +43,23 @@ public sealed class FinancialTransaction
     public string? Reference { get; set; }
     [StringLength(100)] public string? Activity { get; set; }
     [StringLength(40)] public string? Symbol { get; set; }
+    public DateTime? PostingDate { get; set; }
+    public DateTime? EffectiveDate { get; set; }
+    public DateTime? ActivityDate { get; set; }
+    public DateTime? ProcessDate { get; set; }
+    public DateTime? SettlementDate { get; set; }
+    [StringLength(100)] public string? SourceType { get; set; }
+    [StringLength(100)] public string? SourceStatus { get; set; }
+    [StringLength(100)] public string? SourceCategory { get; set; }
+    [StringLength(120)] public string? SourceReference { get; set; }
+    [StringLength(160)] public string? Instrument { get; set; }
+    [StringLength(200)] public string? Memo { get; set; }
+    [StringLength(80)] public string? CheckNumber { get; set; }
+    [StringLength(120)] public string? ReferenceNumber { get; set; }
+    [StringLength(120)] public string? TransactionCode { get; set; }
+    public decimal? SourceSignedAmount { get; set; }
+    public decimal? RunningBalance { get; set; }
+    [StringLength(64)] public string? ImportFingerprint { get; set; }
     [StringLength(20)] public string? Cusip { get; set; }
     [StringLength(40)] public string? SecurityType { get; set; }
     public decimal? Quantity { get; set; }
