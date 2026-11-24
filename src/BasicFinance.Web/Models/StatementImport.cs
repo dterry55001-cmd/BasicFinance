@@ -49,6 +49,8 @@ public sealed class StatementImportRow
     public string? Reference { get; set; }
     [StringLength(100)] public string? Activity { get; set; }
     [StringLength(100)] public string? SourceType { get; set; }
+    [StringLength(100)] public string? SourceSubType { get; set; }
+    [StringLength(200)] public string? ExtendedDescription { get; set; }
     [StringLength(100)] public string? SourceStatus { get; set; }
     [StringLength(100)] public string? SourceCategory { get; set; }
     [StringLength(120)] public string? SourceReference { get; set; }
