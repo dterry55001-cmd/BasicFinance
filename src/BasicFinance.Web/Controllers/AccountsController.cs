@@ -35,15 +35,24 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         return View(account);
     }
 
-    public IActionResult Create() => View(new AccountInputModel());
+    public IActionResult Create()
+    {
+        PopulateRetirementTypes();
+        return View(new AccountInputModel());
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AccountInputModel input)
     {
-        if (!ModelState.IsValid) return View(input);
+        ValidateRetirementType(input);
+        if (!ModelState.IsValid)
+        {
+            PopulateRetirementTypes();
+            return View(input);
+        }
         var account = new Account
         {
-            Name = input.Name.Trim(), Type = input.Type,
+            Name = input.Name.Trim(), Type = input.Type, RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null,
             Institution = CleanOptional(input.Institution),
             AccountNumberLast4 = CleanOptional(input.AccountNumberLast4),
             CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant(),
@@ -60,9 +69,10 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
     {
         var account = await database.Accounts.FindAsync(id);
         if (account is null) return NotFound();
+        PopulateRetirementTypes();
         return View(new AccountInputModel
         {
-            Name = account.Name, Type = account.Type, Institution = account.Institution,
+            Name = account.Name, Type = account.Type, RetirementType = account.RetirementType, Institution = account.Institution,
             AccountNumberLast4 = account.AccountNumberLast4, CurrencyCode = account.CurrencyCode,
             OpeningBalance = account.OpeningBalance, OpenedOn = account.OpenedOn, Status = account.Status
         });
@@ -71,10 +81,16 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, AccountInputModel input)
     {
-        if (!ModelState.IsValid) return View(input);
+        ValidateRetirementType(input);
+        if (!ModelState.IsValid)
+        {
+            PopulateRetirementTypes();
+            return View(input);
+        }
         var account = await database.Accounts.FindAsync(id);
         if (account is null) return NotFound();
         account.Name = input.Name.Trim(); account.Type = input.Type;
+        account.RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null;
         account.Institution = CleanOptional(input.Institution);
         account.AccountNumberLast4 = CleanOptional(input.AccountNumberLast4);
         account.CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant();
@@ -96,6 +112,42 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         TempData["SuccessMessage"] = "Account archived. Its history remains in the database.";
         return RedirectToAction(nameof(Index), new { includeArchived = true });
     }
+
+    private void PopulateRetirementTypes()
+    {
+        ViewBag.RetirementTypes = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
+            Enum.GetValues<RetirementAccountType>()
+                .Select(type => new { Value = type, Text = RetirementTypeLabel(type) }),
+            "Value", "Text");
+    }
+
+    private void ValidateRetirementType(AccountInputModel input)
+    {
+        if (input.Type == AccountType.Retirement && !input.RetirementType.HasValue)
+            ModelState.AddModelError(nameof(input.RetirementType), "Choose a retirement account type.");
+        if (input.Type != AccountType.Retirement)
+            input.RetirementType = null;
+    }
+
+    private static string RetirementTypeLabel(RetirementAccountType type) => type switch
+    {
+        RetirementAccountType.Employer401k => "401(k) — Employer-sponsored",
+        RetirementAccountType.Employer401a => "401(a) — Employer-sponsored",
+        RetirementAccountType.Employer403b => "403(b) — Tax-sheltered annuity",
+        RetirementAccountType.Government457b => "457(b) — Government deferred compensation",
+        RetirementAccountType.ThriftSavingsPlan => "Thrift Savings Plan (TSP)",
+        RetirementAccountType.TraditionalIra => "Traditional IRA",
+        RetirementAccountType.RothIra => "Roth IRA",
+        RetirementAccountType.RolloverIra => "Rollover IRA",
+        RetirementAccountType.InheritedIra => "Inherited IRA",
+        RetirementAccountType.SepIra => "SEP IRA",
+        RetirementAccountType.SimpleIra => "SIMPLE IRA",
+        RetirementAccountType.Solo401k => "Solo / Individual 401(k)",
+        RetirementAccountType.DefinedBenefitPension => "Defined-benefit pension",
+        RetirementAccountType.CashBalancePension => "Cash-balance pension",
+        RetirementAccountType.Annuity => "Retirement annuity",
+        _ => "Other retirement account"
+    };
 
     private static string? CleanOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
