@@ -55,6 +55,18 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
             Name = input.Name.Trim(), Type = input.Type, RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null,
             DebtType = input.Type == AccountType.Debt ? input.DebtType : null,
             Institution = CleanOptional(input.Institution),
+            InterestRatePercent = input.InterestRatePercent,
+            CreditLimit = input.CreditLimit,
+            MinimumPayment = input.MinimumPayment,
+            PaymentDueDay = input.PaymentDueDay,
+            OriginalLoanAmount = input.OriginalLoanAmount,
+            LoanTermMonths = input.LoanTermMonths,
+            MaturityDate = input.MaturityDate,
+            EmployerName = CleanOptional(input.EmployerName),
+            EmployerMatchPercent = input.EmployerMatchPercent,
+            TaxTreatment = CleanOptional(input.TaxTreatment),
+            BrokerageRegistrationType = CleanOptional(input.BrokerageRegistrationType),
+            Notes = CleanOptional(input.Notes),
             CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant(),
             OpeningBalance = input.OpeningBalance, OpenedOn = input.OpenedOn,
             Status = input.Status, CreatedUtc = DateTime.UtcNow, UpdatedUtc = DateTime.UtcNow
@@ -74,6 +86,18 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         {
             Name = account.Name, Type = account.Type, RetirementType = account.RetirementType, DebtType = account.DebtType, Institution = account.Institution,
             CurrencyCode = account.CurrencyCode,
+            InterestRatePercent = account.InterestRatePercent,
+            CreditLimit = account.CreditLimit,
+            MinimumPayment = account.MinimumPayment,
+            PaymentDueDay = account.PaymentDueDay,
+            OriginalLoanAmount = account.OriginalLoanAmount,
+            LoanTermMonths = account.LoanTermMonths,
+            MaturityDate = account.MaturityDate,
+            EmployerName = account.EmployerName,
+            EmployerMatchPercent = account.EmployerMatchPercent,
+            TaxTreatment = account.TaxTreatment,
+            BrokerageRegistrationType = account.BrokerageRegistrationType,
+            Notes = account.Notes,
             OpeningBalance = account.OpeningBalance, OpenedOn = account.OpenedOn, Status = account.Status
         });
     }
@@ -93,6 +117,18 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         account.RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null;
         account.DebtType = input.Type == AccountType.Debt ? input.DebtType : null;
         account.Institution = CleanOptional(input.Institution);
+        account.InterestRatePercent = input.InterestRatePercent;
+        account.CreditLimit = input.CreditLimit;
+        account.MinimumPayment = input.MinimumPayment;
+        account.PaymentDueDay = input.PaymentDueDay;
+        account.OriginalLoanAmount = input.OriginalLoanAmount;
+        account.LoanTermMonths = input.LoanTermMonths;
+        account.MaturityDate = input.MaturityDate;
+        account.EmployerName = CleanOptional(input.EmployerName);
+        account.EmployerMatchPercent = input.EmployerMatchPercent;
+        account.TaxTreatment = CleanOptional(input.TaxTreatment);
+        account.BrokerageRegistrationType = CleanOptional(input.BrokerageRegistrationType);
+        account.Notes = CleanOptional(input.Notes);
         account.CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant();
         account.OpeningBalance = input.OpeningBalance; account.OpenedOn = input.OpenedOn;
         account.Status = input.Status; account.UpdatedUtc = DateTime.UtcNow;
