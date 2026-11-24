@@ -12,7 +12,10 @@ public sealed class AccountSpecificDetails : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(name: "AccountNumberLast4", table: "Accounts");
+        // EF Core's SQLite migration generator does not emit DropColumn directly.
+        // SQLite 3.35+ supports this operation natively; Microsoft.Data.Sqlite
+        // ships a compatible SQLite engine with the application's .NET 10 stack.
+        migrationBuilder.Sql("ALTER TABLE \"Accounts\" DROP COLUMN \"AccountNumberLast4\";");
         migrationBuilder.AddColumn<string>(name: "InterestRatePercent", table: "Accounts", type: "TEXT", nullable: true);
         migrationBuilder.AddColumn<string>(name: "CreditLimit", table: "Accounts", type: "TEXT", nullable: true);
         migrationBuilder.AddColumn<string>(name: "MinimumPayment", table: "Accounts", type: "TEXT", nullable: true);
