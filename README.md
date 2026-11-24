@@ -35,20 +35,20 @@ The application starts with no user financial records. No legacy finance applica
 
 ### Statement imports
 
-- CSV upload with a 10 MB size limit
-- Preview and validation before posting to the ledger
-- Required Date, Description/Source, and Amount columns
-- Optional transaction type, category, and reference columns
-- Common statement aliases for contributions, employer matches, purchases, payments, dividends, and interest
-- Duplicate detection against existing transactions and within each uploaded file
-- Import history with row-level validation status
-- LifeSight statement CSV support using Transaction Type, Date, Source, Fund Name, Unit Count, Unit Value, and Transaction Amount
-- LifeSight contribution types map to retirement deposits while preserving the original type label, source, fund, units, and unit value
-- UBS brokerage statement support: account number (last four digits only), date, activity, description, symbol, CUSIP, security type, quantity, price, amount, and friendly account name
-- Confirmed imports preserve brokerage activity and security details on ledger transactions
-- Search transactions by symbol, CUSIP, and brokerage activity
+- CSV upload with a 10 MB size limit, institution profile selection, durable preview, and confirmation
+- Six institution-specific layouts: UBS Brokerage, LifeSight Retirement, Atomic Banking, Robinhood Brokerage, Robinhood Bank, and Chase Banking
+- Source headers and original source values are retained in the import record and copied to posted ledger transactions; UBS account numbers are masked to the last four digits
+- Distinct activity, processing, posting, effective, and settlement dates are retained independently where supplied
+- Signed source amounts are preserved separately from the positive ledger amount used with the normalized transaction type
+- Security and retirement details include symbol, CUSIP, instrument, quantity, price, fund, contribution source, unit count, and unit value
+- Banking details include provider transaction IDs, posting status, check/reference numbers, categories, memo, extended description, and running balance
+- Duplicate fingerprints are scoped to the selected internal account; Atomic transaction IDs are preferred when available
+- Atomic pending, void, rejected, and reversed rows are held for review
+- Robinhood Brokerage rows are held for review until transaction-code mappings are configured; the importer does not guess investment action semantics
+- Robinhood Bank's generic Date/Description/Amount layout requires explicit profile selection
+- Import history records row-level validation, duplicate, and review status
 
-Imports remain staged until the user confirms them. CSV import supports the common transaction layout, LifeSight investment contribution columns, and the UBS brokerage column layout. OFX/QFX and additional institution-specific mapping templates are future work.
+Imports are persisted as unposted preview batches. Only valid, non-duplicate rows not flagged for review are posted when the user confirms. OFX/QFX, configurable Robinhood transaction-code mappings, and a workflow to resolve held-for-review rows remain future work.
 
 ## Run locally
 
