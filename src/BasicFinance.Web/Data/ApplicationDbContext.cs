@@ -8,6 +8,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 {
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<FinancialTransaction> Transactions => Set<FinancialTransaction>();
+    public DbSet<StatementImport> StatementImports => Set<StatementImport>();
+    public DbSet<StatementImportRow> StatementImportRows => Set<StatementImportRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +21,21 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(account => account.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.Property(account => account.OpeningBalance).HasColumnType("TEXT");
             entity.HasIndex(account => account.Status);
+        });
+
+        modelBuilder.Entity<StatementImport>(entity =>
+        {
+            entity.Property(batch => batch.FileName).HasMaxLength(255).IsRequired();
+            entity.HasOne(batch => batch.Account).WithMany().HasForeignKey(batch => batch.AccountId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(batch => batch.Rows).WithOne(row => row.StatementImport).HasForeignKey(row => row.StatementImportId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(batch => batch.CreatedUtc);
+        });
+
+        modelBuilder.Entity<StatementImportRow>(entity =>
+        {
+            entity.Property(row => row.Amount).HasColumnType("TEXT");
+            entity.Property(row => row.Description).HasMaxLength(160).IsRequired();
+            entity.HasIndex(row => new { row.StatementImportId, row.RowNumber }).IsUnique();
         });
 
         modelBuilder.Entity<FinancialTransaction>(entity =>
