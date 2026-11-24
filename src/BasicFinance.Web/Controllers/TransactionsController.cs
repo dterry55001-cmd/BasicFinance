@@ -1,15 +1,12 @@
 using BasicFinance.Web.Data;
 using BasicFinance.Web.Models;
-using BasicFinance.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BasicFinance.Web.Controllers;
 
-public sealed class TransactionsController(
-    ApplicationDbContext database,
-    AccountBalanceService balances) : Controller
+public sealed class TransactionsController(ApplicationDbContext database) : Controller
 {
     public async Task<IActionResult> Index(
         int? accountId, DateTime? from, DateTime? to, string? search, CancellationToken cancellationToken)
