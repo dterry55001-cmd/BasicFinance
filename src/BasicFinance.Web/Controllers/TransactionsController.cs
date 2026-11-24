@@ -66,7 +66,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
             ? await database.Accounts.FindAsync([input.RelatedAccountId.Value], cancellationToken)
             : null;
 
-        await ValidateCategoryAsync(input, cancellationToken);
+        await ValidateCategoryAsync(input, null, cancellationToken);
         ValidateAccounts(input, account, destination);
         if (!ModelState.IsValid)
         {
@@ -125,7 +125,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         var destination = input.RelatedAccountId.HasValue
             ? await database.Accounts.FindAsync([input.RelatedAccountId.Value], cancellationToken)
             : null;
-        await ValidateCategoryAsync(input, cancellationToken);
+        await ValidateCategoryAsync(input, transaction.CategoryId, cancellationToken);
         ValidateAccounts(input, account, destination);
 
         if (!ModelState.IsValid)
@@ -163,7 +163,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         return RedirectToAction(nameof(Index), new { accountId });
     }
 
-    private async Task ValidateCategoryAsync(TransactionInputModel input, CancellationToken cancellationToken)
+    private async Task ValidateCategoryAsync(TransactionInputModel input, int? existingCategoryId, CancellationToken cancellationToken)
     {
         var expectedType = input.Type switch
         {
@@ -182,7 +182,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
 
         var category = await database.TransactionCategories
             .FirstOrDefaultAsync(item => item.Id == input.CategoryId.Value, cancellationToken);
-        if (category is null || !category.IsActive)
+        if (category is null || (!category.IsActive && category.Id != existingCategoryId))
             ModelState.AddModelError(nameof(input.CategoryId), "Choose an active category.");
         else if (expectedType.HasValue && category.Type != expectedType.Value)
             ModelState.AddModelError(nameof(input.CategoryId), "The selected category does not match the transaction type.");
@@ -211,7 +211,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
             .OrderBy(a => a.Name).ToListAsync(cancellationToken);
         ViewBag.Accounts = new SelectList(accounts, "Id", "Name", selectedAccountId);
 
-        var categoryQuery = database.TransactionCategories.AsNoTracking().Where(category => category.IsActive);
+        var categoryQuery = database.TransactionCategories.AsNoTracking().Include(category => category.ParentCategory).Where(category => category.IsActive || category.Id == selectedCategoryId);
         if (type.HasValue)
         {
             var categoryType = type.Value switch
