@@ -18,6 +18,8 @@ jobs:
           dotnet-version: 10.0.x
       - name: Restore
         run: dotnet restore BasicFinance.sln
+      - name: Audit dependencies
+        run: dotnet list src/BasicFinance.Web/BasicFinance.Web.csproj package --vulnerable --include-transitive
       - name: Build
         run: dotnet build BasicFinance.sln --configuration Release --no-restore
       - name: Test
