@@ -34,6 +34,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         modelBuilder.Entity<StatementImportRow>(entity =>
         {
             entity.Property(row => row.Amount).HasColumnType("TEXT");
+            entity.Property(row => row.UnitCount).HasColumnType("TEXT");
+            entity.Property(row => row.UnitValue).HasColumnType("TEXT");
             entity.Property(row => row.Description).HasMaxLength(160).IsRequired();
             entity.HasIndex(row => new { row.StatementImportId, row.RowNumber }).IsUnique();
         });
@@ -41,6 +43,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         modelBuilder.Entity<FinancialTransaction>(entity =>
         {
             entity.Property(transaction => transaction.Amount).HasColumnType("TEXT");
+            entity.Property(transaction => transaction.UnitCount).HasColumnType("TEXT");
+            entity.Property(transaction => transaction.UnitValue).HasColumnType("TEXT");
             entity.Property(transaction => transaction.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(transaction => transaction.TransactionDate);
             entity.HasIndex(transaction => transaction.AccountId);
