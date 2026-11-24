@@ -125,6 +125,9 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
     {
         if (input.Type == AccountType.Retirement && !input.RetirementType.HasValue)
             ModelState.AddModelError(nameof(input.RetirementType), "Choose a retirement account type.");
+        else if (input.Type == AccountType.Retirement &&
+                 !Enum.IsDefined(input.RetirementType!.Value))
+            ModelState.AddModelError(nameof(input.RetirementType), "Choose a valid retirement account type.");
         if (input.Type != AccountType.Retirement)
             input.RetirementType = null;
     }
