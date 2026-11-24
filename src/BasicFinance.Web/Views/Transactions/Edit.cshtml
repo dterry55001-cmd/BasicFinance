@@ -1,0 +1,4 @@
+@model BasicFinance.Web.Models.TransactionInputModel
+@{ ViewData["Title"] = "Edit transaction"; }
+<section class="page-heading"><div><p class="eyebrow">TRANSACTION LEDGER</p><h1>Edit transaction</h1><p class="page-description">Update the transaction details.</p></div></section>
+<form asp-action="Edit" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" class="form-card"><partial name="_TransactionForm" model="Model" /></form>
