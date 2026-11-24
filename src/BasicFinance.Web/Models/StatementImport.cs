@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations;
 namespace BasicFinance.Web.Models;
 
 public enum StatementImportStatus { Preview, Completed, CompletedWithErrors }
+public enum StatementImportProfile
+{
+    Unknown, UbsBrokerage, LifeSightRetirement, AtomicBanking,
+    RobinhoodBrokerage, RobinhoodBank, ChaseBanking
+}
 
 public sealed class StatementImport
 {
@@ -12,6 +17,8 @@ public sealed class StatementImport
     public int AccountId { get; set; }
     public Account Account { get; set; } = null!;
     public StatementImportStatus Status { get; set; } = StatementImportStatus.Preview;
+    public StatementImportProfile Profile { get; set; } = StatementImportProfile.Unknown;
+    [StringLength(64)] public string? AccountKey { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedUtc { get; set; }
     [StringLength(4)] public string? ExternalAccountNumberLast4 { get; set; }
@@ -26,6 +33,11 @@ public sealed class StatementImportRow
     public StatementImport StatementImport { get; set; } = null!;
     public int RowNumber { get; set; }
     public DateTime? TransactionDate { get; set; }
+    public DateTime? PostingDate { get; set; }
+    public DateTime? EffectiveDate { get; set; }
+    public DateTime? ActivityDate { get; set; }
+    public DateTime? ProcessDate { get; set; }
+    public DateTime? SettlementDate { get; set; }
     [StringLength(160)]
     public string Description { get; set; } = string.Empty;
     public decimal Amount { get; set; }
