@@ -38,7 +38,10 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(row => row.UnitValue).HasColumnType("TEXT");
             entity.Property(row => row.Quantity).HasColumnType("TEXT");
             entity.Property(row => row.Price).HasColumnType("TEXT");
+            entity.Property(row => row.RunningBalance).HasColumnType("TEXT");
             entity.Property(row => row.Description).HasMaxLength(160).IsRequired();
+            entity.Property(row => row.SourceFieldsJson).HasColumnType("TEXT").IsRequired();
+            entity.HasIndex(row => row.DuplicateFingerprint);
             entity.HasIndex(row => new { row.StatementImportId, row.RowNumber }).IsUnique();
         });
 
@@ -49,6 +52,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(transaction => transaction.UnitValue).HasColumnType("TEXT");
             entity.Property(transaction => transaction.Quantity).HasColumnType("TEXT");
             entity.Property(transaction => transaction.Price).HasColumnType("TEXT");
+            entity.Property(transaction => transaction.SourceSignedAmount).HasColumnType("TEXT");
+            entity.Property(transaction => transaction.RunningBalance).HasColumnType("TEXT");
+            entity.HasIndex(transaction => transaction.ImportFingerprint).IsUnique().HasFilter("\"ImportFingerprint\" IS NOT NULL");
             entity.Property(transaction => transaction.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(transaction => transaction.TransactionDate);
             entity.HasIndex(transaction => transaction.AccountId);
