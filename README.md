@@ -43,9 +43,11 @@ The application starts with no user financial records. No legacy finance applica
 - Duplicate detection against existing transactions and within each uploaded file
 - Import history with row-level validation status
 - LifeSight-style contribution metadata: source, fund name, unit count, and unit value
-- Confirmed imports preserve fund and unit details on the ledger transaction
+- UBS brokerage statement support: account number (last four digits only), date, activity, description, symbol, CUSIP, security type, quantity, price, amount, and friendly account name
+- Confirmed imports preserve brokerage activity and security details on ledger transactions
+- Search transactions by symbol, CUSIP, and brokerage activity
 
-Imports remain staged until the user confirms them. CSV import currently supports a configurable common header set; OFX/QFX and bank-specific mapping templates are future work.
+Imports remain staged until the user confirms them. CSV import supports the common transaction layout, LifeSight investment contribution columns, and the UBS brokerage column layout. OFX/QFX and additional institution-specific mapping templates are future work.
 
 ## Run locally
 
