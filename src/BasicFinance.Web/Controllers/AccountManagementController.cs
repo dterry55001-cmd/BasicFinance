@@ -35,8 +35,14 @@ public sealed class AccountManagementController(
             .GroupBy(r => r.Account.CurrencyCode)
             .Select(group => new DebtCurrencyTotal { CurrencyCode = group.Key, Amount = group.Sum(r => Math.Max(0, r.Balance)) })
             .OrderBy(item => item.CurrencyCode).ToList();
-        ViewBag.InterestEarned = await database.InterestRecords.AsNoTracking().Where(r => r.Type == InterestRecordType.Earned).SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
-        ViewBag.InterestCharged = await database.InterestRecords.AsNoTracking().Where(r => r.Type == InterestRecordType.Charged).SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
+        ViewBag.InterestEarnedTotals = await database.InterestRecords.AsNoTracking().Where(r => r.Type == InterestRecordType.Earned)
+            .GroupBy(r => r.Account.CurrencyCode)
+            .Select(group => new InterestCurrencyTotal { CurrencyCode = group.Key, Amount = group.Sum(r => r.Amount) })
+            .OrderBy(item => item.CurrencyCode).ToListAsync(cancellationToken);
+        ViewBag.InterestChargedTotals = await database.InterestRecords.AsNoTracking().Where(r => r.Type == InterestRecordType.Charged)
+            .GroupBy(r => r.Account.CurrencyCode)
+            .Select(group => new InterestCurrencyTotal { CurrencyCode = group.Key, Amount = group.Sum(r => r.Amount) })
+            .OrderBy(item => item.CurrencyCode).ToListAsync(cancellationToken);
         return View();
     }
 
@@ -193,6 +199,12 @@ public sealed class AccountManagementRow
 }
 
 public sealed class DebtCurrencyTotal
+{
+    public string CurrencyCode { get; set; } = "USD";
+    public decimal Amount { get; set; }
+}
+
+public sealed class InterestCurrencyTotal
 {
     public string CurrencyCode { get; set; } = "USD";
     public decimal Amount { get; set; }
