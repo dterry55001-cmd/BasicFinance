@@ -85,7 +85,7 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         ValidateAccountSubtypes(input);
         if (!ModelState.IsValid)
         {
-            PopulateRetirementTypes();
+            PopulateAccountSubtypes();
             return View(input);
         }
         var account = await database.Accounts.FindAsync(id);
