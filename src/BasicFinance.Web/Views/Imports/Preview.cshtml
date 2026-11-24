@@ -2,6 +2,10 @@
 @using BasicFinance.Web.Models
 @{ ViewData["Title"] = "Import preview"; var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate); var errors = Model.Rows.Count(x => x.ValidationError is not null); var duplicates = Model.Rows.Count(x => x.IsDuplicate); }
 <section class="page-heading"><div><p class="eyebrow">IMPORT REVIEW</p><h1>@Model.FileName</h1><p class="page-description">@Model.Account.Name · Uploaded @Model.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</p></div><a class="button button-secondary" asp-action="Index">Back to imports</a></section>
+@if (Model.FriendlyAccountName is not null || Model.ExternalAccountNumberLast4 is not null)
+{
+    <div class="notice">Statement account: <strong>@(Model.FriendlyAccountName ?? Model.Account.Name)</strong> · Account ending in @(Model.ExternalAccountNumberLast4 ?? "unknown")</div>
+}
 <div class="summary-grid">
     <div class="summary-card"><span>Rows detected</span><strong>@Model.Rows.Count</strong></div>
     <div class="summary-card"><span>Ready to import</span><strong>@valid</strong></div>
@@ -17,10 +21,10 @@ else
     <div class="notice notice-success">Import status: @Model.Status. Completed @Model.CompletedUtc?.ToLocalTime().ToString("MMM d, yyyy h:mm tt").</div>
 }
 <div class="table-card"><div class="table-scroll"><table>
-    <thead><tr><th>CSV row</th><th>Date</th><th>Description</th><th>Type</th><th>Category</th><th>Amount</th><th>Source / fund</th><th>Units</th><th>Unit value</th><th>Review status</th></tr></thead>
+    <thead><tr><th>CSV row</th><th>Date</th><th>Activity</th><th>Description</th><th>Symbol / CUSIP</th><th>Security type</th><th>Quantity</th><th>Price</th><th>Amount</th><th>Review status</th></tr></thead>
     <tbody>@foreach (var row in Model.Rows.OrderBy(x => x.RowNumber))
     {
-        <tr><td>@row.RowNumber</td><td>@(row.TransactionDate?.ToString("MMM d, yyyy") ?? "—")</td><td>@row.Description</td><td>@row.Type</td><td>@(row.Category ?? "—")</td><td>@row.Amount.ToString("N2") @Model.Account.CurrencyCode</td><td>@(row.Source ?? "—")<div class="table-subtext">@(row.FundName ?? "")</div></td><td>@(row.UnitCount?.ToString("N6") ?? "—")</td><td>@(row.UnitValue?.ToString("N6") ?? "—")</td>
+        <tr><td>@row.RowNumber</td><td>@(row.TransactionDate?.ToString("MMM d, yyyy") ?? "—")</td><td>@(row.Activity ?? row.Type.ToString())</td><td>@row.Description<div class="table-subtext">@(row.Source ?? row.FundName ?? "")</div></td><td>@(row.Symbol ?? "—")<div class="table-subtext">@(row.Cusip ?? "")</div></td><td>@(row.SecurityType ?? "—")</td><td>@(row.Quantity?.ToString("N6") ?? row.UnitCount?.ToString("N6") ?? "—")</td><td>@(row.Price?.ToString("N4") ?? row.UnitValue?.ToString("N6") ?? "—")</td><td>@row.Amount.ToString("N2") @Model.Account.CurrencyCode</td>
         <td>@if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> } else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> } else if (row.IsImported) { <span class="status-success">Imported</span> } else { <span class="status-ready">Ready</span> }</td></tr>
     }</tbody>
 </table></div></div>
