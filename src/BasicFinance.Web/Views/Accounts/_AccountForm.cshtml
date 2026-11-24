@@ -105,14 +105,15 @@
     const updateSubtypeFields = () => {
         const isRetirement = accountType.value === "@((int)AccountType.Retirement)";
         const isDebt = accountType.value === "@((int)AccountType.Debt)";
+        const isCreditCard = accountType.value === "@((int)AccountType.CreditCard)";
         retirementField.hidden = !isRetirement;
         retirementType.required = isRetirement;
         debtField.hidden = !isDebt;
         debtType.required = isDebt;
-        debtDetails.hidden = !isDebt;
+        debtDetails.hidden = !(isDebt || isCreditCard);
         retirementDetails.hidden = !isRetirement;
         brokerageDetails.hidden = accountType.value !== "@((int)AccountType.Brokerage)";
-        interestRateField.hidden = !(isDebt || ["@((int)AccountType.Checking)", "@((int)AccountType.Savings)"].includes(accountType.value));
+        interestRateField.hidden = !(isDebt || isCreditCard || ["@((int)AccountType.Checking)", "@((int)AccountType.Savings)"].includes(accountType.value));
         if (!isRetirement) retirementType.value = "";
         if (!isDebt) debtType.value = "";
     };
