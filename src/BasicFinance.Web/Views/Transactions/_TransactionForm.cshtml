@@ -1,0 +1,15 @@
+@model BasicFinance.Web.Models.TransactionInputModel
+@using BasicFinance.Web.Models
+<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+<div class="form-grid">
+    <div class="form-field"><label asp-for="AccountId"></label><select asp-for="AccountId" asp-items="ViewBag.Accounts"><option value="">Choose account</option></select><span asp-validation-for="AccountId" class="field-error"></span></div>
+    <div class="form-field"><label asp-for="Type"></label><select asp-for="Type" asp-items="Html.GetEnumSelectList<TransactionType>()"></select><span asp-validation-for="Type" class="field-error"></span></div>
+    <div class="form-field"><label asp-for="RelatedAccountId"></label><select asp-for="RelatedAccountId" asp-items="ViewBag.Accounts"><option value="">Not applicable</option></select><span asp-validation-for="RelatedAccountId" class="field-error"></span><small>Only required for transfers. Source and destination must use the same currency.</small></div>
+    <div class="form-field"><label asp-for="Description"></label><input asp-for="Description" /><span asp-validation-for="Description" class="field-error"></span></div>
+    <div class="form-field"><label asp-for="Category"></label><input asp-for="Category" placeholder="e.g. Housing, Groceries, Salary" /><span asp-validation-for="Category" class="field-error"></span></div>
+    <div class="form-field"><label asp-for="Amount"></label><input asp-for="Amount" type="number" min="0.01" step="0.01" /><span asp-validation-for="Amount" class="field-error"></span></div>
+    <div class="form-field"><label asp-for="CurrencyCode"></label><input asp-for="CurrencyCode" maxlength="3" /><span asp-validation-for="CurrencyCode" class="field-error"></span></div>
+    <div class="form-field"><label asp-for="TransactionDate"></label><input asp-for="TransactionDate" type="date" /><span asp-validation-for="TransactionDate" class="field-error"></span></div>
+    <div class="form-field"><label asp-for="Reference"></label><input asp-for="Reference" /><span asp-validation-for="Reference" class="field-error"></span></div>
+</div>
+<div class="form-actions"><button class="button button-primary" type="submit">Save transaction</button><a class="button button-secondary" asp-action="Index">Cancel</a></div>
