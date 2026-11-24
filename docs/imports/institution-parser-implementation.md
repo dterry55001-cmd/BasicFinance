@@ -57,6 +57,12 @@ The account key passed to the parser should be the internal selected account ide
 - [x] Safe review flags for Atomic statuses and unmapped Robinhood brokerage codes.
 - [x] EF Core migrations added for institution-specific fields and duplicate fingerprints.
 - [x] Automated parser tests added for all six layouts and key safety rules.
-- [ ] Confirm CI test run and exercise the migration against a clean SQLite database.
+- [x] CI build and 8 automated tests pass, including migration execution against a clean in-memory SQLite database.
 - [ ] Add a workflow to resolve held-for-review rows.
 - [ ] Add reconciliation and audit features.
+
+## Dependency security
+
+- EF Core SQLite and Design packages are updated to 10.0.15.
+- The transitive `System.Security.Cryptography.Pkcs` package is pinned to patched 9.0.21.
+- CI now runs `dotnet list package --vulnerable --include-transitive`; the audit reported no vulnerable packages.
