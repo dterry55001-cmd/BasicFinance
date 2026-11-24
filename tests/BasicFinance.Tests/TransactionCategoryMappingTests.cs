@@ -59,6 +59,7 @@ public sealed class TransactionCategoryMappingTests
         }
 
         Assert.Contains("TransactionCategories", tables);
+        Assert.Contains("TransactionRules", tables);
         Assert.Contains("TransactionCategoryMappings", tables);
         Assert.Contains("Transactions", tables);
         Assert.Contains("StatementImportRows", tables);
