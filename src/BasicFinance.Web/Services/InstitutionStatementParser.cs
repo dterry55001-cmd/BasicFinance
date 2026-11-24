@@ -91,6 +91,8 @@ public sealed class InstitutionStatementParser
     {
         if (profile == StatementSourceProfile.Unknown)
             throw new InvalidDataException("The statement format was not recognized. Select a supported institution profile.");
+        if (string.IsNullOrWhiteSpace(accountKey))
+            throw new ArgumentException("A selected internal account key is required.", nameof(accountKey));
         var records = ReadCsv(csv);
         if (records.Count < 2) throw new InvalidDataException("The CSV must contain a header and at least one data row.");
 
@@ -231,10 +233,18 @@ public sealed class InstitutionStatementParser
 
     public static string BuildFingerprint(StatementSourceProfile profile, string accountKey, ParsedStatementRow row)
     {
+        // A provider transaction ID is the strongest identity when present. Keep it
+        // independent of mutable descriptions/status/amount fields for idempotency.
+        if (!string.IsNullOrWhiteSpace(row.SourceReference))
+        {
+            var sourceIdentity = string.Join("|", profile.ToString(), accountKey.Trim(), row.SourceReference.Trim());
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sourceIdentity)));
+        }
+
         // Stable, culture-invariant fingerprint. Account scope prevents cross-account collisions.
         var parts = new[]
         {
-            profile.ToString(), accountKey, row.SourceReference,
+            profile.ToString(), accountKey.Trim(),
             row.TransactionDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             row.PostingDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             row.ActivityDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
