@@ -32,6 +32,12 @@ public sealed class StatementImportRow
     public string? Category { get; set; }
     [StringLength(100)]
     public string? Reference { get; set; }
+    [StringLength(120)]
+    public string? Source { get; set; }
+    [StringLength(160)]
+    public string? FundName { get; set; }
+    public decimal? UnitCount { get; set; }
+    public decimal? UnitValue { get; set; }
     [StringLength(500)]
     public string? ValidationError { get; set; }
     public bool IsDuplicate { get; set; }
