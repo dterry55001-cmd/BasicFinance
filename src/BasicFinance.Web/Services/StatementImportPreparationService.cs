@@ -52,7 +52,7 @@ public sealed class StatementImportPreparationService(
             {
                 row.IsDuplicate = !seenInFile.Add(row.DuplicateFingerprint)
                     || await database.StatementImportRows.AnyAsync(
-                        existing => existing.DuplicateFingerprint == row.DuplicateFingerprint,
+                        existing => existing.DuplicateFingerprint == row.DuplicateFingerprint && existing.IsImported,
                         cancellationToken)
                     || await database.Transactions.AnyAsync(
                         existing => existing.ImportFingerprint == row.DuplicateFingerprint,
