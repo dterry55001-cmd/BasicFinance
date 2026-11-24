@@ -69,8 +69,6 @@ public sealed class CsvStatementParser
                 }
                 row.FundName = fundIndex >= 0 ? NullIfEmpty(Get(fields, fundIndex), 160) : null;
                 row.Description = Get(fields, descriptionIndex).Trim();
-                if (!string.IsNullOrWhiteSpace(row.FundName) && !row.Description.Contains(row.FundName, StringComparison.OrdinalIgnoreCase))
-                    row.Description = $"{row.Description} — {row.FundName}";
                 if (string.IsNullOrWhiteSpace(row.Description) || row.Description.Length > 160)
                     throw new FormatException("Description is required and must be 160 characters or fewer.");
 
@@ -96,11 +94,8 @@ public sealed class CsvStatementParser
                 var typeText = typeIndex >= 0 ? Get(fields, typeIndex).Trim() : "";
                 if (!string.IsNullOrWhiteSpace(row.Activity))
                     row.Type = MapActivity(row.Activity, amount);
-                else if (string.IsNullOrWhiteSpace(typeText))
-                    row.Type = amount < 0 ? TransactionType.Expense : TransactionType.Income;
-                else if (!Enum.TryParse<TransactionType>(typeText, true, out var parsedType) || parsedType == TransactionType.Transfer)
-                    row.Type = amount < 0 ? TransactionType.Expense : TransactionType.Income;
-                else row.Type = parsedType;
+                else
+                    row.Type = MapTransactionType(typeText, amount);
 
 
 
@@ -146,6 +141,22 @@ public sealed class CsvStatementParser
         record.Add(field.ToString().Trim());
         if (record.Any(value => value.Length > 0)) records.Add(record);
         return records;
+    }
+
+    private static TransactionType MapTransactionType(string typeText, decimal signedAmount)
+    {
+        var value = Normalize(typeText);
+        if (value is "contribution" or "employermatch" or "employercontribution" or "rollover" or "deposit")
+            return TransactionType.Deposit;
+        if (value is "withdrawal" or "distribution" or "cashout")
+            return TransactionType.Withdrawal;
+        if (value is "purchase" or "buy")
+            return TransactionType.Expense;
+        if (value is "sale" or "sell" or "dividend" or "interest")
+            return TransactionType.Income;
+        if (Enum.TryParse<TransactionType>(typeText, true, out var parsedType) && parsedType != TransactionType.Transfer)
+            return parsedType;
+        return signedAmount < 0 ? TransactionType.Expense : TransactionType.Income;
     }
 
     private static TransactionType MapActivity(string activity, decimal signedAmount)
