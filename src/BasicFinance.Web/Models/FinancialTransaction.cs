@@ -41,6 +41,14 @@ public sealed class FinancialTransaction
 
     [StringLength(100)]
     public string? Reference { get; set; }
+    [StringLength(100)] public string? Activity { get; set; }
+    [StringLength(40)] public string? Symbol { get; set; }
+    [StringLength(20)] public string? Cusip { get; set; }
+    [StringLength(40)] public string? SecurityType { get; set; }
+    public decimal? Quantity { get; set; }
+    public decimal? Price { get; set; }
+    [StringLength(4)] public string? ExternalAccountNumberLast4 { get; set; }
+    [StringLength(100)] public string? FriendlyAccountName { get; set; }
 
     [StringLength(120)]
     public string? Source { get; set; }
