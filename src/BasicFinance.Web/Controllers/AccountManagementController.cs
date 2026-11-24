@@ -49,17 +49,17 @@ public sealed class AccountManagementController(
     [HttpGet]
     public async Task<IActionResult> Payoff(CancellationToken cancellationToken)
     {
-        await PopulateDebtAccountsAsync(cancellationToken);
+        await PopulateDebtCurrenciesAsync("USD", cancellationToken);
         return View(new DebtPayoffInputModel());
     }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Payoff(DebtPayoffInputModel input, CancellationToken cancellationToken)
     {
-        await PopulateDebtAccountsAsync(cancellationToken);
+        await PopulateDebtCurrenciesAsync(input.CurrencyCode, cancellationToken);
         if (!ModelState.IsValid) return View(input);
         var accounts = await database.Accounts.AsNoTracking()
-            .Where(a => a.Status == AccountStatus.Active && (a.Type == AccountType.Debt || a.Type == AccountType.CreditCard))
+            .Where(a => a.Status == AccountStatus.Active && a.CurrencyCode == input.CurrencyCode && (a.Type == AccountType.Debt || a.Type == AccountType.CreditCard))
             .OrderBy(a => a.Name).ToListAsync(cancellationToken);
         var debts = new List<DebtPayoffDebtInput>();
         foreach (var account in accounts)
@@ -173,6 +173,15 @@ public sealed class AccountManagementController(
         await database.SaveChangesAsync(cancellationToken);
         TempData["SuccessMessage"] = "Interest record saved. It is tracked separately and does not alter account balance.";
         return RedirectToAction(nameof(Interest), new { accountId = input.AccountId });
+    }
+
+    private async Task PopulateDebtCurrenciesAsync(string selectedCurrency, CancellationToken cancellationToken)
+    {
+        var currencies = await database.Accounts.AsNoTracking()
+            .Where(a => a.Status == AccountStatus.Active && (a.Type == AccountType.Debt || a.Type == AccountType.CreditCard))
+            .Select(a => a.CurrencyCode).Distinct().OrderBy(code => code).ToListAsync(cancellationToken);
+        if (currencies.Count == 0 && !currencies.Contains("USD")) currencies.Add("USD");
+        ViewBag.DebtCurrencies = new SelectList(currencies, selectedCurrency);
     }
 
     private async Task PopulateDebtAccountsAsync(CancellationToken cancellationToken)
