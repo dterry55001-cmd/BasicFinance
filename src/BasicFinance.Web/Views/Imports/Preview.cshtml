@@ -48,6 +48,10 @@ else
                             <option value="@item.Value" selected="@(int.TryParse(item.Value, out var optionId) && row.CategoryId == optionId)">@item.Text</option>
                         }
                     </select>
+                    @if (row.CategorySuggestedByRule)
+                    {
+                        <div class="table-subtext">Suggested by a transaction rule — review before confirming</div>
+                    }
                     @if (!string.IsNullOrWhiteSpace(row.SourceCategory) && Model.Profile != StatementImportProfile.Unknown)
                     {
                         <label><input type="checkbox" name="applyToFutureImports" value="true" /> Remember this mapping for future imports</label>
