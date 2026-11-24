@@ -45,6 +45,8 @@ public sealed class StatementImportRow
     public TransactionType Type { get; set; }
     [StringLength(80)]
     public string? Category { get; set; }
+    public int? CategoryId { get; set; }
+    public TransactionCategory? TransactionCategory { get; set; }
     [StringLength(100)]
     public string? Reference { get; set; }
     [StringLength(100)] public string? Activity { get; set; }
