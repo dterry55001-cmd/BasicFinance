@@ -9,7 +9,7 @@ namespace BasicFinance.Web.Services;
 /// </summary>
 public sealed class StatementImportPreparationService(
     ApplicationDbContext database,
-    InstitutionStatementParser parser)
+    InstitutionStatementParser parser, TransactionRuleService ruleService)
 {
     public async Task<StatementImport> PrepareAsync(
         int accountId,
@@ -62,6 +62,13 @@ public sealed class StatementImportPreparationService(
             if (sourceCategory.Length > 0 && mappingLookup.TryGetValue(sourceCategory, out var mappedCategory)
                 && IsCompatible(mappedCategory.Type, row.Type))
                 row.CategoryId = mappedCategory.Id;
+
+            if (!row.CategoryId.HasValue)
+            {
+                var suggestion = await ruleService.SuggestAsync(row.Description, account.Id, row.Type, cancellationToken);
+                if (suggestion is not null)
+                    row.CategoryId = suggestion.Id;
+            }
             if (!string.IsNullOrWhiteSpace(row.DuplicateFingerprint))
             {
                 row.IsDuplicate = !seenInFile.Add(row.DuplicateFingerprint)
