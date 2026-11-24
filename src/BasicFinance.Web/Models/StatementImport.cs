@@ -47,6 +47,7 @@ public sealed class StatementImportRow
     public string? Category { get; set; }
     public int? CategoryId { get; set; }
     public TransactionCategory? TransactionCategory { get; set; }
+    public bool CategorySuggestedByRule { get; set; }
     [StringLength(100)]
     public string? Reference { get; set; }
     [StringLength(100)] public string? Activity { get; set; }
