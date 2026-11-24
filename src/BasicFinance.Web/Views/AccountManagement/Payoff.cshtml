@@ -8,6 +8,7 @@
 <section class="page-heading"><div><p class="eyebrow">DEBT PLANNING</p><h1>Debt payoff planner</h1><p class="page-description">Compare the debt snowball and avalanche methods using current account balances, APRs, and minimum payments.</p></div></section>
 <form asp-action="Payoff" method="post" class="form-card">
     <div asp-validation-summary="All" class="validation-summary"></div>
+    <div class="form-field"><label asp-for="CurrencyCode"></label><select asp-for="CurrencyCode" asp-items="(SelectList)ViewBag.DebtCurrencies"></select><span asp-validation-for="CurrencyCode" class="field-error"></span></div>
     <div class="form-field"><label asp-for="ExtraMonthlyPayment"></label><input asp-for="ExtraMonthlyPayment" type="number" min="0" step="0.01" /><span asp-validation-for="ExtraMonthlyPayment" class="field-error"></span><small>This amount is added to the sum of estimated monthly minimums.</small></div>
     <div class="form-actions"><button class="button button-primary" type="submit">Compare payoff strategies</button></div>
 </form>
