@@ -1,4 +1,7 @@
+using BasicFinance.Web.Data;
 using BasicFinance.Web.Models;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using BasicFinance.Web.Services;
 using Xunit;
 
@@ -34,4 +37,31 @@ public sealed class TransactionCategoryMappingTests
         Assert.Equal(expected,
             StatementImportPreparationService.IsCompatible(categoryType, transactionType));
     }
+    [Fact]
+    public async Task ApplicationModel_CreatesCategoryAndMappingSchema()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var database = new ApplicationDbContext(options);
+        await database.Database.EnsureCreatedAsync();
+
+        var tables = new List<string>();
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table'";
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                tables.Add(reader.GetString(0));
+        }
+
+        Assert.Contains("TransactionCategories", tables);
+        Assert.Contains("TransactionCategoryMappings", tables);
+        Assert.Contains("Transactions", tables);
+        Assert.Contains("StatementImportRows", tables);
+    }
+
 }
