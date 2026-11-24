@@ -24,7 +24,6 @@ public sealed class AccountDebtManagement : Migration
             );
             CREATE UNIQUE INDEX "IX_AccountBalanceSnapshots_AccountId_SnapshotDate"
                 ON "AccountBalanceSnapshots" ("AccountId", "SnapshotDate");
-
             CREATE TABLE "InterestRecords" (
                 "Id" INTEGER NOT NULL CONSTRAINT "PK_InterestRecords" PRIMARY KEY AUTOINCREMENT,
                 "AccountId" INTEGER NOT NULL,
@@ -46,7 +45,6 @@ public sealed class AccountDebtManagement : Migration
                 ON "InterestRecords" ("TransactionId");
             """);
     }
-
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(name: "InterestRecords");

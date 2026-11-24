@@ -1,0 +1,26 @@
+@using BasicFinance.Web.Models
+@{
+    ViewData["Title"] = "Account & debt management";
+    var rows = (IReadOnlyList<BasicFinance.Web.Controllers.AccountManagementRow>)ViewBag.Rows;
+}
+<section class="page-heading"><div><p class="eyebrow">ACCOUNTS & LIABILITIES</p><h1>Account & debt management</h1><p class="page-description">Monitor credit, loan obligations, interest activity, and historical balances.</p></div></section>
+<div class="summary-grid">
+    <div class="summary-card"><span>Total debt balances</span><strong>@(((decimal)ViewBag.DebtTotal).ToString("N2"))</strong></div>
+    <div class="summary-card"><span>Interest earned</span><strong>@(((decimal)ViewBag.InterestEarned).ToString("N2"))</strong></div>
+    <div class="summary-card"><span>Interest charged</span><strong>@(((decimal)ViewBag.InterestCharged).ToString("N2"))</strong></div>
+</div>
+<div class="quick-links">
+    <a class="button button-primary" asp-action="Payoff">Debt payoff planner</a>
+    <a class="button button-secondary" asp-action="Amortization">Loan amortization</a>
+    <a class="button button-secondary" asp-action="Interest">Interest tracking</a>
+</div>
+<section class="section-block"><div class="section-heading"><h2>Credit cards, loans & accounts</h2><a asp-controller="Accounts" asp-action="Index">Manage account details</a></div>
+<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Current balance</th><th>APR / APY</th><th>Credit utilization</th><th>Minimum payment</th><th>Due day</th><th>History</th></tr></thead><tbody>
+@foreach (var row in rows)
+{
+<tr><td><a class="table-link" asp-controller="Accounts" asp-action="Details" asp-route-id="@row.Account.Id">@row.Account.Name</a><div class="table-subtext">@row.Account.Type / @row.Account.DebtType</div></td>
+<td>@row.Balance.ToString("N2") @row.Account.CurrencyCode</td><td>@(row.Account.InterestRatePercent?.ToString("0.###") ?? "—")%</td>
+<td>@(row.UtilizationPercent.HasValue ? $"{row.UtilizationPercent:0.0}%" : "—")</td><td>@(row.Account.MinimumPayment?.ToString("N2") ?? "—")</td><td>@(row.Account.PaymentDueDay?.ToString() ?? "—")</td>
+<td><a asp-action="BalanceHistory" asp-route-accountId="@row.Account.Id">Balance history</a></td></tr>
+}
+</tbody></table></div></div></section>

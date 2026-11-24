@@ -1,0 +1,21 @@
+@using BasicFinance.Web.Models
+@model IReadOnlyList<InterestRecord>
+@{
+    ViewData["Title"] = "Interest tracking";
+}
+<section class="page-heading"><div><p class="eyebrow">INTEREST ACTIVITY</p><h1>Interest tracking</h1><p class="page-description">Record interest earned on assets and interest charged by creditors. These records are separate from transactions and do not change account balances.</p></div></section>
+@if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
+<form asp-action="AddInterest" method="post" class="form-card">
+<h2>Record interest</h2><div asp-validation-summary="All" class="validation-summary"></div>
+<div class="form-grid">
+<div class="form-field"><label for="AccountId">Account</label><select id="AccountId" name="AccountId" asp-items="(SelectList)ViewBag.Accounts" required><option value="">Choose account</option></select></div>
+<div class="form-field"><label for="Type">Interest type</label><select id="Type" name="Type"><option value="Earned">Earned</option><option value="Charged">Charged</option></select></div>
+<div class="form-field"><label for="InterestDate">Date</label><input id="InterestDate" name="InterestDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+<div class="form-field"><label for="Amount">Amount</label><input id="Amount" name="Amount" type="number" min="0.01" step="0.01" required /></div>
+<div class="form-field"><label for="Description">Description</label><input id="Description" name="Description" maxlength="160" value="Interest" /></div>
+<div class="form-field form-field-wide"><label for="Notes">Notes</label><textarea id="Notes" name="Notes" maxlength="500"></textarea></div>
+</div><button class="button button-primary" type="submit">Save interest record</button>
+</form>
+<section class="section-block"><h2>Interest history</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Account</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>
+@foreach (var record in Model) { <tr><td>@record.InterestDate.ToString("MMM d, yyyy")</td><td>@record.Account.Name</td><td>@record.Type</td><td>@record.Description</td><td>@record.Amount.ToString("C")</td></tr> }
+</tbody></table></div></div></section>
