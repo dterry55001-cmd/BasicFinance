@@ -1,0 +1,4 @@
+@model BasicFinance.Web.Models.TransactionRuleInputModel
+@{ ViewData["Title"] = "Add transaction rule"; }
+<section class="page-heading"><div><p class="eyebrow">TRANSACTION AUTOMATION</p><h1>Add rule</h1><p class="page-description">Create a rule that suggests a category when a description matches.</p></div></section>
+<form asp-action="Create" method="post" class="form-card"><partial name="_RuleForm" model="Model" /></form>
