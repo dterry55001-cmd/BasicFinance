@@ -23,7 +23,7 @@ public sealed class InitialAccounts : Migration
                 Institution = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                 AccountNumberLast4 = table.Column<string>(type: "TEXT", maxLength: 4, nullable: true),
                 CurrencyCode = table.Column<string>(type: "TEXT", maxLength: 3, nullable: false),
-                OpeningBalance = table.Column<string>(type: "TEXT", nullable: false),
+                OpeningBalance = table.Column<decimal>(type: "TEXT", nullable: false),
                 OpenedOn = table.Column<DateTime>(type: "TEXT", nullable: true),
                 Status = table.Column<int>(type: "INTEGER", nullable: false),
                 CreatedUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
