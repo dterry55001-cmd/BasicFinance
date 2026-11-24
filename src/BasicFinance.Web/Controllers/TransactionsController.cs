@@ -9,11 +9,12 @@ namespace BasicFinance.Web.Controllers;
 public sealed class TransactionsController(ApplicationDbContext database) : Controller
 {
     public async Task<IActionResult> Index(
-        int? accountId, DateTime? from, DateTime? to, string? search, CancellationToken cancellationToken)
+        int? accountId, DateTime? from, DateTime? to, string? search, int? categoryId, CancellationToken cancellationToken)
     {
         var query = database.Transactions.AsNoTracking()
             .Include(transaction => transaction.Account)
             .Include(transaction => transaction.RelatedAccount)
+            .Include(transaction => transaction.TransactionCategory)
             .AsQueryable();
 
         if (accountId.HasValue)
@@ -22,11 +23,14 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
             query = query.Where(transaction => transaction.TransactionDate >= from.Value.Date);
         if (to.HasValue)
             query = query.Where(transaction => transaction.TransactionDate < to.Value.Date.AddDays(1));
+        if (categoryId.HasValue)
+            query = query.Where(transaction => transaction.CategoryId == categoryId);
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
             query = query.Where(transaction => transaction.Description.Contains(term)
                 || (transaction.Category != null && transaction.Category.Contains(term))
+                || (transaction.TransactionCategory != null && transaction.TransactionCategory.Name.Contains(term))
                 || (transaction.Reference != null && transaction.Reference.Contains(term))
                 || (transaction.Symbol != null && transaction.Symbol.Contains(term))
                 || (transaction.Cusip != null && transaction.Cusip.Contains(term))
@@ -36,7 +40,11 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         ViewData["Accounts"] = new SelectList(
             await database.Accounts.AsNoTracking().Where(a => a.Status != AccountStatus.Archived).OrderBy(a => a.Name).ToListAsync(cancellationToken),
             "Id", "Name", accountId);
+        ViewData["Categories"] = new SelectList(
+            await database.TransactionCategories.AsNoTracking().OrderBy(c => c.Type).ThenBy(c => c.Name).ToListAsync(cancellationToken),
+            "Id", "Name", categoryId);
         ViewData["AccountId"] = accountId;
+        ViewData["CategoryId"] = categoryId;
         ViewData["From"] = from?.ToString("yyyy-MM-dd");
         ViewData["To"] = to?.ToString("yyyy-MM-dd");
         ViewData["Search"] = search;
@@ -46,7 +54,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
 
     public async Task<IActionResult> Create(int? accountId, CancellationToken cancellationToken)
     {
-        await PopulateAccountsAsync(accountId, cancellationToken);
+        await PopulateFormAsync(accountId, null, null, cancellationToken);
         return View(new TransactionInputModel { AccountId = accountId ?? 0 });
     }
 
@@ -58,10 +66,11 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
             ? await database.Accounts.FindAsync([input.RelatedAccountId.Value], cancellationToken)
             : null;
 
+        await ValidateCategoryAsync(input, cancellationToken);
         ValidateAccounts(input, account, destination);
         if (!ModelState.IsValid)
         {
-            await PopulateAccountsAsync(input.AccountId, cancellationToken);
+            await PopulateFormAsync(input.AccountId, input.Type, input.CategoryId, cancellationToken);
             return View(input);
         }
 
@@ -71,7 +80,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
             RelatedAccountId = input.RelatedAccountId,
             Type = input.Type,
             Description = input.Description.Trim(),
-            Category = Clean(input.Category),
+            CategoryId = input.CategoryId,
             Amount = input.Amount,
             CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant(),
             TransactionDate = input.TransactionDate.Date,
@@ -91,14 +100,14 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         var transaction = await database.Transactions.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
         if (transaction is null) return NotFound();
 
-        await PopulateAccountsAsync(transaction.AccountId, cancellationToken);
+        await PopulateFormAsync(transaction.AccountId, transaction.Type, transaction.CategoryId, cancellationToken);
         return View(new TransactionInputModel
         {
             AccountId = transaction.AccountId,
             RelatedAccountId = transaction.RelatedAccountId,
             Type = transaction.Type,
             Description = transaction.Description,
-            Category = transaction.Category,
+            CategoryId = transaction.CategoryId,
             Amount = transaction.Amount,
             CurrencyCode = transaction.CurrencyCode,
             TransactionDate = transaction.TransactionDate,
@@ -116,11 +125,12 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         var destination = input.RelatedAccountId.HasValue
             ? await database.Accounts.FindAsync([input.RelatedAccountId.Value], cancellationToken)
             : null;
+        await ValidateCategoryAsync(input, cancellationToken);
         ValidateAccounts(input, account, destination);
 
         if (!ModelState.IsValid)
         {
-            await PopulateAccountsAsync(input.AccountId, cancellationToken);
+            await PopulateFormAsync(input.AccountId, input.Type, input.CategoryId, cancellationToken);
             return View(input);
         }
 
@@ -128,7 +138,7 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         transaction.RelatedAccountId = input.RelatedAccountId;
         transaction.Type = input.Type;
         transaction.Description = input.Description.Trim();
-        transaction.Category = Clean(input.Category);
+        transaction.CategoryId = input.CategoryId;
         transaction.Amount = input.Amount;
         transaction.CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant();
         transaction.TransactionDate = input.TransactionDate.Date;
@@ -153,6 +163,31 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         return RedirectToAction(nameof(Index), new { accountId });
     }
 
+    private async Task ValidateCategoryAsync(TransactionInputModel input, CancellationToken cancellationToken)
+    {
+        var expectedType = input.Type switch
+        {
+            TransactionType.Income or TransactionType.Deposit => TransactionCategoryType.Income,
+            TransactionType.Expense or TransactionType.Withdrawal => TransactionCategoryType.Expense,
+            TransactionType.Transfer => TransactionCategoryType.Transfer,
+            _ => (TransactionCategoryType?)null
+        };
+
+        if (!input.CategoryId.HasValue)
+        {
+            if (input.Type != TransactionType.Transfer)
+                ModelState.AddModelError(nameof(input.CategoryId), "Choose a category for this transaction.");
+            return;
+        }
+
+        var category = await database.TransactionCategories
+            .FirstOrDefaultAsync(item => item.Id == input.CategoryId.Value, cancellationToken);
+        if (category is null || !category.IsActive)
+            ModelState.AddModelError(nameof(input.CategoryId), "Choose an active category.");
+        else if (expectedType.HasValue && category.Type != expectedType.Value)
+            ModelState.AddModelError(nameof(input.CategoryId), "The selected category does not match the transaction type.");
+    }
+
     private void ValidateAccounts(TransactionInputModel input, Account? account, Account? destination)
     {
         if (account is null || account.Status == AccountStatus.Archived)
@@ -169,12 +204,27 @@ public sealed class TransactionsController(ApplicationDbContext database) : Cont
         }
     }
 
-    private async Task PopulateAccountsAsync(int? selectedId, CancellationToken cancellationToken)
+    private async Task PopulateFormAsync(int? selectedAccountId, TransactionType? type, int? selectedCategoryId, CancellationToken cancellationToken)
     {
         var accounts = await database.Accounts.AsNoTracking()
             .Where(a => a.Status != AccountStatus.Archived)
             .OrderBy(a => a.Name).ToListAsync(cancellationToken);
-        ViewBag.Accounts = new SelectList(accounts, "Id", "Name", selectedId);
+        ViewBag.Accounts = new SelectList(accounts, "Id", "Name", selectedAccountId);
+
+        var categoryQuery = database.TransactionCategories.AsNoTracking().Where(category => category.IsActive);
+        if (type.HasValue)
+        {
+            var categoryType = type.Value switch
+            {
+                TransactionType.Income or TransactionType.Deposit => TransactionCategoryType.Income,
+                TransactionType.Expense or TransactionType.Withdrawal => TransactionCategoryType.Expense,
+                TransactionType.Transfer => TransactionCategoryType.Transfer,
+                _ => (TransactionCategoryType?)null
+            };
+            if (categoryType.HasValue) categoryQuery = categoryQuery.Where(category => category.Type == categoryType.Value);
+        }
+        var categories = await categoryQuery.OrderBy(category => category.DisplayOrder).ThenBy(category => category.Name).ToListAsync(cancellationToken);
+        ViewBag.Categories = new SelectList(categories, "Id", "Name", selectedCategoryId);
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
