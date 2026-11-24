@@ -70,7 +70,7 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
     {
         var account = await database.Accounts.FindAsync(id);
         if (account is null) return NotFound();
-        PopulateRetirementTypes();
+        PopulateAccountSubtypes();
         return View(new AccountInputModel
         {
             Name = account.Name, Type = account.Type, RetirementType = account.RetirementType, DebtType = account.DebtType, Institution = account.Institution,
@@ -82,7 +82,7 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, AccountInputModel input)
     {
-        ValidateRetirementType(input);
+        ValidateAccountSubtypes(input);
         if (!ModelState.IsValid)
         {
             PopulateRetirementTypes();
