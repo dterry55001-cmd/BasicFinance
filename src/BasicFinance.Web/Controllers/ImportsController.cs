@@ -46,6 +46,8 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
                 AccountId = accountId,
                 Status = StatementImportStatus.Preview,
                 CreatedUtc = DateTime.UtcNow,
+                ExternalAccountNumberLast4 = rows.Select(x => x.ExternalAccountNumberLast4).FirstOrDefault(x => x is not null),
+                FriendlyAccountName = rows.Select(x => x.FriendlyAccountName).FirstOrDefault(x => x is not null),
                 Rows = rows
             };
             var seenInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -106,6 +108,14 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
                 CurrencyCode = account.CurrencyCode,
                 TransactionDate = row.TransactionDate!.Value,
                 Reference = row.Reference,
+                Activity = row.Activity,
+                Symbol = row.Symbol,
+                Cusip = row.Cusip,
+                SecurityType = row.SecurityType,
+                Quantity = row.Quantity,
+                Price = row.Price,
+                ExternalAccountNumberLast4 = row.ExternalAccountNumberLast4,
+                FriendlyAccountName = row.FriendlyAccountName,
                 Source = row.Source,
                 FundName = row.FundName,
                 UnitCount = row.UnitCount,
