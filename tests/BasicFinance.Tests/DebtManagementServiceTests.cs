@@ -1,0 +1,76 @@
+using BasicFinance.Web.Models;
+using BasicFinance.Web.Services;
+using Xunit;
+
+namespace BasicFinance.Tests;
+
+public sealed class DebtManagementServiceTests
+{
+    private readonly DebtManagementService _service = new();
+
+    [Fact]
+    public void Amortization_ZeroInterest_DistributesPrincipalAcrossTerm()
+    {
+        var result = _service.CalculateAmortization(new LoanAmortizationInput
+        {
+            Principal = 1200m,
+            AnnualRatePercent = 0m,
+            TermMonths = 12,
+            FirstPaymentDate = new DateTime(2026, 1, 15)
+        });
+
+        Assert.Equal(100m, result.RegularPayment);
+        Assert.Equal(0m, result.TotalInterest);
+        Assert.Equal(1200m, result.TotalPaid);
+        Assert.Equal(12, result.Payments.Count);
+        Assert.Equal(0m, result.Payments[^1].RemainingBalance);
+    }
+
+    [Fact]
+    public void Amortization_PositiveRate_CalculatesMonthlyInterestAndPaysOff()
+    {
+        var result = _service.CalculateAmortization(new LoanAmortizationInput
+        {
+            Principal = 1000m,
+            AnnualRatePercent = 12m,
+            TermMonths = 12,
+            FirstPaymentDate = new DateTime(2026, 1, 1)
+        });
+
+        Assert.Equal(10m, result.Payments[0].Interest);
+        Assert.True(result.TotalInterest > 0m);
+        Assert.Equal(0m, result.Payments[^1].RemainingBalance);
+        Assert.Equal(12, result.Payments.Count);
+    }
+
+    [Fact]
+    public void PayoffPlanner_ReturnsSnowballAndAvalancheScenarios()
+    {
+        var debts = new[]
+        {
+            new DebtPayoffDebtInput { AccountId = 1, Name = "Small balance", Balance = 500m, AnnualRatePercent = 8m, MinimumPayment = 25m },
+            new DebtPayoffDebtInput { AccountId = 2, Name = "High APR", Balance = 3000m, AnnualRatePercent = 24m, MinimumPayment = 75m }
+        };
+
+        var snowball = _service.CalculatePayoff(debts, 100m, avalanche: false, startDate: new DateTime(2026, 1, 1));
+        var avalanche = _service.CalculatePayoff(debts, 100m, avalanche: true, startDate: new DateTime(2026, 1, 1));
+
+        Assert.Equal("Snowball", snowball.Strategy);
+        Assert.Equal("Avalanche", avalanche.Strategy);
+        Assert.True(snowball.ReachedDebtFree);
+        Assert.True(avalanche.ReachedDebtFree);
+        Assert.Equal(2, snowball.Debts.Count);
+        Assert.True(avalanche.TotalInterest <= snowball.TotalInterest);
+    }
+
+    [Fact]
+    public void Amortization_RejectsInvalidTerm()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => _service.CalculateAmortization(new LoanAmortizationInput
+        {
+            Principal = 1000m,
+            AnnualRatePercent = 5m,
+            TermMonths = 0
+        }));
+    }
+}
