@@ -24,6 +24,15 @@ A clean, modular personal finance application.
 
 The application starts with no user financial records. No legacy finance application code or data is included.
 
+### Transaction ledger
+
+- Income, expense, deposit, withdrawal, and transfer entries
+- Account-linked transactions with category, reference, date, and description
+- Transfers link source and destination accounts and require matching currencies
+- Create, edit, and delete transaction workflows
+- Date, account, description, category, and reference filtering
+- Account balances are calculated from the opening balance and posted ledger activity
+
 ## Run locally
 
     dotnet restore
