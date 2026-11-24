@@ -70,7 +70,7 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
         if (account is null) return BadRequest("The selected account is no longer available.");
 
         var seenDuringConfirmation = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var row in batch.Rows.Where(x => x.ValidationError is null && !x.IsDuplicate && !x.RequiresReview))
+        foreach (var row in batch.Rows.Where(x => x.ValidationError is null && !x.IsDuplicate && !x.IsImported && !x.RequiresReview))
         {
             var key = $"{row.TransactionDate:yyyy-MM-dd}|{row.Amount}|{row.Description.Trim()}";
             var exists = await database.Transactions.AnyAsync(t =>
@@ -126,12 +126,41 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
             row.IsImported = true;
         }
 
-        batch.Status = batch.Rows.Any(x => x.ValidationError is not null || x.RequiresReview)
-            ? StatementImportStatus.CompletedWithErrors : StatementImportStatus.Completed;
-        batch.CompletedUtc = DateTime.UtcNow;
+        batch.Status = batch.Rows.Any(x => x.RequiresReview)
+            ? StatementImportStatus.Preview
+            : batch.Rows.Any(x => x.ValidationError is not null)
+                ? StatementImportStatus.CompletedWithErrors
+                : StatementImportStatus.Completed;
+        batch.CompletedUtc = batch.Status == StatementImportStatus.Preview ? null : DateTime.UtcNow;
         await database.SaveChangesAsync(cancellationToken);
-        TempData["SuccessMessage"] = $"Import completed. {batch.Rows.Count(x => x.IsImported)} transaction(s) added; {batch.Rows.Count(x => x.IsDuplicate)} duplicate(s) skipped.";
+        TempData["SuccessMessage"] = $"Import processing saved. {batch.Rows.Count(x => x.IsImported)} transaction(s) added; {batch.Rows.Count(x => x.IsDuplicate)} duplicate(s) skipped; {batch.Rows.Count(x => x.RequiresReview)} row(s) remain for review.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReviewRobinhoodRow(
+        int id, int rowId, TransactionType normalizedType, CancellationToken cancellationToken)
+    {
+        var batch = await database.StatementImports.Include(x => x.Rows)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (batch is null) return NotFound();
+        if (batch.Status != StatementImportStatus.Preview ||
+            batch.Profile != StatementImportProfile.RobinhoodBrokerage)
+            return BadRequest("Only Robinhood Brokerage rows in an open preview can be reviewed here.");
+
+        var row = batch.Rows.SingleOrDefault(x => x.Id == rowId);
+        if (row is null) return NotFound();
+        if (!row.RequiresReview || row.ValidationError is not null || row.IsDuplicate || row.IsImported)
+            return BadRequest("This row is not eligible for manual transaction-code review.");
+        if (!Enum.IsDefined(normalizedType) || normalizedType == TransactionType.Transfer)
+            return BadRequest("Choose Income, Expense, Deposit, or Withdrawal. Transfers require a separate linked-account workflow.");
+
+        row.Type = normalizedType;
+        row.RequiresReview = false;
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = $"Row {row.RowNumber} has been mapped to {normalizedType}. Confirm the import when the remaining rows are ready.";
+        return RedirectToAction(nameof(Preview), new { id });
     }
 
     public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
