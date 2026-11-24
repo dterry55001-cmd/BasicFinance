@@ -127,8 +127,9 @@ public sealed class RulesController(ApplicationDbContext database) : Controller
         else if (input.TransactionType.HasValue && !CategoryMatches(category.Type, input.TransactionType.Value))
             ModelState.AddModelError(nameof(input.TransactionCategoryId), "The category does not match the selected transaction type.");
 
-        if (await database.TransactionRules.AnyAsync(rule =>
-            rule.Id != currentId && rule.Name.ToLower() == input.Name.Trim().ToLower(), cancellationToken))
+        var normalizedName = input.Name?.Trim();
+        if (!string.IsNullOrWhiteSpace(normalizedName) && await database.TransactionRules.AnyAsync(rule =>
+            rule.Id != currentId && rule.Name.ToLower() == normalizedName.ToLower(), cancellationToken))
             ModelState.AddModelError(nameof(input.Name), "A rule with this name already exists.");
     }
 
