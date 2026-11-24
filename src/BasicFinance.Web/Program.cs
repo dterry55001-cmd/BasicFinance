@@ -19,6 +19,14 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// The initial application has no domain tables. EnsureCreated establishes the
+// empty SQLite database; switch to EF Core migrations when the first module is added.
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var database = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await database.Database.EnsureCreatedAsync();
+}
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
