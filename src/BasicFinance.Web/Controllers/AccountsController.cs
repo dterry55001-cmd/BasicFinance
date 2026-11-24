@@ -55,17 +55,17 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
             Name = input.Name.Trim(), Type = input.Type, RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null,
             DebtType = input.Type == AccountType.Debt ? input.DebtType : null,
             Institution = CleanOptional(input.Institution),
-            InterestRatePercent = input.InterestRatePercent,
-            CreditLimit = input.CreditLimit,
-            MinimumPayment = input.MinimumPayment,
-            PaymentDueDay = input.PaymentDueDay,
-            OriginalLoanAmount = input.OriginalLoanAmount,
-            LoanTermMonths = input.LoanTermMonths,
-            MaturityDate = input.MaturityDate,
-            EmployerName = CleanOptional(input.EmployerName),
-            EmployerMatchPercent = input.EmployerMatchPercent,
-            TaxTreatment = CleanOptional(input.TaxTreatment),
-            BrokerageRegistrationType = CleanOptional(input.BrokerageRegistrationType),
+            InterestRatePercent = input.Type is AccountType.Debt or AccountType.Checking or AccountType.Savings ? input.InterestRatePercent : null,
+            CreditLimit = input.Type == AccountType.Debt ? input.CreditLimit : null,
+            MinimumPayment = input.Type == AccountType.Debt ? input.MinimumPayment : null,
+            PaymentDueDay = input.Type == AccountType.Debt ? input.PaymentDueDay : null,
+            OriginalLoanAmount = input.Type == AccountType.Debt ? input.OriginalLoanAmount : null,
+            LoanTermMonths = input.Type == AccountType.Debt ? input.LoanTermMonths : null,
+            MaturityDate = input.Type == AccountType.Debt ? input.MaturityDate : null,
+            EmployerName = input.Type == AccountType.Retirement ? CleanOptional(input.EmployerName) : null,
+            EmployerMatchPercent = input.Type == AccountType.Retirement ? input.EmployerMatchPercent : null,
+            TaxTreatment = input.Type == AccountType.Retirement ? CleanOptional(input.TaxTreatment) : null,
+            BrokerageRegistrationType = input.Type == AccountType.Brokerage ? CleanOptional(input.BrokerageRegistrationType) : null,
             Notes = CleanOptional(input.Notes),
             CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant(),
             OpeningBalance = input.OpeningBalance, OpenedOn = input.OpenedOn,
@@ -117,17 +117,17 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         account.RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null;
         account.DebtType = input.Type == AccountType.Debt ? input.DebtType : null;
         account.Institution = CleanOptional(input.Institution);
-        account.InterestRatePercent = input.InterestRatePercent;
-        account.CreditLimit = input.CreditLimit;
-        account.MinimumPayment = input.MinimumPayment;
-        account.PaymentDueDay = input.PaymentDueDay;
-        account.OriginalLoanAmount = input.OriginalLoanAmount;
-        account.LoanTermMonths = input.LoanTermMonths;
-        account.MaturityDate = input.MaturityDate;
-        account.EmployerName = CleanOptional(input.EmployerName);
-        account.EmployerMatchPercent = input.EmployerMatchPercent;
-        account.TaxTreatment = CleanOptional(input.TaxTreatment);
-        account.BrokerageRegistrationType = CleanOptional(input.BrokerageRegistrationType);
+        account.InterestRatePercent = input.Type is AccountType.Debt or AccountType.Checking or AccountType.Savings ? input.InterestRatePercent : null;
+        account.CreditLimit = input.Type == AccountType.Debt ? input.CreditLimit : null;
+        account.MinimumPayment = input.Type == AccountType.Debt ? input.MinimumPayment : null;
+        account.PaymentDueDay = input.Type == AccountType.Debt ? input.PaymentDueDay : null;
+        account.OriginalLoanAmount = input.Type == AccountType.Debt ? input.OriginalLoanAmount : null;
+        account.LoanTermMonths = input.Type == AccountType.Debt ? input.LoanTermMonths : null;
+        account.MaturityDate = input.Type == AccountType.Debt ? input.MaturityDate : null;
+        account.EmployerName = input.Type == AccountType.Retirement ? CleanOptional(input.EmployerName) : null;
+        account.EmployerMatchPercent = input.Type == AccountType.Retirement ? input.EmployerMatchPercent : null;
+        account.TaxTreatment = input.Type == AccountType.Retirement ? CleanOptional(input.TaxTreatment) : null;
+        account.BrokerageRegistrationType = input.Type == AccountType.Brokerage ? CleanOptional(input.BrokerageRegistrationType) : null;
         account.Notes = CleanOptional(input.Notes);
         account.CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant();
         account.OpeningBalance = input.OpeningBalance; account.OpenedOn = input.OpenedOn;
