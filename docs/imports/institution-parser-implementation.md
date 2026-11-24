@@ -5,7 +5,7 @@
 A dedicated institution parser has been added at
 `src/BasicFinance.Web/Services/InstitutionStatementParser.cs` and registered in dependency injection.
 
-It remains a parsing foundation, not a complete end-to-end import workflow. It is not yet wired into the upload controller, persistence, preview UI, or posting confirmation.
+The parser is now connected to the upload, durable preview, duplicate review, and confirmation workflow through `StatementImportPreparationService` and `ImportsController`. Institution metadata is persisted on import rows and copied to posted ledger transactions.
 
 ## Supported profiles and retained values
 
@@ -20,7 +20,11 @@ It remains a parsing foundation, not a complete end-to-end import workflow. It i
 
 ## Important behaviors
 
-- The parser preserves each original CSV header/value pair in `SourceFields`.
+- The parser preserves each original CSV header/value pair in `SourceFields`; the masked source payload is persisted as JSON on import rows and posted transactions.
+- Source signed amount is preserved separately from the positive ledger amount.
+- Provider categories remain source metadata and are not silently assigned as the user's own categories.
+- Import previews persist before confirmation and display separate dates, source details, and signed amounts.
+- Provider transaction fingerprints are checked against imported rows and posted transactions; unconfirmed previews do not block a later retry.
 - Signed amounts are parsed without applying absolute value.
 - Decimal parsing is culture invariant and supports comma grouping, dollar signs and parenthesized negatives.
 - Institution-specific dates are represented independently.
@@ -32,16 +36,13 @@ It remains a parsing foundation, not a complete end-to-end import workflow. It i
 - Unknown Robinhood transaction codes are retained as source data; this parser does not guess normalized investment action semantics.
 - The parser validates the selected profile's required headers.
 
-## Known follow-up work
+## Remaining work
 
-1. Add unit tests using real, sanitized statement samples for all six profiles.
-2. Add explicit schema fields to persisted import rows and transactions, or a durable JSON source payload with schema/versioning.
-3. Wire profile detection/selection and parser into the existing upload and preview workflow.
-4. Use Atomic transaction ID as the preferred duplicate key; use fingerprints for other sources.
-5. Add posting eligibility rules for Atomic pending/void/rejected/reversed statuses.
-6. Add configured Robinhood transaction-code mappings and flag unknown codes for review.
-7. Implement import confirmation, idempotent posting, reconciliation and audit history.
-8. Validate date formats and profile-specific edge cases against actual exported files before enabling production posting.
+1. Configure Robinhood transaction-code mappings and provide a user workflow to review and release held rows.
+2. Add reconciliation screens using Atomic running balances and investment unit/price details.
+3. Validate every layout against actual sanitized exports, including institution-specific date and decimal edge cases.
+4. Add end-to-end tests for database migration, durable preview, duplicate detection, and confirmation.
+5. Consider an import audit/export facility for traceability.
 
 ## Safety note
 
@@ -50,9 +51,12 @@ The account key passed to the parser should be the internal selected account ide
 ## Current integration status
 
 - [x] Parser added and registered in dependency injection.
-- [x] Institution-specific field extraction and source payload retention.
+- [x] All six institution profiles supported in the upload workflow.
+- [x] Institution-specific field extraction and lossless source payload persistence.
+- [x] Separate source and ledger amounts, with institution categories kept distinct.
 - [x] Safe review flags for Atomic statuses and unmapped Robinhood brokerage codes.
-- [ ] Persist parsed source payload and institution-specific fields.
-- [ ] Wire into the existing upload/preview/confirm controller and views.
-- [ ] Add migrations, idempotent posting, and import audit.
-- [ ] Add automated tests and verify a .NET 10 build.
+- [x] EF Core migrations added for institution-specific fields and duplicate fingerprints.
+- [x] Automated parser tests added for all six layouts and key safety rules.
+- [ ] Confirm CI test run and exercise the migration against a clean SQLite database.
+- [ ] Add a workflow to resolve held-for-review rows.
+- [ ] Add reconciliation and audit features.
