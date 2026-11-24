@@ -1,6 +1,6 @@
 @model BasicFinance.Web.Models.StatementImport
 @using BasicFinance.Web.Models
-@{ ViewData["Title"] = "Import preview"; var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate && !x.RequiresReview); var errors = Model.Rows.Count(x => x.ValidationError is not null); var duplicates = Model.Rows.Count(x => x.IsDuplicate); var review = Model.Rows.Count(x => x.RequiresReview && x.ValidationError is null); }
+@{ ViewData["Title"] = "Import preview"; var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate && !x.IsImported && !x.RequiresReview); var errors = Model.Rows.Count(x => x.ValidationError is not null); var duplicates = Model.Rows.Count(x => x.IsDuplicate); var review = Model.Rows.Count(x => x.RequiresReview && x.ValidationError is null); }
 <section class="page-heading"><div><p class="eyebrow">IMPORT REVIEW</p><h1>@Model.FileName</h1><p class="page-description">@Model.Account.Name · @Model.Profile · Uploaded @Model.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</p></div><a class="button button-secondary" asp-action="Index">Back to imports</a></section>
 @if (Model.FriendlyAccountName is not null || Model.ExternalAccountNumberLast4 is not null)
 {
@@ -34,7 +34,22 @@ else
             <div class="table-subtext">@(row.FundName ?? row.Instrument ?? "") · @(row.SourceStatus ?? "")</div>
             @if (!string.IsNullOrWhiteSpace(row.SourceCategory)) { <div class="table-subtext">Source category: @row.SourceCategory</div> }
             @if (!string.IsNullOrWhiteSpace(row.Memo) || !string.IsNullOrWhiteSpace(row.ExtendedDescription)) { <div class="table-subtext">@(row.Memo ?? row.ExtendedDescription)</div> }</td><td>@(row.Symbol ?? "—")<div class="table-subtext">@(row.Cusip ?? "")</div></td><td>@(row.SecurityType ?? "—")</td><td>@(row.Quantity?.ToString("N6") ?? row.UnitCount?.ToString("N6") ?? "—")</td><td>@(row.Price?.ToString("N4") ?? row.UnitValue?.ToString("N6") ?? "—")</td><td>@(row.SourceSignedAmount?.ToString("N2") ?? row.Amount.ToString("N2")) @Model.Account.CurrencyCode</td>
-        <td>@if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> } else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> } else if (row.IsImported) { <span class="status-success">Imported</span> } else if (row.RequiresReview) { <span class="status-warning">Needs review — not posted</span> } else { <span class="status-ready">Ready</span> }</td></tr>
+        <td>@if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> } else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> } else if (row.IsImported) { <span class="status-success">Imported</span> } else if (row.RequiresReview) {
+            <span class="status-warning">Needs review — not posted</span>
+            @if (Model.Profile == StatementImportProfile.RobinhoodBrokerage) {
+                <form asp-action="ReviewRobinhoodRow" asp-route-id="@Model.Id" method="post" class="row-review-form">
+                    <input type="hidden" name="rowId" value="@row.Id" />
+                    <label class="visually-hidden" for="type-@row.Id">Map @row.TransactionCode to</label>
+                    <select id="type-@row.Id" name="normalizedType">
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                        <option value="Deposit">Deposit</option>
+                        <option value="Withdrawal">Withdrawal</option>
+                    </select>
+                    <button type="submit" class="button button-secondary">Approve mapping</button>
+                </form>
+            }
+        } else { <span class="status-ready">Ready</span> }</td></tr>
     }</tbody>
 </table></div></div>
 @if (Model.Status == StatementImportStatus.Preview)
