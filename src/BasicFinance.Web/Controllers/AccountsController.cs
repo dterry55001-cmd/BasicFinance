@@ -55,7 +55,6 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
             Name = input.Name.Trim(), Type = input.Type, RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null,
             DebtType = input.Type == AccountType.Debt ? input.DebtType : null,
             Institution = CleanOptional(input.Institution),
-            AccountNumberLast4 = CleanOptional(input.AccountNumberLast4),
             CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant(),
             OpeningBalance = input.OpeningBalance, OpenedOn = input.OpenedOn,
             Status = input.Status, CreatedUtc = DateTime.UtcNow, UpdatedUtc = DateTime.UtcNow
@@ -74,7 +73,7 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         return View(new AccountInputModel
         {
             Name = account.Name, Type = account.Type, RetirementType = account.RetirementType, DebtType = account.DebtType, Institution = account.Institution,
-            AccountNumberLast4 = account.AccountNumberLast4, CurrencyCode = account.CurrencyCode,
+            CurrencyCode = account.CurrencyCode,
             OpeningBalance = account.OpeningBalance, OpenedOn = account.OpenedOn, Status = account.Status
         });
     }
@@ -94,7 +93,6 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         account.RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null;
         account.DebtType = input.Type == AccountType.Debt ? input.DebtType : null;
         account.Institution = CleanOptional(input.Institution);
-        account.AccountNumberLast4 = CleanOptional(input.AccountNumberLast4);
         account.CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant();
         account.OpeningBalance = input.OpeningBalance; account.OpenedOn = input.OpenedOn;
         account.Status = input.Status; account.UpdatedUtc = DateTime.UtcNow;
