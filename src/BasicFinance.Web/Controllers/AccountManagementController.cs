@@ -158,6 +158,7 @@ public sealed class AccountManagementController(
     {
         var account = await database.Accounts.FirstOrDefaultAsync(a => a.Id == input.AccountId && a.Status != AccountStatus.Archived, cancellationToken);
         if (account is null) ModelState.AddModelError(nameof(input.AccountId), "Choose an active account.");
+        if (!Enum.IsDefined(input.Type)) ModelState.AddModelError(nameof(input.Type), "Choose Earned or Charged.");
         if (input.Amount <= 0) ModelState.AddModelError(nameof(input.Amount), "Enter an amount greater than zero.");
         if (!ModelState.IsValid)
         {
