@@ -11,6 +11,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<StatementImport> StatementImports => Set<StatementImport>();
     public DbSet<StatementImportRow> StatementImportRows => Set<StatementImportRow>();
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
+    public DbSet<TransactionCategoryMapping> TransactionCategoryMappings => Set<TransactionCategoryMapping>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +50,11 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(row => row.Description).HasMaxLength(160).IsRequired();
             entity.Property(row => row.SourceFieldsJson).HasColumnType("TEXT").IsRequired();
             entity.HasIndex(row => row.DuplicateFingerprint);
+            entity.HasIndex(row => row.CategoryId);
+            entity.HasOne(row => row.TransactionCategory)
+                .WithMany()
+                .HasForeignKey(row => row.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(row => new { row.StatementImportId, row.RowNumber }).IsUnique();
         });
 
@@ -91,6 +97,17 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasOne(category => category.ParentCategory)
                 .WithMany(category => category.Children)
                 .HasForeignKey(category => category.ParentCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TransactionCategoryMapping>(entity =>
+        {
+            entity.Property(mapping => mapping.SourceCategory).HasMaxLength(100).IsRequired();
+            entity.Property(mapping => mapping.NormalizedSourceCategory).HasMaxLength(100).IsRequired();
+            entity.HasIndex(mapping => new { mapping.Profile, mapping.NormalizedSourceCategory }).IsUnique();
+            entity.HasOne(mapping => mapping.TransactionCategory)
+                .WithMany()
+                .HasForeignKey(mapping => mapping.TransactionCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
