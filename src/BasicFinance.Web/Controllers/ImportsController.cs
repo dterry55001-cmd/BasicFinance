@@ -12,7 +12,7 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var imports = await database.StatementImports.AsNoTracking().Include(x => x.Account)
+        var imports = await database.StatementImports.AsNoTracking().Include(x => x.Account).Include(x => x.Rows)
             .OrderByDescending(x => x.CreatedUtc).Take(100).ToListAsync(cancellationToken);
         return View(imports);
     }
@@ -48,11 +48,14 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
                 CreatedUtc = DateTime.UtcNow,
                 Rows = rows
             };
+            var seenInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows.Where(x => x.ValidationError is null))
             {
-                row.IsDuplicate = await database.Transactions.AnyAsync(t =>
+                var key = $"{row.TransactionDate:yyyy-MM-dd}|{row.Amount}|{row.Description.Trim()}";
+                var exists = await database.Transactions.AnyAsync(t =>
                     t.AccountId == accountId && t.TransactionDate == row.TransactionDate &&
                     t.Amount == row.Amount && t.Description == row.Description, cancellationToken);
+                row.IsDuplicate = exists || !seenInFile.Add(key);
             }
             database.StatementImports.Add(batch);
             await database.SaveChangesAsync(cancellationToken);
@@ -84,12 +87,14 @@ public sealed class ImportsController(ApplicationDbContext database, CsvStatemen
         var account = await database.Accounts.FirstOrDefaultAsync(x => x.Id == batch.AccountId && x.Status != AccountStatus.Archived, cancellationToken);
         if (account is null) return BadRequest("The selected account is no longer available.");
 
+        var seenDuringConfirmation = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in batch.Rows.Where(x => x.ValidationError is null && !x.IsDuplicate))
         {
+            var key = $"{row.TransactionDate:yyyy-MM-dd}|{row.Amount}|{row.Description.Trim()}";
             var exists = await database.Transactions.AnyAsync(t =>
                 t.AccountId == batch.AccountId && t.TransactionDate == row.TransactionDate &&
                 t.Amount == row.Amount && t.Description == row.Description, cancellationToken);
-            if (exists) { row.IsDuplicate = true; continue; }
+            if (exists || !seenDuringConfirmation.Add(key)) { row.IsDuplicate = true; continue; }
 
             database.Transactions.Add(new FinancialTransaction
             {
