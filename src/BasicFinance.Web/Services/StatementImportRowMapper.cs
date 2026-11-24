@@ -47,6 +47,8 @@ public static class StatementImportRowMapper
             TransactionCode = Limit(parsed.TransactionCode, 120),
             Symbol = Limit(parsed.Symbol, 40),
             Cusip = Limit(parsed.Cusip, 20),
+            ExternalAccountNumberLast4 = Limit(parsed.ExternalAccountNumberLast4, 4),
+            FriendlyAccountName = Limit(parsed.FriendlyAccountName, 100),
             Quantity = parsed.Quantity,
             Price = parsed.Price,
             FundName = Limit(parsed.FundName, 160),
