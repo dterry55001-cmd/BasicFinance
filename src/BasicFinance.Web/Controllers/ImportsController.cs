@@ -191,6 +191,7 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
         }
 
         row.CategoryId = category?.Id;
+        row.CategorySuggestedByRule = false;
         if (applyToFutureImports && category is not null && !string.IsNullOrWhiteSpace(row.SourceCategory)
             && batch.Profile != StatementImportProfile.Unknown)
         {
