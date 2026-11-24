@@ -37,22 +37,23 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
 
     public IActionResult Create()
     {
-        PopulateRetirementTypes();
+        PopulateAccountSubtypes();
         return View(new AccountInputModel());
     }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AccountInputModel input)
     {
-        ValidateRetirementType(input);
+        ValidateAccountSubtypes(input);
         if (!ModelState.IsValid)
         {
-            PopulateRetirementTypes();
+            PopulateAccountSubtypes();
             return View(input);
         }
         var account = new Account
         {
             Name = input.Name.Trim(), Type = input.Type, RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null,
+            DebtType = input.Type == AccountType.Debt ? input.DebtType : null,
             Institution = CleanOptional(input.Institution),
             AccountNumberLast4 = CleanOptional(input.AccountNumberLast4),
             CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant(),
@@ -72,7 +73,7 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         PopulateRetirementTypes();
         return View(new AccountInputModel
         {
-            Name = account.Name, Type = account.Type, RetirementType = account.RetirementType, Institution = account.Institution,
+            Name = account.Name, Type = account.Type, RetirementType = account.RetirementType, DebtType = account.DebtType, Institution = account.Institution,
             AccountNumberLast4 = account.AccountNumberLast4, CurrencyCode = account.CurrencyCode,
             OpeningBalance = account.OpeningBalance, OpenedOn = account.OpenedOn, Status = account.Status
         });
@@ -91,6 +92,7 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         if (account is null) return NotFound();
         account.Name = input.Name.Trim(); account.Type = input.Type;
         account.RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null;
+        account.DebtType = input.Type == AccountType.Debt ? input.DebtType : null;
         account.Institution = CleanOptional(input.Institution);
         account.AccountNumberLast4 = CleanOptional(input.AccountNumberLast4);
         account.CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant();
@@ -113,24 +115,46 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         return RedirectToAction(nameof(Index), new { includeArchived = true });
     }
 
-    private void PopulateRetirementTypes()
+    private void PopulateAccountSubtypes()
     {
         ViewBag.RetirementTypes = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
-            Enum.GetValues<RetirementAccountType>()
-                .Select(type => new { Value = type, Text = RetirementTypeLabel(type) }),
+            Enum.GetValues<RetirementAccountType>().Select(type => new { Value = type, Text = RetirementTypeLabel(type) }),
+            "Value", "Text");
+        ViewBag.DebtTypes = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
+            Enum.GetValues<DebtAccountType>().Select(type => new { Value = type, Text = DebtTypeLabel(type) }),
             "Value", "Text");
     }
 
-    private void ValidateRetirementType(AccountInputModel input)
+    private void ValidateAccountSubtypes(AccountInputModel input)
     {
         if (input.Type == AccountType.Retirement && !input.RetirementType.HasValue)
             ModelState.AddModelError(nameof(input.RetirementType), "Choose a retirement account type.");
-        else if (input.Type == AccountType.Retirement &&
-                 !Enum.IsDefined(input.RetirementType!.Value))
+        else if (input.Type == AccountType.Retirement && !Enum.IsDefined(input.RetirementType!.Value))
             ModelState.AddModelError(nameof(input.RetirementType), "Choose a valid retirement account type.");
-        if (input.Type != AccountType.Retirement)
-            input.RetirementType = null;
+        if (input.Type == AccountType.Debt && !input.DebtType.HasValue)
+            ModelState.AddModelError(nameof(input.DebtType), "Choose a debt account type.");
+        else if (input.Type == AccountType.Debt && !Enum.IsDefined(input.DebtType!.Value))
+            ModelState.AddModelError(nameof(input.DebtType), "Choose a valid debt account type.");
+        if (input.Type != AccountType.Retirement) input.RetirementType = null;
+        if (input.Type != AccountType.Debt) input.DebtType = null;
     }
+
+    private static string DebtTypeLabel(DebtAccountType type) => type switch
+    {
+        DebtAccountType.CreditCard => "Credit card",
+        DebtAccountType.Mortgage => "Mortgage",
+        DebtAccountType.HomeEquityLoan => "Home equity loan",
+        DebtAccountType.HomeEquityLineOfCredit => "Home equity line of credit (HELOC)",
+        DebtAccountType.AutoLoan => "Auto loan",
+        DebtAccountType.StudentLoan => "Student loan",
+        DebtAccountType.PersonalLoan => "Personal loan",
+        DebtAccountType.BusinessLoan => "Business loan",
+        DebtAccountType.MedicalDebt => "Medical debt",
+        DebtAccountType.BuyNowPayLater => "Buy now, pay later",
+        DebtAccountType.LineOfCredit => "Other line of credit",
+        DebtAccountType.TaxDebt => "Tax debt",
+        _ => "Other debt"
+    };
 
     private static string RetirementTypeLabel(RetirementAccountType type) => type switch
     {
