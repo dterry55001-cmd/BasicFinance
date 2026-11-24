@@ -8,6 +8,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<AccountBalanceService>();
+builder.Services.AddScoped<CsvStatementParser>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
