@@ -13,6 +13,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
     public DbSet<TransactionCategoryMapping> TransactionCategoryMappings => Set<TransactionCategoryMapping>();
     public DbSet<TransactionRule> TransactionRules => Set<TransactionRule>();
+    public DbSet<AccountBalanceSnapshot> AccountBalanceSnapshots => Set<AccountBalanceSnapshot>();
+    public DbSet<InterestRecord> InterestRecords => Set<InterestRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
