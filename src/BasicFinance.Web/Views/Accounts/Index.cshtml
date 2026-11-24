@@ -9,7 +9,7 @@
     <div>
         <p class="eyebrow">FINANCIAL ORGANIZATION</p>
         <h1>Accounts</h1>
-        <p class="page-description">Manage the accounts you want to track. Only the last four account-number digits are stored.</p>
+        <p class="page-description">Manage the accounts you want to track without storing bank account numbers or banking credentials.</p>
     </div>
     <a class="button button-primary" asp-action="Create">Add account</a>
 </section>
@@ -47,7 +47,7 @@ else
                 @foreach (var account in Model)
                 {
                     <tr>
-                        <td><a class="table-link" asp-action="Details" asp-route-id="@account.Id">@account.Name</a><div class="table-subtext">@account.CurrencyCode@if (!string.IsNullOrEmpty(account.AccountNumberLast4)) { <text> · •••• @account.AccountNumberLast4</text> }</div></td>
+                        <td><a class="table-link" asp-action="Details" asp-route-id="@account.Id">@account.Name</a><div class="table-subtext">@account.CurrencyCode</div></td>
                         <td>@account.Type
                             @if (account.RetirementType.HasValue) { <div class="table-subtext">@account.RetirementType.Value</div> }
                             @if (account.DebtType.HasValue) { <div class="table-subtext">@account.DebtType.Value</div> }</td>
