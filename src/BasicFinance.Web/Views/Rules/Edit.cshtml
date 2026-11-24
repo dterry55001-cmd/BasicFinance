@@ -1,0 +1,4 @@
+@model BasicFinance.Web.Models.TransactionRuleInputModel
+@{ ViewData["Title"] = "Edit transaction rule"; }
+<section class="page-heading"><div><p class="eyebrow">TRANSACTION AUTOMATION</p><h1>Edit rule</h1><p class="page-description">Change the matching conditions or suggested category.</p></div></section>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="form-card"><partial name="_RuleForm" model="Model" /></form>
