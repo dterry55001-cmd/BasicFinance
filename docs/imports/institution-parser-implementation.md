@@ -3,9 +3,9 @@
 ## Status
 
 A dedicated institution parser has been added at
-`src/BasicFinance.Web/Services/InstitutionStatementParser.cs`.
+`src/BasicFinance.Web/Services/InstitutionStatementParser.cs` and registered in dependency injection.
 
-It is a parsing foundation, not yet a complete end-to-end import workflow. It is not wired into the upload controller, persistence, preview UI, or posting confirmation in this change.
+It remains a parsing foundation, not a complete end-to-end import workflow. It is not yet wired into the upload controller, persistence, preview UI, or posting confirmation.
 
 ## Supported profiles and retained values
 
@@ -24,7 +24,11 @@ It is a parsing foundation, not yet a complete end-to-end import workflow. It is
 - Signed amounts are parsed without applying absolute value.
 - Decimal parsing is culture invariant and supports comma grouping, dollar signs and parenthesized negatives.
 - Institution-specific dates are represented independently.
-- Duplicate fingerprints are deterministic SHA-256 hashes scoped by profile and selected account key. Atomic's transaction ID is included when present.
+- Duplicate fingerprints are deterministic SHA-256 hashes scoped by profile and selected internal account key. Atomic's transaction ID is used as the preferred stable identity when present.
+- Generic Date/Description/Amount headers are not auto-detected as Robinhood Bank because they do not uniquely identify that institution; users must select that profile explicitly.
+- Atomic pending, void, rejected and reversed statuses are flagged for review.
+- Robinhood Brokerage rows are held for review until a transaction-code mapping is configured; the parser does not guess transaction semantics.
+- Rows with a column count exceeding the header are rejected at row level.
 - Unknown Robinhood transaction codes are retained as source data; this parser does not guess normalized investment action semantics.
 - The parser validates the selected profile's required headers.
 
@@ -42,3 +46,13 @@ It is a parsing foundation, not yet a complete end-to-end import workflow. It is
 ## Safety note
 
 The account key passed to the parser should be the internal selected account identifier, not the full external bank account number. Do not persist full account numbers; retain only a masked suffix if the product requires it.
+
+## Current integration status
+
+- [x] Parser added and registered in dependency injection.
+- [x] Institution-specific field extraction and source payload retention.
+- [x] Safe review flags for Atomic statuses and unmapped Robinhood brokerage codes.
+- [ ] Persist parsed source payload and institution-specific fields.
+- [ ] Wire into the existing upload/preview/confirm controller and views.
+- [ ] Add migrations, idempotent posting, and import audit.
+- [ ] Add automated tests and verify a .NET 10 build.
