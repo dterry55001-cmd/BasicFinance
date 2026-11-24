@@ -8,6 +8,6 @@ obj/
 *.db
 *.db-shm
 *.db-wal
- data/
+data/
 .env
 .DS_Store
