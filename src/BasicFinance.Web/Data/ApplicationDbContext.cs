@@ -128,5 +128,22 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
                 .HasForeignKey(rule => rule.TransactionCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<AccountBalanceSnapshot>(entity =>
+        {
+            entity.Property(snapshot => snapshot.Balance).HasColumnType("TEXT");
+            entity.HasIndex(snapshot => new { snapshot.AccountId, snapshot.SnapshotDate }).IsUnique();
+            entity.HasOne(snapshot => snapshot.Account).WithMany().HasForeignKey(snapshot => snapshot.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<InterestRecord>(entity =>
+        {
+            entity.Property(record => record.Amount).HasColumnType("TEXT");
+            entity.Property(record => record.Description).HasMaxLength(160).IsRequired();
+            entity.Property(record => record.Notes).HasMaxLength(500);
+            entity.HasIndex(record => new { record.AccountId, record.InterestDate });
+            entity.HasOne(record => record.Account).WithMany().HasForeignKey(record => record.AccountId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(record => record.Transaction).WithMany().HasForeignKey(record => record.TransactionId).OnDelete(DeleteBehavior.SetNull);
+        });
     }
 }
