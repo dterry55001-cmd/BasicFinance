@@ -22,6 +22,13 @@ public sealed class CsvStatementParser
         var fundIndex = Find(headers, "fundname", "fund");
         var unitsIndex = Find(headers, "unitcount", "units", "shares");
         var unitValueIndex = Find(headers, "unitvalue", "priceperunit");
+        var accountNumberIndex = Find(headers, "accountnumber", "account");
+        var activityIndex = Find(headers, "activity", "action");
+        var symbolIndex = Find(headers, "symbol", "ticker");
+        var cusipIndex = Find(headers, "cusip");
+        var securityTypeIndex = Find(headers, "type", "securitytype", "assettype");
+        var quantityIndex = Find(headers, "quantity", "shares", "units");
+        var priceIndex = Find(headers, "price", "unitprice");
 
         if (dateIndex < 0 || descriptionIndex < 0 || amountIndex < 0)
             throw new InvalidDataException("Required columns were not found. Include Date, Description, and Amount headers.");
@@ -40,6 +47,25 @@ public sealed class CsvStatementParser
                 row.TransactionDate = date.Date;
 
                 row.Source = sourceIndex >= 0 ? NullIfEmpty(Get(fields, sourceIndex), 120) : null;
+                var accountNumber = accountNumberIndex >= 0 ? Get(fields, accountNumberIndex).Trim() : "";
+                row.ExternalAccountNumberLast4 = accountNumber.Length >= 4 ? accountNumber[^4..] : NullIfEmpty(accountNumber, 4);
+                row.FriendlyAccountName = null;
+                row.Activity = activityIndex >= 0 ? NullIfEmpty(Get(fields, activityIndex), 100) : null;
+                row.Symbol = symbolIndex >= 0 ? NullIfEmpty(Get(fields, symbolIndex), 40) : null;
+                row.Cusip = cusipIndex >= 0 ? NullIfEmpty(Get(fields, cusipIndex), 20) : null;
+                row.SecurityType = securityTypeIndex >= 0 ? NullIfEmpty(Get(fields, securityTypeIndex), 40) : null;
+                if (quantityIndex >= 0 && !string.IsNullOrWhiteSpace(Get(fields, quantityIndex)))
+                {
+                    if (!decimal.TryParse(Get(fields, quantityIndex), NumberStyles.Number, CultureInfo.InvariantCulture, out var quantity))
+                        throw new FormatException("Invalid security quantity.");
+                    row.Quantity = quantity;
+                }
+                if (priceIndex >= 0 && !string.IsNullOrWhiteSpace(Get(fields, priceIndex)))
+                {
+                    if (!decimal.TryParse(Get(fields, priceIndex).Replace("$", "").Replace(",", ""), NumberStyles.Number, CultureInfo.InvariantCulture, out var price) || price < 0)
+                        throw new FormatException("Invalid security price.");
+                    row.Price = price;
+                }
                 row.FundName = fundIndex >= 0 ? NullIfEmpty(Get(fields, fundIndex), 160) : null;
                 row.Description = Get(fields, descriptionIndex).Trim();
                 if (!string.IsNullOrWhiteSpace(row.FundName) && !row.Description.Contains(row.FundName, StringComparison.OrdinalIgnoreCase))
@@ -67,23 +93,16 @@ public sealed class CsvStatementParser
                 if (row.Amount <= 0) throw new FormatException("Amount must be greater than zero.");
 
                 var typeText = typeIndex >= 0 ? Get(fields, typeIndex).Trim() : "";
-                if (!string.IsNullOrWhiteSpace(typeText))
-                {
-                    if (typeText.Equals("Contribution", StringComparison.OrdinalIgnoreCase) ||
-                        typeText.Equals("Employer Match", StringComparison.OrdinalIgnoreCase) ||
-                        typeText.Equals("Employer Contribution", StringComparison.OrdinalIgnoreCase))
-                        row.Type = TransactionType.Deposit;
-                    else if (typeText.Equals("Purchase", StringComparison.OrdinalIgnoreCase) ||
-                        typeText.Equals("Payment", StringComparison.OrdinalIgnoreCase))
-                        row.Type = TransactionType.Expense;
-                    else if (typeText.Equals("Dividend", StringComparison.OrdinalIgnoreCase) ||
-                        typeText.Equals("Interest", StringComparison.OrdinalIgnoreCase))
-                        row.Type = TransactionType.Income;
-                    else if (!Enum.TryParse<TransactionType>(typeText, true, out var type) || type == TransactionType.Transfer)
-                        throw new FormatException("Unsupported transaction type. Use Income, Expense, Deposit, or Withdrawal.");
-                    else row.Type = type;
-                }
-                else row.Type = amount < 0 ? TransactionType.Expense : TransactionType.Income;
+                if (!string.IsNullOrWhiteSpace(row.Activity))
+                    row.Type = MapActivity(row.Activity, amount);
+                else if (string.IsNullOrWhiteSpace(typeText))
+                    row.Type = amount < 0 ? TransactionType.Expense : TransactionType.Income;
+                else if (!Enum.TryParse<TransactionType>(typeText, true, out var parsedType) || parsedType == TransactionType.Transfer)
+                    row.Type = amount < 0 ? TransactionType.Expense : TransactionType.Income;
+                else row.Type = parsedType;
+
+                /*LEGACY_TYPE_MAPPING*/
+                
 
                 row.Category = categoryIndex >= 0 ? NullIfEmpty(Get(fields, categoryIndex), 80) : null;
                 row.Reference = referenceIndex >= 0 ? NullIfEmpty(Get(fields, referenceIndex), 100) : null;
@@ -127,6 +146,20 @@ public sealed class CsvStatementParser
         record.Add(field.ToString().Trim());
         if (record.Any(value => value.Length > 0)) records.Add(record);
         return records;
+    }
+
+    private static TransactionType MapActivity(string activity, decimal signedAmount)
+    {
+        var value = Normalize(activity);
+        if (value.Contains("buy") || value.Contains("purchase") || value.Contains("reinvest"))
+            return TransactionType.Expense;
+        if (value.Contains("sell") || value.Contains("dividend") || value.Contains("interest") || value.Contains("credit"))
+            return TransactionType.Income;
+        if (value.Contains("contribution") || value.Contains("deposit"))
+            return TransactionType.Deposit;
+        if (value.Contains("withdrawal") || value.Contains("debit") || value.Contains("fee") || value.Contains("tax"))
+            return TransactionType.Withdrawal;
+        return signedAmount < 0 ? TransactionType.Expense : TransactionType.Income;
     }
 
     private static int Find(Dictionary<string, int> headers, params string[] names)
