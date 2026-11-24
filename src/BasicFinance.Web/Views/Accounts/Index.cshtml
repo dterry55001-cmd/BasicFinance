@@ -33,7 +33,7 @@
     <section class="empty-state">
         <div class="empty-state-icon" aria-hidden="true">＋</div>
         <h2>No accounts yet</h2>
-        <p>Add a checking, savings, cash, credit card, brokerage, or a specific retirement account to begin organizing your finances.</p>
+        <p>Add a checking, savings, cash, credit card, brokerage, or a specific retirement or debt account to begin organizing your finances.</p>
         <a class="button button-primary" asp-action="Create">Create your first account</a>
     </section>
 }
@@ -48,7 +48,9 @@ else
                 {
                     <tr>
                         <td><a class="table-link" asp-action="Details" asp-route-id="@account.Id">@account.Name</a><div class="table-subtext">@account.CurrencyCode@if (!string.IsNullOrEmpty(account.AccountNumberLast4)) { <text> · •••• @account.AccountNumberLast4</text> }</div></td>
-                        <td>@account.Type@if (account.RetirementType.HasValue) { <div class="table-subtext">@account.RetirementType.Value</div> }</td>
+                        <td>@account.Type
+                            @if (account.RetirementType.HasValue) { <div class="table-subtext">@account.RetirementType.Value</div> }
+                            @if (account.DebtType.HasValue) { <div class="table-subtext">@account.DebtType.Value</div> }</td>
                         <td>@(account.Institution ?? "—")</td>
                         <td>@balances.FirstOrDefault(item => item.Key == account.Id).Value.ToString("N2") @account.CurrencyCode</td>
                         <td><span class="status-pill status-@account.Status.ToString().ToLowerInvariant()">@account.Status</span></td>
