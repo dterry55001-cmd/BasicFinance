@@ -140,7 +140,7 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ReviewRobinhoodRow(
-        int id, int rowId, TransactionType normalizedType, CancellationToken cancellationToken)
+        int id, int rowId, TransactionType? normalizedType, CancellationToken cancellationToken)
     {
         var batch = await database.StatementImports.Include(x => x.Rows)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -153,10 +153,11 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
         if (row is null) return NotFound();
         if (!row.RequiresReview || row.ValidationError is not null || row.IsDuplicate || row.IsImported)
             return BadRequest("This row is not eligible for manual transaction-code review.");
-        if (!Enum.IsDefined(normalizedType) || normalizedType == TransactionType.Transfer)
+        if (!normalizedType.HasValue || !Enum.IsDefined(normalizedType.Value) ||
+            normalizedType.Value == TransactionType.Transfer)
             return BadRequest("Choose Income, Expense, Deposit, or Withdrawal. Transfers require a separate linked-account workflow.");
 
-        row.Type = normalizedType;
+        row.Type = normalizedType.Value;
         row.RequiresReview = false;
         await database.SaveChangesAsync(cancellationToken);
         TempData["SuccessMessage"] = $"Row {row.RowNumber} has been mapped to {normalizedType}. Confirm the import when the remaining rows are ready.";
