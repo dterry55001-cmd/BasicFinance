@@ -12,6 +12,26 @@ public enum AccountType
     Retirement
 }
 
+public enum RetirementAccountType
+{
+    Employer401k,
+    Employer401a,
+    Employer403b,
+    Government457b,
+    ThriftSavingsPlan,
+    TraditionalIra,
+    RothIra,
+    RolloverIra,
+    InheritedIra,
+    SepIra,
+    SimpleIra,
+    Solo401k,
+    DefinedBenefitPension,
+    CashBalancePension,
+    Annuity,
+    OtherRetirement
+}
+
 public enum AccountStatus
 {
     Active,
@@ -28,6 +48,8 @@ public sealed class Account
 
     [Required]
     public AccountType Type { get; set; }
+
+    public RetirementAccountType? RetirementType { get; set; }
 
     [StringLength(100)]
     public string? Institution { get; set; }
