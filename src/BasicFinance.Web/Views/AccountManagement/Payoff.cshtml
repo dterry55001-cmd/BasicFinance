@@ -16,14 +16,14 @@
 @if (snowball is not null && avalanche is not null)
 {
 <div class="summary-grid">
-<div class="summary-card"><span>Snowball debt-free date</span><strong>@(snowball.ReachedDebtFree ? snowball.DebtFreeDate.ToString("MMM yyyy") : "Beyond 100 years")</strong><span>@snowball.MonthsToPayoff months · @snowball.TotalInterest.ToString("N2") + " " + Model.CurrencyCode interest</span></div>
-<div class="summary-card"><span>Avalanche debt-free date</span><strong>@(avalanche.ReachedDebtFree ? avalanche.DebtFreeDate.ToString("MMM yyyy") : "Beyond 100 years")</strong><span>@avalanche.MonthsToPayoff months · @avalanche.TotalInterest.ToString("N2") + " " + Model.CurrencyCode interest</span></div>
+<div class="summary-card"><span>Snowball debt-free date</span><strong>@(snowball.ReachedDebtFree ? snowball.DebtFreeDate.ToString("MMM yyyy") : "Beyond 100 years")</strong><span>@snowball.MonthsToPayoff months · @(snowball.TotalInterest.ToString("N2") + " " + Model.CurrencyCode) interest</span></div>
+<div class="summary-card"><span>Avalanche debt-free date</span><strong>@(avalanche.ReachedDebtFree ? avalanche.DebtFreeDate.ToString("MMM yyyy") : "Beyond 100 years")</strong><span>@avalanche.MonthsToPayoff months · @(avalanche.TotalInterest.ToString("N2") + " " + Model.CurrencyCode) interest</span></div>
 </div>
 <section class="section-block"><h2>Debt-by-debt payoff estimates</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Debt</th><th>Snowball payoff</th><th>Snowball interest</th><th>Avalanche payoff</th><th>Avalanche interest</th></tr></thead><tbody>
 @foreach (var item in snowball.Debts)
 {
 var other = avalanche.Debts.First(x => x.AccountId == item.AccountId);
-<tr><td>@item.AccountName</td><td>@item.PayoffDate.ToString("MMM yyyy")</td><td>@item.InterestPaid.ToString("N2") + " " + Model.CurrencyCode</td><td>@other.PayoffDate.ToString("MMM yyyy")</td><td>@other.InterestPaid.ToString("N2") + " " + Model.CurrencyCode</td></tr>
+<tr><td>@item.AccountName</td><td>@item.PayoffDate.ToString("MMM yyyy")</td><td>@(item.InterestPaid.ToString("N2") + " " + Model.CurrencyCode)</td><td>@other.PayoffDate.ToString("MMM yyyy")</td><td>@(other.InterestPaid.ToString("N2") + " " + Model.CurrencyCode)</td></tr>
 }
 </tbody></table></div></div></section>
 }
