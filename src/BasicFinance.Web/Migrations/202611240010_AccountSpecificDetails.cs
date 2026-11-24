@@ -41,6 +41,5 @@ public sealed class AccountSpecificDetails : Migration
         migrationBuilder.DropColumn(name: "TaxTreatment", table: "Accounts");
         migrationBuilder.DropColumn(name: "BrokerageRegistrationType", table: "Accounts");
         migrationBuilder.DropColumn(name: "Notes", table: "Accounts");
-        migrationBuilder.AddColumn<string>(name: "AccountNumberLast4", table: "Accounts", type: "TEXT", maxLength: 4, nullable: true);
     }
 }
