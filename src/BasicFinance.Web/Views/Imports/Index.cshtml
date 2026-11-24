@@ -1,0 +1,16 @@
+@model IReadOnlyList<BasicFinance.Web.Models.StatementImport>
+@using BasicFinance.Web.Models
+@{ ViewData["Title"] = "Statement imports"; }
+<section class="page-heading"><div><p class="eyebrow">DATA MANAGEMENT</p><h1>Statement imports</h1><p class="page-description">Upload CSV statements, review parsed rows, and approve transactions before they reach your ledger.</p></div><a class="button button-primary" asp-action="Create">Import CSV</a></section>
+@if (TempData["SuccessMessage"] is string message) { <div class="notice notice-success" role="status">@message</div> }
+@if (Model.Count == 0)
+{
+    <section class="empty-state"><h2>No imports yet</h2><p>Start with a CSV statement. Your original account records are not changed until you confirm an import.</p><a class="button button-primary" asp-action="Create">Import first statement</a></section>
+}
+else
+{
+    <div class="table-card"><div class="table-scroll"><table>
+        <thead><tr><th>Uploaded</th><th>File</th><th>Account</th><th>Status</th><th>Rows</th><th></th></tr></thead>
+        <tbody>@foreach (var batch in Model) { <tr><td>@batch.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</td><td>@batch.FileName</td><td>@batch.Account.Name</td><td>@batch.Status</td><td>@batch.Rows.Count</td><td><a asp-action="Details" asp-route-id="@batch.Id">Review</a></td></tr> }</tbody>
+    </table></div></div>
+}
