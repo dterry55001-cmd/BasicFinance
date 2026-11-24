@@ -34,6 +34,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         modelBuilder.Entity<StatementImportRow>(entity =>
         {
             entity.Property(row => row.Amount).HasColumnType("TEXT");
+            entity.Property(row => row.SourceSignedAmount).HasColumnType("TEXT");
             entity.Property(row => row.UnitCount).HasColumnType("TEXT");
             entity.Property(row => row.UnitValue).HasColumnType("TEXT");
             entity.Property(row => row.Quantity).HasColumnType("TEXT");
