@@ -1,0 +1,4 @@
+@model BasicFinance.Web.Models.TransactionInputModel
+@{ ViewData["Title"] = "Add transaction"; }
+<section class="page-heading"><div><p class="eyebrow">TRANSACTION LEDGER</p><h1>Add transaction</h1><p class="page-description">Record an income, expense, deposit, withdrawal, or account transfer.</p></div></section>
+<form asp-action="Create" method="post" class="form-card"><partial name="_TransactionForm" model="Model" /></form>
