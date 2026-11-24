@@ -18,6 +18,10 @@ public sealed class CsvStatementParser
         var typeIndex = Find(headers, "type", "transactiontype");
         var categoryIndex = Find(headers, "category");
         var referenceIndex = Find(headers, "reference", "id", "transactionid");
+        var sourceIndex = Find(headers, "source");
+        var fundIndex = Find(headers, "fundname", "fund");
+        var unitsIndex = Find(headers, "unitcount", "units", "shares");
+        var unitValueIndex = Find(headers, "unitvalue", "priceperunit");
 
         if (dateIndex < 0 || descriptionIndex < 0 || amountIndex < 0)
             throw new InvalidDataException("Required columns were not found. Include Date, Description, and Amount headers.");
@@ -35,9 +39,26 @@ public sealed class CsvStatementParser
                     throw new FormatException("Invalid transaction date.");
                 row.TransactionDate = date.Date;
 
+                row.Source = sourceIndex >= 0 ? NullIfEmpty(Get(fields, sourceIndex), 120) : null;
+                row.FundName = fundIndex >= 0 ? NullIfEmpty(Get(fields, fundIndex), 160) : null;
                 row.Description = Get(fields, descriptionIndex).Trim();
+                if (!string.IsNullOrWhiteSpace(row.FundName) && !row.Description.Contains(row.FundName, StringComparison.OrdinalIgnoreCase))
+                    row.Description = $"{row.Description} — {row.FundName}";
                 if (string.IsNullOrWhiteSpace(row.Description) || row.Description.Length > 160)
                     throw new FormatException("Description is required and must be 160 characters or fewer.");
+
+                if (unitsIndex >= 0 && !string.IsNullOrWhiteSpace(Get(fields, unitsIndex)))
+                {
+                    if (!decimal.TryParse(Get(fields, unitsIndex), NumberStyles.Number, CultureInfo.InvariantCulture, out var units) || units < 0)
+                        throw new FormatException("Invalid unit count.");
+                    row.UnitCount = units;
+                }
+                if (unitValueIndex >= 0 && !string.IsNullOrWhiteSpace(Get(fields, unitValueIndex)))
+                {
+                    if (!decimal.TryParse(Get(fields, unitValueIndex), NumberStyles.Number, CultureInfo.InvariantCulture, out var unitValue) || unitValue < 0)
+                        throw new FormatException("Invalid unit value.");
+                    row.UnitValue = unitValue;
+                }
 
                 var amountText = Get(fields, amountIndex).Trim().Replace("$", "").Replace(",", "");
                 if (!decimal.TryParse(amountText, NumberStyles.Number | NumberStyles.AllowParentheses, CultureInfo.InvariantCulture, out var amount))
