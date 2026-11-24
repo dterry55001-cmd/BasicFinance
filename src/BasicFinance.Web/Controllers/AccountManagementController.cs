@@ -31,7 +31,10 @@ public sealed class AccountManagementController(
             });
         }
         ViewBag.Rows = rows;
-        ViewBag.DebtTotal = rows.Where(r => r.Account.Type is AccountType.Debt or AccountType.CreditCard).Sum(r => Math.Max(0, r.Balance));
+        ViewBag.DebtTotals = rows.Where(r => r.Account.Type is AccountType.Debt or AccountType.CreditCard)
+            .GroupBy(r => r.Account.CurrencyCode)
+            .Select(group => new DebtCurrencyTotal { CurrencyCode = group.Key, Amount = group.Sum(r => Math.Max(0, r.Balance)) })
+            .OrderBy(item => item.CurrencyCode).ToList();
         ViewBag.InterestEarned = await database.InterestRecords.AsNoTracking().Where(r => r.Type == InterestRecordType.Earned).SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
         ViewBag.InterestCharged = await database.InterestRecords.AsNoTracking().Where(r => r.Type == InterestRecordType.Charged).SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
         return View();
