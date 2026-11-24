@@ -85,6 +85,42 @@ public sealed class Account
     [Range(typeof(decimal), "-999999999999", "999999999999")]
     public decimal OpeningBalance { get; set; }
 
+    [Range(typeof(decimal), "0", "100")]
+    public decimal? InterestRatePercent { get; set; }
+
+    [Range(typeof(decimal), "0", "999999999999")]
+    public decimal? CreditLimit { get; set; }
+
+    [Range(typeof(decimal), "0", "999999999999")]
+    public decimal? MinimumPayment { get; set; }
+
+    [Range(1, 31)]
+    public int? PaymentDueDay { get; set; }
+
+    [Range(typeof(decimal), "0", "999999999999")]
+    public decimal? OriginalLoanAmount { get; set; }
+
+    [Range(1, 600)]
+    public int? LoanTermMonths { get; set; }
+
+    [DataType(DataType.Date)]
+    public DateTime? MaturityDate { get; set; }
+
+    [StringLength(100)]
+    public string? EmployerName { get; set; }
+
+    [Range(typeof(decimal), "0", "100")]
+    public decimal? EmployerMatchPercent { get; set; }
+
+    [StringLength(40)]
+    public string? TaxTreatment { get; set; }
+
+    [StringLength(100)]
+    public string? BrokerageRegistrationType { get; set; }
+
+    [StringLength(1000)]
+    public string? Notes { get; set; }
+
     [DataType(DataType.Date)]
     public DateTime? OpenedOn { get; set; }
 
