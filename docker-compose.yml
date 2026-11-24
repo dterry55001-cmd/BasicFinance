@@ -1,0 +1,13 @@
+services:
+  basicfinance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: basicfinance
+    ports:
+      - "7002:7002"
+    volumes:
+      - basicfinance-data:/app/data
+    restart: unless-stopped
+volumes:
+  basicfinance-data:
