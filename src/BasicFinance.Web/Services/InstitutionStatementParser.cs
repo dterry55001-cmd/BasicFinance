@@ -52,6 +52,8 @@ public sealed class ParsedStatementRow
     public decimal? UnitCount { get; set; }
     public decimal? UnitValue { get; set; }
     public string? ValidationError { get; set; }
+    public bool RequiresReview { get; set; }
+    public bool CanPost => ValidationError is null && !RequiresReview;
     public string? DuplicateFingerprint { get; set; }
 }
 
@@ -80,7 +82,8 @@ public sealed class InstitutionStatementParser
         if (ContainsAll(headers, AtomicHeaders)) return StatementSourceProfile.AtomicBanking;
         if (ContainsAll(headers, RobinhoodBrokerageHeaders)) return StatementSourceProfile.RobinhoodBrokerage;
         if (ContainsAll(headers, ChaseHeaders)) return StatementSourceProfile.ChaseBanking;
-        if (ContainsAll(headers, RobinhoodBankHeaders)) return StatementSourceProfile.RobinhoodBank;
+        // Date/Description/Amount is generic and cannot identify Robinhood uniquely.
+        // Require the user to explicitly select Robinhood Bank for this layout.
         return StatementSourceProfile.Unknown;
     }
 
@@ -101,6 +104,12 @@ public sealed class InstitutionStatementParser
             var values = records[i];
             if (values.All(string.IsNullOrWhiteSpace)) continue;
             var row = new ParsedStatementRow { RowNumber = i + 1 };
+            if (values.Count > headers.Length)
+            {
+                row.ValidationError = $"This row has {values.Count} values but the header has {headers.Length} columns.";
+                rows.Add(row);
+                continue;
+            }
             for (var h = 0; h < headers.Length; h++)
             {
                 var sourceValue = h < values.Count ? values[h] : string.Empty;
@@ -197,6 +206,15 @@ public sealed class InstitutionStatementParser
                 if (string.IsNullOrWhiteSpace(row.Description))
                     throw new FormatException("A transaction description is required.");
 
+                if (profile == StatementSourceProfile.AtomicBanking &&
+                    IsNonPostableAtomicStatus(row.PostingStatus))
+                    row.RequiresReview = true;
+
+                // No Robinhood transaction-code mapping is configured yet. Keep these rows
+                // staged until a reviewed mapping is supplied rather than guessing semantics.
+                if (profile == StatementSourceProfile.RobinhoodBrokerage)
+                    row.RequiresReview = true;
+
                 row.DuplicateFingerprint = BuildFingerprint(profile, accountKey, row);
             }
             catch (FormatException ex)
@@ -248,6 +266,12 @@ public sealed class InstitutionStatementParser
         var missing = required.Where(h => !set.Contains(h)).ToArray();
         if (missing.Length > 0)
             throw new InvalidDataException($"The selected {profile} profile is missing required columns: {string.Join(", ", missing)}.");
+    }
+
+    private static bool IsNonPostableAtomicStatus(string? status)
+    {
+        var normalized = Normalize(status ?? string.Empty);
+        return normalized is "pending" or "void" or "rejected" or "reversed";
     }
 
     private static bool ContainsAll(HashSet<string> headers, string[] required) => required.All(headers.Contains);
