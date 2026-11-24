@@ -10,6 +10,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<AccountBalanceService>();
 builder.Services.AddScoped<CsvStatementParser>();
 builder.Services.AddScoped<InstitutionStatementParser>();
+builder.Services.AddScoped<StatementImportPreparationService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
