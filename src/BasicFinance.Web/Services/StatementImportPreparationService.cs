@@ -67,7 +67,10 @@ public sealed class StatementImportPreparationService(
             {
                 var suggestion = await ruleService.SuggestAsync(row.Description, account.Id, row.Type, cancellationToken);
                 if (suggestion is not null)
+                {
                     row.CategoryId = suggestion.Id;
+                    row.CategorySuggestedByRule = true;
+                }
             }
             if (!string.IsNullOrWhiteSpace(row.DuplicateFingerprint))
             {
