@@ -5,7 +5,7 @@
 @if (TempData["SuccessMessage"] is string message) { <div class="notice notice-success" role="status">@message</div> }
 <form method="get" asp-action="Index" class="filter-card">
     <div class="filter-grid">
-        <div class="form-field"><label for="accountId">Account</label><select id="accountId" name="accountId" asp-items="(SelectList)ViewData["Accounts"]"><option value="">All accounts</option></select></div>
+        <div class="form-field"><label for="accountId">Account</label><select id="accountId" name="accountId" asp-items="ViewBag.Accounts"><option value="">All accounts</option></select></div>
         <div class="form-field"><label for="from">From</label><input id="from" type="date" name="from" value="@ViewData["From"]" /></div>
         <div class="form-field"><label for="to">To</label><input id="to" type="date" name="to" value="@ViewData["To"]" /></div>
         <div class="form-field"><label for="search">Search</label><input id="search" name="search" value="@ViewData["Search"]" placeholder="Description, category, reference" /></div>
