@@ -1,0 +1,8 @@
+@model BasicFinance.Web.Models.AccountInputModel
+@{
+    ViewData["Title"] = "Add account";
+}
+<section class="page-heading"><div><p class="eyebrow">ACCOUNT MANAGEMENT</p><h1>Add account</h1><p class="page-description">Enter the basic details for an account you want to track.</p></div></section>
+<form asp-action="Create" method="post" class="form-card">
+    <partial name="_AccountForm" model="Model" />
+</form>
