@@ -14,16 +14,13 @@
         <div class="navigation-links">
             <a class="navigation-link" asp-controller="Home" asp-action="Index">Dashboard</a>
             <a class="navigation-link" asp-controller="Accounts" asp-action="Index">Accounts</a>
+            <a class="navigation-link" asp-controller="Transactions" asp-action="Index">Transactions</a>
         </div>
         <span class="navigation-caption">Personal finance workspace</span>
     </nav>
 </header>
-<main class="page-content">
-    @RenderBody()
-</main>
-<footer class="site-footer">
-    <div>BasicFinance <span aria-hidden="true">·</span> Local-first finance workspace</div>
-</footer>
+<main class="page-content">@RenderBody()</main>
+<footer class="site-footer"><div>BasicFinance <span aria-hidden="true">·</span> Local-first finance workspace</div></footer>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
