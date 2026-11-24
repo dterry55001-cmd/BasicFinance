@@ -1,5 +1,6 @@
 @model BasicFinance.Web.Models.AccountInputModel
 @using BasicFinance.Web.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
 <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
 <div class="form-grid">
     <div class="form-field">
@@ -11,6 +12,14 @@
         <label asp-for="Type"></label>
         <select asp-for="Type" asp-items="Html.GetEnumSelectList<AccountType>()"></select>
         <span asp-validation-for="Type" class="field-error"></span>
+    </div>
+    <div class="form-field" id="retirement-type-field" hidden>
+        <label asp-for="RetirementType"></label>
+        <select asp-for="RetirementType" asp-items="(IEnumerable<SelectListItem>)ViewBag.RetirementTypes">
+            <option value="">Choose retirement account type</option>
+        </select>
+        <span asp-validation-for="RetirementType" class="field-error"></span>
+        <small>Select the specific tax-advantaged or pension account you hold.</small>
     </div>
     <div class="form-field">
         <label asp-for="Institution"></label>
@@ -48,3 +57,20 @@
     <button class="button button-primary" type="submit">Save account</button>
     <a class="button button-secondary" asp-action="Index">Cancel</a>
 </div>
+
+<script>
+(() => {
+    const accountType = document.getElementById("Type");
+    const retirementField = document.getElementById("retirement-type-field");
+    const retirementType = document.getElementById("RetirementType");
+    if (!accountType || !retirementField) return;
+    const updateRetirementField = () => {
+        const isRetirement = accountType.value === "@((int)AccountType.Retirement)";
+        retirementField.hidden = !isRetirement;
+        retirementType.required = isRetirement;
+        if (!isRetirement) retirementType.value = "";
+    };
+    accountType.addEventListener("change", updateRetirementField);
+    updateRetirementField();
+})();
+</script>
