@@ -43,8 +43,8 @@ The application starts with no user financial records. No legacy finance applica
 - Security and retirement details include symbol, CUSIP, instrument, quantity, price, fund, contribution source, unit count, and unit value
 - Banking details include provider transaction IDs, posting status, check/reference numbers, categories, memo, extended description, and running balance
 - Duplicate fingerprints are scoped to the selected internal account; Atomic transaction IDs are preferred when available
-- Atomic pending, void, rejected, and reversed rows are held for review
-- Robinhood Brokerage rows are held for review until transaction-code mappings are configured; the importer does not guess investment action semantics
+- Atomic pending, void, rejected, and reversed rows remain held and cannot be manually released
+- Robinhood Brokerage rows require explicit row-level mapping to Income, Expense, Deposit, or Withdrawal before posting; the importer does not guess investment action semantics
 - Robinhood Bank's generic Date/Description/Amount layout requires explicit profile selection
 - Import history records row-level validation, duplicate, and review status
 
