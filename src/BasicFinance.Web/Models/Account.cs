@@ -9,7 +9,8 @@ public enum AccountType
     Cash,
     CreditCard,
     Brokerage,
-    Retirement
+    Retirement,
+    Debt
 }
 
 public enum RetirementAccountType
@@ -32,6 +33,23 @@ public enum RetirementAccountType
     OtherRetirement
 }
 
+public enum DebtAccountType
+{
+    CreditCard,
+    Mortgage,
+    HomeEquityLoan,
+    HomeEquityLineOfCredit,
+    AutoLoan,
+    StudentLoan,
+    PersonalLoan,
+    BusinessLoan,
+    MedicalDebt,
+    BuyNowPayLater,
+    LineOfCredit,
+    TaxDebt,
+    OtherDebt
+}
+
 public enum AccountStatus
 {
     Active,
@@ -50,6 +68,8 @@ public sealed class Account
     public AccountType Type { get; set; }
 
     public RetirementAccountType? RetirementType { get; set; }
+
+    public DebtAccountType? DebtType { get; set; }
 
     [StringLength(100)]
     public string? Institution { get; set; }
