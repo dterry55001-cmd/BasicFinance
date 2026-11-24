@@ -35,6 +35,8 @@ public sealed class ParsedStatementRow
     public string? SourceStatus { get; set; }
     public string? SourceCategory { get; set; }
     public string? SourceReference { get; set; }
+    public string? ExternalAccountNumberLast4 { get; set; }
+    public string? FriendlyAccountName { get; set; }
     public string? Instrument { get; set; }
     public string? Symbol { get; set; }
     public string? Cusip { get; set; }
@@ -137,6 +139,9 @@ public sealed class InstitutionStatementParser
                 {
                     case StatementSourceProfile.UbsBrokerage:
                         row.TransactionDate = Date("Date");
+                        var accountDigits = new string(Get("Account Number").Where(char.IsDigit).ToArray());
+                        row.ExternalAccountNumberLast4 = accountDigits.Length >= 4 ? accountDigits[^4..] : null;
+                        row.FriendlyAccountName = Get("Friendly Account Name");
                         row.Description = FirstNonEmpty(Get("Description"), Get("Activity"));
                         row.SourceType = Get("Type");
                         row.SourceCategory = Get("Activity");
