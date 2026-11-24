@@ -2,25 +2,41 @@
 
 A clean, modular personal finance application.
 
-## Baseline
+## Current foundation
 
 - ASP.NET Core MVC / .NET 10
 - Entity Framework Core with SQLite
-- Razor Views and responsive Bootstrap-based layout
+- Responsive Razor Views
 - Docker-ready
 - Application port: 7002
+- EF Core migrations applied at startup
 
-This repository intentionally starts with an empty application foundation. No legacy finance application code, imported data, or business modules are included.
+## Implemented modules
+
+### Account management
+
+- Checking, savings, cash, credit card, brokerage, and retirement accounts
+- Institution, currency, opening balance, and optional opened date
+- Only the last four account-number digits may be stored
+- Active, inactive, and archived account statuses
+- Account list, details, create, edit, and archive workflows
+- Archived accounts remain stored and can be included in the account list
+
+The application starts with no user financial records. No legacy finance application code or data is included.
 
 ## Run locally
 
-```bash
-dotnet restore
-dotnet run --project src/BasicFinance.Web/BasicFinance.Web.csproj
-```
+    dotnet restore
+    dotnet run --project src/BasicFinance.Web/BasicFinance.Web.csproj
 
-The application uses SQLite at `data/basicfinance.db`. The database directory is created automatically. The initial dashboard is intentionally empty.
+Open http://localhost:7002. SQLite is stored at data/basicfinance.db.
+
+## Docker
+
+    docker compose up --build -d
+
+The SQLite database is persisted in the basicfinance-data Docker volume.
 
 ## Health
 
-`/health` returns a simple application health response.
+/health provides the application health endpoint.
