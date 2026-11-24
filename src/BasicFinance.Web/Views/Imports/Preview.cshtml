@@ -40,7 +40,8 @@ else
                 <form asp-action="ReviewRobinhoodRow" asp-route-id="@Model.Id" method="post" class="row-review-form">
                     <input type="hidden" name="rowId" value="@row.Id" />
                     <label class="visually-hidden" for="type-@row.Id">Map @row.TransactionCode to</label>
-                    <select id="type-@row.Id" name="normalizedType">
+                    <select id="type-@row.Id" name="normalizedType" required>
+                        <option value="" selected disabled>Choose type</option>
                         <option value="Income">Income</option>
                         <option value="Expense">Expense</option>
                         <option value="Deposit">Deposit</option>
