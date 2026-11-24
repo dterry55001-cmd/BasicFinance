@@ -1,0 +1,8 @@
+@model BasicFinance.Web.Models.AccountInputModel
+@{
+    ViewData["Title"] = "Edit account";
+}
+<section class="page-heading"><div><p class="eyebrow">ACCOUNT MANAGEMENT</p><h1>Edit account</h1><p class="page-description">Update account details and status.</p></div></section>
+<form asp-action="Edit" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" class="form-card">
+    <partial name="_AccountForm" model="Model" />
+</form>
