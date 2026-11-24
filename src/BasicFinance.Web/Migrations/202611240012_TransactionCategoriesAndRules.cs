@@ -93,16 +93,10 @@ public sealed class TransactionCategoriesAndRules : Migration
         migrationBuilder.CreateIndex(name: "IX_Transactions_CategoryId", table: "Transactions", column: "CategoryId");
         migrationBuilder.CreateIndex(name: "IX_StatementImportRows_CategoryId", table: "StatementImportRows", column: "CategoryId");
 
-        migrationBuilder.AddForeignKey(name: "FK_Transactions_TransactionCategories_CategoryId", table: "Transactions",
-            column: "CategoryId", principalTable: "TransactionCategories", principalColumn: "Id", onDelete: ReferentialAction.Restrict);
-        migrationBuilder.AddForeignKey(name: "FK_StatementImportRows_TransactionCategories_CategoryId", table: "StatementImportRows",
-            column: "CategoryId", principalTable: "TransactionCategories", principalColumn: "Id", onDelete: ReferentialAction.Restrict);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropForeignKey(name: "FK_Transactions_TransactionCategories_CategoryId", table: "Transactions");
-        migrationBuilder.DropForeignKey(name: "FK_StatementImportRows_TransactionCategories_CategoryId", table: "StatementImportRows");
         migrationBuilder.DropIndex(name: "IX_Transactions_CategoryId", table: "Transactions");
         migrationBuilder.DropIndex(name: "IX_StatementImportRows_CategoryId", table: "StatementImportRows");
         migrationBuilder.DropColumn(name: "CategoryId", table: "Transactions");
