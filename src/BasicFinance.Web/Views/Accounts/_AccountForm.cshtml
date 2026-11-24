@@ -49,6 +49,37 @@
         <input asp-for="OpenedOn" type="date" />
         <span asp-validation-for="OpenedOn" class="field-error"></span>
     </div>
+    <div id="debt-details" class="form-field-group" hidden>
+        <h3>Debt details</h3>
+        <div class="form-grid">
+            <div class="form-field"><label asp-for="InterestRatePercent"></label><input asp-for="InterestRatePercent" type="number" min="0" max="100" step="0.001" /><span asp-validation-for="InterestRatePercent" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="CreditLimit"></label><input asp-for="CreditLimit" type="number" min="0" step="0.01" /><span asp-validation-for="CreditLimit" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="MinimumPayment"></label><input asp-for="MinimumPayment" type="number" min="0" step="0.01" /><span asp-validation-for="MinimumPayment" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="PaymentDueDay"></label><input asp-for="PaymentDueDay" type="number" min="1" max="31" /><span asp-validation-for="PaymentDueDay" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="OriginalLoanAmount"></label><input asp-for="OriginalLoanAmount" type="number" min="0" step="0.01" /><span asp-validation-for="OriginalLoanAmount" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="LoanTermMonths"></label><input asp-for="LoanTermMonths" type="number" min="1" max="600" /><span asp-validation-for="LoanTermMonths" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="MaturityDate"></label><input asp-for="MaturityDate" type="date" /><span asp-validation-for="MaturityDate" class="field-error"></span></div>
+        </div>
+    </div>
+    <div id="retirement-details" class="form-field-group" hidden>
+        <h3>Retirement details</h3>
+        <div class="form-grid">
+            <div class="form-field"><label asp-for="EmployerName"></label><input asp-for="EmployerName" autocomplete="organization" /><span asp-validation-for="EmployerName" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="EmployerMatchPercent"></label><input asp-for="EmployerMatchPercent" type="number" min="0" max="100" step="0.01" /><span asp-validation-for="EmployerMatchPercent" class="field-error"></span></div>
+            <div class="form-field"><label asp-for="TaxTreatment"></label><select asp-for="TaxTreatment"><option value="">Not specified</option><option>Traditional / pre-tax</option><option>Roth / after-tax</option><option>Mixed</option><option>Taxable</option><option>Tax-deferred</option><option>Other</option></select><span asp-validation-for="TaxTreatment" class="field-error"></span></div>
+        </div>
+    </div>
+    <div id="brokerage-details" class="form-field-group" hidden>
+        <h3>Brokerage details</h3>
+        <div class="form-field"><label asp-for="BrokerageRegistrationType"></label><select asp-for="BrokerageRegistrationType"><option value="">Not specified</option><option>Individual</option><option>Joint</option><option>Trust</option><option>Custodial</option><option>Other</option></select><span asp-validation-for="BrokerageRegistrationType" class="field-error"></span></div>
+    </div>
+    <div id="banking-details" class="form-field-group" hidden>
+        <h3>Banking details</h3>
+        <div class="form-field"><label asp-for="InterestRatePercent"></label><input asp-for="InterestRatePercent" type="number" min="0" max="100" step="0.001" /><span asp-validation-for="InterestRatePercent" class="field-error"></span><small>Enter the current APY or interest rate shown on your statement.</small></div>
+    </div>
+    <div class="form-field form-field-wide">
+        <label asp-for="Notes"></label><textarea asp-for="Notes" rows="3" maxlength="1000"></textarea><span asp-validation-for="Notes" class="field-error"></span>
+    </div>
     <div class="form-field">
         <label asp-for="Status"></label>
         <select asp-for="Status" asp-items="Html.GetEnumSelectList<AccountStatus>()"></select>
@@ -67,6 +98,10 @@
     const retirementType = document.getElementById("RetirementType");
     const debtField = document.getElementById("debt-type-field");
     const debtType = document.getElementById("DebtType");
+    const debtDetails = document.getElementById("debt-details");
+    const retirementDetails = document.getElementById("retirement-details");
+    const brokerageDetails = document.getElementById("brokerage-details");
+    const bankingDetails = document.getElementById("banking-details");
     if (!accountType) return;
     const updateSubtypeFields = () => {
         const isRetirement = accountType.value === "@((int)AccountType.Retirement)";
@@ -75,6 +110,10 @@
         retirementType.required = isRetirement;
         debtField.hidden = !isDebt;
         debtType.required = isDebt;
+        debtDetails.hidden = !isDebt;
+        retirementDetails.hidden = !isRetirement;
+        brokerageDetails.hidden = accountType.value !== "@((int)AccountType.Brokerage)";
+        bankingDetails.hidden = !["@((int)AccountType.Checking)", "@((int)AccountType.Savings)", "@((int)AccountType.Cash)"].includes(accountType.value);
         if (!isRetirement) retirementType.value = "";
         if (!isDebt) debtType.value = "";
     };
