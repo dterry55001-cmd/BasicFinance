@@ -20,7 +20,7 @@ public sealed class CsvStatementParser
         var referenceIndex = Find(headers, "reference", "id", "transactionid");
         var sourceIndex = Find(headers, "source");
         var fundIndex = Find(headers, "fundname", "fund");
-        var unitsIndex = Find(headers, "unitcount", "units", "shares");
+        var unitsIndex = Find(headers, "unitcount", "units");
         var unitValueIndex = Find(headers, "unitvalue", "priceperunit");
         var accountNumberIndex = Find(headers, "accountnumber", "account");
         var activityIndex = Find(headers, "activity", "action");
@@ -48,8 +48,8 @@ public sealed class CsvStatementParser
                 row.TransactionDate = date.Date;
 
                 row.Source = sourceIndex >= 0 ? NullIfEmpty(Get(fields, sourceIndex), 120) : null;
-                var accountNumber = accountNumberIndex >= 0 ? Get(fields, accountNumberIndex).Trim() : "";
-                row.ExternalAccountNumberLast4 = accountNumber.Length >= 4 ? accountNumber[^4..] : NullIfEmpty(accountNumber, 4);
+                var accountNumber = accountNumberIndex >= 0 ? new string(Get(fields, accountNumberIndex).Where(char.IsDigit).ToArray()) : "";
+                row.ExternalAccountNumberLast4 = accountNumber.Length >= 4 ? accountNumber[^4..] : null;
                 row.FriendlyAccountName = friendlyAccountIndex >= 0 ? NullIfEmpty(Get(fields, friendlyAccountIndex), 100) : null;
                 row.Activity = activityIndex >= 0 ? NullIfEmpty(Get(fields, activityIndex), 100) : null;
                 row.Symbol = symbolIndex >= 0 ? NullIfEmpty(Get(fields, symbolIndex), 40) : null;
@@ -151,9 +151,9 @@ public sealed class CsvStatementParser
     private static TransactionType MapActivity(string activity, decimal signedAmount)
     {
         var value = Normalize(activity);
-        if (value.Contains("buy") || value.Contains("purchase") || value.Contains("reinvest"))
+        if (value.Contains("buy") || value.Contains("bought") || value.Contains("purchase") || value.Contains("reinvest"))
             return TransactionType.Expense;
-        if (value.Contains("sell") || value.Contains("dividend") || value.Contains("interest") || value.Contains("credit"))
+        if (value.Contains("sell") || value.Contains("sold") || value.Contains("sale") || value.Contains("dividend") || value.Contains("interest") || value.Contains("credit"))
             return TransactionType.Income;
         if (value.Contains("contribution") || value.Contains("deposit"))
             return TransactionType.Deposit;
