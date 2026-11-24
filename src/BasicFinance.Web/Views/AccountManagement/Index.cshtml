@@ -6,8 +6,8 @@
 <section class="page-heading"><div><p class="eyebrow">ACCOUNTS & LIABILITIES</p><h1>Account & debt management</h1><p class="page-description">Monitor credit, loan obligations, interest activity, and historical balances.</p></div></section>
 <div class="summary-grid">
     <div class="summary-card"><span>Debt balances by currency</span>@foreach (var total in (IReadOnlyList<BasicFinance.Web.Controllers.DebtCurrencyTotal>)ViewBag.DebtTotals) { <strong>@total.Amount.ToString("N2") @total.CurrencyCode</strong> }</div>
-    <div class="summary-card"><span>Interest earned</span><strong>@(((decimal)ViewBag.InterestEarned).ToString("N2"))</strong></div>
-    <div class="summary-card"><span>Interest charged</span><strong>@(((decimal)ViewBag.InterestCharged).ToString("N2"))</strong></div>
+    <div class="summary-card"><span>Interest earned by currency</span>@foreach (var total in (IReadOnlyList<BasicFinance.Web.Controllers.InterestCurrencyTotal>)ViewBag.InterestEarnedTotals) { <strong>@total.Amount.ToString("N2") @total.CurrencyCode</strong> }</div>
+    <div class="summary-card"><span>Interest charged by currency</span>@foreach (var total in (IReadOnlyList<BasicFinance.Web.Controllers.InterestCurrencyTotal>)ViewBag.InterestChargedTotals) { <strong>@total.Amount.ToString("N2") @total.CurrencyCode</strong> }</div>
 </div>
 <div class="quick-links">
     <a class="button button-primary" asp-action="Payoff">Debt payoff planner</a>
