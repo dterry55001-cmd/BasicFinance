@@ -130,7 +130,14 @@ public sealed class InstitutionStatementParserTests
         Assert.Contains("PostingDate", columns);
         Assert.Contains("SettlementDate", columns);
         Assert.Contains("RequiresReview", columns);
-        Assert.Contains("DebtType", columns);
+        var accountColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using var accountCommand = connection.CreateCommand();
+        accountCommand.CommandText = "PRAGMA table_info('Accounts');";
+        await using var accountReader = await accountCommand.ExecuteReaderAsync();
+        while (await accountReader.ReadAsync()) accountColumns.Add(accountReader.GetString(1));
+        Assert.Contains("DebtType", accountColumns);
+
+
     }
 
 
