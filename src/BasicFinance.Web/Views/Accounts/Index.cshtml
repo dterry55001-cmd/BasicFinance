@@ -1,0 +1,61 @@
+@model IReadOnlyList<BasicFinance.Web.Models.Account>
+@using BasicFinance.Web.Models
+@{
+    ViewData["Title"] = "Accounts";
+    var includeArchived = ViewData["IncludeArchived"] as bool? ?? false;
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">FINANCIAL ORGANIZATION</p>
+        <h1>Accounts</h1>
+        <p class="page-description">Manage the accounts you want to track. Only the last four account-number digits are stored.</p>
+    </div>
+    <a class="button button-primary" asp-action="Create">Add account</a>
+</section>
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="notice notice-success" role="status">@message</div>
+}
+<div class="toolbar">
+    <span class="muted">@Model.Count account(s)</span>
+    @if (includeArchived)
+    {
+        <a asp-action="Index">Hide archived accounts</a>
+    }
+    else
+    {
+        <a asp-action="Index" asp-route-includeArchived="true">Show archived accounts</a>
+    }
+</div>
+@if (Model.Count == 0)
+{
+    <section class="empty-state">
+        <div class="empty-state-icon" aria-hidden="true">＋</div>
+        <h2>No accounts yet</h2>
+        <p>Add a checking, savings, cash, credit card, brokerage, or retirement account to begin organizing your finances.</p>
+        <a class="button button-primary" asp-action="Create">Create your first account</a>
+    </section>
+}
+else
+{
+    <div class="table-card">
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Account</th><th>Type</th><th>Institution</th><th>Opening balance</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+                <tbody>
+                @foreach (var account in Model)
+                {
+                    <tr>
+                        <td><a class="table-link" asp-action="Details" asp-route-id="@account.Id">@account.Name</a><div class="table-subtext">@account.CurrencyCode@if (!string.IsNullOrEmpty(account.AccountNumberLast4)) { <text> · •••• @account.AccountNumberLast4</text> }</div></td>
+                        <td>@account.Type</td>
+                        <td>@(account.Institution ?? "—")</td>
+                        <td>@account.OpeningBalance.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</td>
+                        <td><span class="status-pill status-@account.Status.ToString().ToLowerInvariant()">@account.Status</span></td>
+                        <td><a asp-action="Edit" asp-route-id="@account.Id">Edit</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
