@@ -13,7 +13,7 @@ public sealed class CsvStatementParser
         var headers = lines[0].Select((value, index) => (Key: Normalize(value), Index: index))
             .GroupBy(item => item.Key).ToDictionary(group => group.Key, group => group.First().Index);
         var dateIndex = Find(headers, "date", "transactiondate", "posteddate");
-        var descriptionIndex = Find(headers, "description", "payee", "name", "memo");
+        var descriptionIndex = Find(headers, "description", "payee", "name", "memo", "source");
         var amountIndex = Find(headers, "amount", "transactionamount", "value");
         var typeIndex = Find(headers, "type", "transactiontype");
         var categoryIndex = Find(headers, "category");
@@ -48,9 +48,19 @@ public sealed class CsvStatementParser
                 var typeText = typeIndex >= 0 ? Get(fields, typeIndex).Trim() : "";
                 if (!string.IsNullOrWhiteSpace(typeText))
                 {
-                    if (!Enum.TryParse<TransactionType>(typeText, true, out var type) || type == TransactionType.Transfer)
-                        throw new FormatException("Type must be Income, Expense, Deposit, or Withdrawal.");
-                    row.Type = type;
+                    if (typeText.Equals("Contribution", StringComparison.OrdinalIgnoreCase) ||
+                        typeText.Equals("Employer Match", StringComparison.OrdinalIgnoreCase) ||
+                        typeText.Equals("Employer Contribution", StringComparison.OrdinalIgnoreCase))
+                        row.Type = TransactionType.Deposit;
+                    else if (typeText.Equals("Purchase", StringComparison.OrdinalIgnoreCase) ||
+                        typeText.Equals("Payment", StringComparison.OrdinalIgnoreCase))
+                        row.Type = TransactionType.Expense;
+                    else if (typeText.Equals("Dividend", StringComparison.OrdinalIgnoreCase) ||
+                        typeText.Equals("Interest", StringComparison.OrdinalIgnoreCase))
+                        row.Type = TransactionType.Income;
+                    else if (!Enum.TryParse<TransactionType>(typeText, true, out var type) || type == TransactionType.Transfer)
+                        throw new FormatException("Unsupported transaction type. Use Income, Expense, Deposit, or Withdrawal.");
+                    else row.Type = type;
                 }
                 else row.Type = amount < 0 ? TransactionType.Expense : TransactionType.Income;
 
