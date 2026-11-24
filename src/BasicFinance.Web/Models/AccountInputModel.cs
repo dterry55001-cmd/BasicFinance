@@ -12,6 +12,9 @@ public sealed class AccountInputModel
     [Display(Name = "Account type")]
     public AccountType Type { get; set; }
 
+    [Display(Name = "Retirement account type")]
+    public RetirementAccountType? RetirementType { get; set; }
+
     [StringLength(100)]
     public string? Institution { get; set; }
 
