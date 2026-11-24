@@ -1,0 +1,50 @@
+@model BasicFinance.Web.Models.AccountInputModel
+@using BasicFinance.Web.Models
+<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+<div class="form-grid">
+    <div class="form-field">
+        <label asp-for="Name"></label>
+        <input asp-for="Name" autocomplete="off" />
+        <span asp-validation-for="Name" class="field-error"></span>
+    </div>
+    <div class="form-field">
+        <label asp-for="Type"></label>
+        <select asp-for="Type" asp-items="Html.GetEnumSelectList<AccountType>()"></select>
+        <span asp-validation-for="Type" class="field-error"></span>
+    </div>
+    <div class="form-field">
+        <label asp-for="Institution"></label>
+        <input asp-for="Institution" autocomplete="organization" />
+        <span asp-validation-for="Institution" class="field-error"></span>
+    </div>
+    <div class="form-field">
+        <label asp-for="AccountNumberLast4"></label>
+        <input asp-for="AccountNumberLast4" inputmode="numeric" maxlength="4" autocomplete="off" />
+        <span asp-validation-for="AccountNumberLast4" class="field-error"></span>
+        <small>Do not enter a full account number or login credentials.</small>
+    </div>
+    <div class="form-field">
+        <label asp-for="CurrencyCode"></label>
+        <input asp-for="CurrencyCode" maxlength="3" autocomplete="off" />
+        <span asp-validation-for="CurrencyCode" class="field-error"></span>
+    </div>
+    <div class="form-field">
+        <label asp-for="OpeningBalance"></label>
+        <input asp-for="OpeningBalance" type="number" step="0.01" />
+        <span asp-validation-for="OpeningBalance" class="field-error"></span>
+    </div>
+    <div class="form-field">
+        <label asp-for="OpenedOn"></label>
+        <input asp-for="OpenedOn" type="date" />
+        <span asp-validation-for="OpenedOn" class="field-error"></span>
+    </div>
+    <div class="form-field">
+        <label asp-for="Status"></label>
+        <select asp-for="Status" asp-items="Html.GetEnumSelectList<AccountStatus>()"></select>
+        <span asp-validation-for="Status" class="field-error"></span>
+    </div>
+</div>
+<div class="form-actions">
+    <button class="button button-primary" type="submit">Save account</button>
+    <a class="button button-secondary" asp-action="Index">Cancel</a>
+</div>
