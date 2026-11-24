@@ -6,6 +6,7 @@
 <form method="get" asp-action="Index" class="filter-card">
     <div class="filter-grid">
         <div class="form-field"><label for="accountId">Account</label><select id="accountId" name="accountId" asp-items="ViewBag.Accounts"><option value="">All accounts</option></select></div>
+        <div class="form-field"><label for="categoryId">Category</label><select id="categoryId" name="categoryId" asp-items="ViewBag.Categories"><option value="">All categories</option></select></div>
         <div class="form-field"><label for="from">From</label><input id="from" type="date" name="from" value="@ViewData["From"]" /></div>
         <div class="form-field"><label for="to">To</label><input id="to" type="date" name="to" value="@ViewData["To"]" /></div>
         <div class="form-field"><label for="search">Search</label><input id="search" name="search" value="@ViewData["Search"]" placeholder="Description, category, reference, symbol, CUSIP" /></div>
@@ -28,7 +29,7 @@ else
             <tr>
                 <td>@transaction.TransactionDate.ToString("MMM d, yyyy")</td>
                 <td><strong>@transaction.Description</strong>@if (transaction.FundName is not null) { <div class="table-subtext">@transaction.Source · @transaction.FundName · @(transaction.UnitCount?.ToString("N6") ?? "Units n/a") units at @(transaction.UnitValue?.ToString("N6") ?? "value n/a")</div> }@if (transaction.Symbol is not null || transaction.Cusip is not null) { <div class="table-subtext">@(transaction.Symbol ?? "No symbol") · CUSIP @(transaction.Cusip ?? "—")</div> }@if (transaction.Activity is not null) { <div class="table-subtext">@transaction.Activity · @(transaction.Quantity?.ToString("N6") ?? "—") units @if (transaction.Price.HasValue) { <text>at @transaction.Price.Value.ToString("N4")</text> }</div> }@if (transaction.Type == TransactionType.Transfer && transaction.RelatedAccount is not null) { <div class="table-subtext">To @transaction.RelatedAccount.Name</div> }</td>
-                <td>@transaction.Account.Name</td><td>@transaction.Type</td><td>@(transaction.Category ?? "—")</td>
+                <td>@transaction.Account.Name</td><td>@transaction.Type</td><td>@(transaction.TransactionCategory?.Name ?? transaction.Category ?? "—")</td>
                 <td class="@(isOutflow ? "amount-out" : "amount-in")">@(isOutflow ? "−" : "+")@transaction.Amount.ToString("N2") @transaction.CurrencyCode</td>
                 <td><div class="table-actions"><a asp-action="Edit" asp-route-id="@transaction.Id">Edit</a><form asp-action="Delete" asp-route-id="@transaction.Id" method="post" onsubmit="return confirm('Delete this transaction? The account balance will be recalculated.');"><button type="submit" class="text-button">Delete</button></form></div></td>
             </tr>
