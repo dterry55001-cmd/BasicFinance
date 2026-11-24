@@ -21,6 +21,14 @@
         <span asp-validation-for="RetirementType" class="field-error"></span>
         <small>Select the specific tax-advantaged or pension account you hold.</small>
     </div>
+    <div class="form-field" id="debt-type-field" hidden>
+        <label asp-for="DebtType"></label>
+        <select asp-for="DebtType" asp-items="(IEnumerable<SelectListItem>)ViewBag.DebtTypes">
+            <option value="">Choose debt account type</option>
+        </select>
+        <span asp-validation-for="DebtType" class="field-error"></span>
+        <small>Choose the type of liability you want to track.</small>
+    </div>
     <div class="form-field">
         <label asp-for="Institution"></label>
         <input asp-for="Institution" autocomplete="organization" />
@@ -63,14 +71,20 @@
     const accountType = document.getElementById("Type");
     const retirementField = document.getElementById("retirement-type-field");
     const retirementType = document.getElementById("RetirementType");
-    if (!accountType || !retirementField) return;
-    const updateRetirementField = () => {
+    const debtField = document.getElementById("debt-type-field");
+    const debtType = document.getElementById("DebtType");
+    if (!accountType) return;
+    const updateSubtypeFields = () => {
         const isRetirement = accountType.value === "@((int)AccountType.Retirement)";
+        const isDebt = accountType.value === "@((int)AccountType.Debt)";
         retirementField.hidden = !isRetirement;
         retirementType.required = isRetirement;
+        debtField.hidden = !isDebt;
+        debtType.required = isDebt;
         if (!isRetirement) retirementType.value = "";
+        if (!isDebt) debtType.value = "";
     };
-    accountType.addEventListener("change", updateRetirementField);
-    updateRetirementField();
+    accountType.addEventListener("change", updateSubtypeFields);
+    updateSubtypeFields();
 })();
 </script>
