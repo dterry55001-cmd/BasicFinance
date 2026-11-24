@@ -102,7 +102,16 @@ public sealed class InstitutionStatementParser
             if (values.All(string.IsNullOrWhiteSpace)) continue;
             var row = new ParsedStatementRow { RowNumber = i + 1 };
             for (var h = 0; h < headers.Length; h++)
-                row.SourceFields[headers[h]] = h < values.Count ? values[h] : string.Empty;
+            {
+                var sourceValue = h < values.Count ? values[h] : string.Empty;
+                // Never retain a full brokerage account number in the source payload.
+                if (profile == StatementSourceProfile.UbsBrokerage && Normalize(headers[h]) == "accountnumber")
+                {
+                    var digits = new string(sourceValue.Where(char.IsDigit).ToArray());
+                    sourceValue = digits.Length >= 4 ? $"****{digits[^4..]}" : string.Empty;
+                }
+                row.SourceFields[headers[h]] = sourceValue;
+            }
 
             string Get(string key) {
                 var index = Array.IndexOf(normalized, Normalize(key));
