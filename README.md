@@ -33,6 +33,20 @@ The application starts with no user financial records. No legacy finance applica
 - Date, account, description, category, and reference filtering
 - Account balances are calculated from the opening balance and posted ledger activity
 
+### Statement imports
+
+- CSV upload with a 10 MB size limit
+- Preview and validation before posting to the ledger
+- Required Date, Description/Source, and Amount columns
+- Optional transaction type, category, and reference columns
+- Common statement aliases for contributions, employer matches, purchases, payments, dividends, and interest
+- Duplicate detection against existing transactions and within each uploaded file
+- Import history with row-level validation status
+- LifeSight-style contribution metadata: source, fund name, unit count, and unit value
+- Confirmed imports preserve fund and unit details on the ledger transaction
+
+Imports remain staged until the user confirms them. CSV import currently supports a configurable common header set; OFX/QFX and bank-specific mapping templates are future work.
+
 ## Run locally
 
     dotnet restore
