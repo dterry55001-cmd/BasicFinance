@@ -104,4 +104,31 @@ public sealed class InstitutionStatementParserTests
         Assert.Null(row.Category);
         Assert.Equal("Shopping", row.SourceCategory);
     }
+
+    [Fact]
+    public async Task AppliesAllSqliteMigrationsWithInstitutionImportSchema()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var database = new ApplicationDbContext(options);
+        await database.Database.MigrateAsync();
+
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA table_info('StatementImportRows');";
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync()) columns.Add(reader.GetString(1));
+
+        Assert.Contains("SourceFieldsJson", columns);
+        Assert.Contains("SourceSignedAmount", columns);
+        Assert.Contains("DuplicateFingerprint", columns);
+        Assert.Contains("PostingDate", columns);
+        Assert.Contains("SettlementDate", columns);
+        Assert.Contains("RequiresReview", columns);
+    }
+
 }
