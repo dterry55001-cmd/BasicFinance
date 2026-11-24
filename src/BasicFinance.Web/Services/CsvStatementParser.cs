@@ -51,7 +51,7 @@ public sealed class CsvStatementParser
                 var accountNumber = accountNumberIndex >= 0 ? new string(Get(fields, accountNumberIndex).Where(char.IsDigit).ToArray()) : "";
                 row.ExternalAccountNumberLast4 = accountNumber.Length >= 4 ? accountNumber[^4..] : null;
                 row.FriendlyAccountName = friendlyAccountIndex >= 0 ? NullIfEmpty(Get(fields, friendlyAccountIndex), 100) : null;
-                row.Activity = activityIndex >= 0 ? NullIfEmpty(Get(fields, activityIndex), 100) : null;
+                row.Activity = activityIndex >= 0 ? NullIfEmpty(Get(fields, activityIndex), 100) : typeIndex >= 0 ? NullIfEmpty(Get(fields, typeIndex), 100) : null;
                 row.Symbol = symbolIndex >= 0 ? NullIfEmpty(Get(fields, symbolIndex), 40) : null;
                 row.Cusip = cusipIndex >= 0 ? NullIfEmpty(Get(fields, cusipIndex), 20) : null;
                 row.SecurityType = securityTypeIndex >= 0 ? NullIfEmpty(Get(fields, securityTypeIndex), 40) : null;
