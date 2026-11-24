@@ -110,7 +110,7 @@ public sealed class AccountManagementController(
         var account = await database.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId, cancellationToken);
         if (account is null) return NotFound();
         ViewBag.Account = account;
-        ViewBag.CurrentBalance = await balances.GetBalanceAsync(accountId, cancellationToken);
+        ViewBag.CurrentBalance = await balances.GetBalanceAtAsync(accountId, date, cancellationToken);
         ViewBag.Snapshots = await database.AccountBalanceSnapshots.AsNoTracking()
             .Where(s => s.AccountId == accountId).OrderByDescending(s => s.SnapshotDate).ToListAsync(cancellationToken);
         return View();
