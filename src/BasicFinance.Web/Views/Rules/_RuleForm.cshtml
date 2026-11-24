@@ -1,0 +1,14 @@
+@model BasicFinance.Web.Models.TransactionRuleInputModel
+<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+<input asp-for="Id" type="hidden"/>
+<div class="form-grid">
+<div class="form-field"><label asp-for="Name"></label><input asp-for="Name"/><span asp-validation-for="Name" class="field-error"></span></div>
+<div class="form-field"><label asp-for="MatchText"></label><input asp-for="MatchText"/><span asp-validation-for="MatchText" class="field-error"></span><small>Match against the transaction description.</small></div>
+<div class="form-field"><label asp-for="MatchType"></label><select asp-for="MatchType" asp-items="Html.GetEnumSelectList<BasicFinance.Web.Models.TransactionRuleMatchType>()"></select><span asp-validation-for="MatchType" class="field-error"></span></div>
+<div class="form-field"><label asp-for="AccountId"></label><select asp-for="AccountId" asp-items="ViewBag.Accounts"><option value="">All accounts</option></select><span asp-validation-for="AccountId" class="field-error"></span></div>
+<div class="form-field"><label asp-for="TransactionType"></label><select asp-for="TransactionType" asp-items="Html.GetEnumSelectList<BasicFinance.Web.Models.TransactionType>()"><option value="">Any transaction type</option></select><span asp-validation-for="TransactionType" class="field-error"></span></div>
+<div class="form-field"><label asp-for="TransactionCategoryId"></label><select asp-for="TransactionCategoryId" asp-items="ViewBag.Categories"><option value="">Choose a category</option></select><span asp-validation-for="TransactionCategoryId" class="field-error"></span></div>
+<div class="form-field"><label asp-for="Priority"></label><input asp-for="Priority" type="number" min="0" max="10000"/><span asp-validation-for="Priority" class="field-error"></span></div>
+</div>
+<div class="notice">Rules only make category suggestions in statement-import previews. They do not post transactions or modify existing ledger entries.</div>
+<div class="form-actions"><button class="button button-primary" type="submit">Save rule</button><a class="button button-secondary" asp-action="Index">Cancel</a></div>
