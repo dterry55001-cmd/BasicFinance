@@ -42,6 +42,15 @@ public sealed class FinancialTransaction
     [StringLength(100)]
     public string? Reference { get; set; }
 
+    [StringLength(120)]
+    public string? Source { get; set; }
+
+    [StringLength(160)]
+    public string? FundName { get; set; }
+
+    public decimal? UnitCount { get; set; }
+    public decimal? UnitValue { get; set; }
+
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
