@@ -13,6 +13,7 @@ builder.Services.AddScoped<InstitutionStatementParser>();
 builder.Services.AddScoped<StatementImportPreparationService>();
 builder.Services.AddScoped<TransactionCategorySeeder>();
 builder.Services.AddScoped<TransactionRuleService>();
+builder.Services.AddScoped<DebtManagementService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
