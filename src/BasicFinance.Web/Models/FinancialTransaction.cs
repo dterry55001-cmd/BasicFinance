@@ -27,8 +27,12 @@ public sealed class FinancialTransaction
     [Required, StringLength(160)]
     public string Description { get; set; } = string.Empty;
 
+    // Retains the original/institution-provided category text for import compatibility.
     [StringLength(80)]
     public string? Category { get; set; }
+
+    public int? CategoryId { get; set; }
+    public TransactionCategory? TransactionCategory { get; set; }
 
     [Range(typeof(decimal), "0.01", "999999999999")]
     public decimal Amount { get; set; }
