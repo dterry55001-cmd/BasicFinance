@@ -1,4 +1,7 @@
 using BasicFinance.Web.Services;
+using BasicFinance.Web.Data;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace BasicFinance.Tests;
