@@ -50,7 +50,7 @@ else
                     </select>
                     @if (!string.IsNullOrWhiteSpace(row.SourceCategory) && Model.Profile != StatementImportProfile.Unknown)
                     {
-                        <label><input type="checkbox" name="applyToFutureImports" value="true" checked /> Remember for future imports</label>
+                        <label><input type="checkbox" name="applyToFutureImports" value="true" /> Remember this mapping for future imports</label>
                     }
                     <button type="submit" class="button button-secondary">Save category</button>
                 </form>
