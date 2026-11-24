@@ -27,7 +27,7 @@ else
             var isOutflow = transaction.Type is TransactionType.Expense or TransactionType.Withdrawal or TransactionType.Transfer;
             <tr>
                 <td>@transaction.TransactionDate.ToString("MMM d, yyyy")</td>
-                <td><strong>@transaction.Description</strong>@if (transaction.Type == TransactionType.Transfer && transaction.RelatedAccount is not null) { <div class="table-subtext">To @transaction.RelatedAccount.Name</div> }</td>
+                <td><strong>@transaction.Description</strong>@if (transaction.FundName is not null) { <div class="table-subtext">@transaction.FundName · @(transaction.UnitCount?.ToString("N6") ?? "Units n/a") units</div> }@if (transaction.Type == TransactionType.Transfer && transaction.RelatedAccount is not null) { <div class="table-subtext">To @transaction.RelatedAccount.Name</div> }</td>
                 <td>@transaction.Account.Name</td><td>@transaction.Type</td><td>@(transaction.Category ?? "—")</td>
                 <td class="@(isOutflow ? "amount-out" : "amount-in")">@(isOutflow ? "−" : "+")@transaction.Amount.ToString("N2") @transaction.CurrencyCode</td>
                 <td><div class="table-actions"><a asp-action="Edit" asp-route-id="@transaction.Id">Edit</a><form asp-action="Delete" asp-route-id="@transaction.Id" method="post" onsubmit="return confirm('Delete this transaction? The account balance will be recalculated.');"><button type="submit" class="text-button">Delete</button></form></div></td>
