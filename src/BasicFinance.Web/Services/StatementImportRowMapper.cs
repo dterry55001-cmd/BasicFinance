@@ -33,9 +33,11 @@ public static class StatementImportRowMapper
             Type = investmentProfile
                 ? (signedAmount < 0 ? TransactionType.Withdrawal : TransactionType.Deposit)
                 : (signedAmount < 0 ? TransactionType.Expense : TransactionType.Income),
-            Category = Limit(parsed.SourceCategory, 80),
+            // Institution categories remain source metadata; do not silently assign
+            // a bank's category taxonomy as the user's own category.
+            Category = null,
             Reference = Limit(parsed.SourceReference ?? parsed.ReferenceNumber, 100),
-            Activity = Limit(parsed.SourceCategory, 100),
+            Activity = profile == StatementSourceProfile.UbsBrokerage ? Limit(parsed.SourceCategory, 100) : null,
             SourceType = Limit(parsed.SourceType, 100),
             SourceSubType = Limit(parsed.SourceSubType, 100),
             ExtendedDescription = Limit(parsed.ExtendedDescription, 200),
