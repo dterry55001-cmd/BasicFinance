@@ -29,6 +29,7 @@ public sealed class CsvStatementParser
         var securityTypeIndex = Find(headers, "type", "securitytype", "assettype");
         var quantityIndex = Find(headers, "quantity", "shares", "units");
         var priceIndex = Find(headers, "price", "unitprice");
+        var friendlyAccountIndex = Find(headers, "friendlyaccountname", "accountname");
 
         if (dateIndex < 0 || descriptionIndex < 0 || amountIndex < 0)
             throw new InvalidDataException("Required columns were not found. Include Date, Description, and Amount headers.");
@@ -49,7 +50,7 @@ public sealed class CsvStatementParser
                 row.Source = sourceIndex >= 0 ? NullIfEmpty(Get(fields, sourceIndex), 120) : null;
                 var accountNumber = accountNumberIndex >= 0 ? Get(fields, accountNumberIndex).Trim() : "";
                 row.ExternalAccountNumberLast4 = accountNumber.Length >= 4 ? accountNumber[^4..] : NullIfEmpty(accountNumber, 4);
-                row.FriendlyAccountName = null;
+                row.FriendlyAccountName = friendlyAccountIndex >= 0 ? NullIfEmpty(Get(fields, friendlyAccountIndex), 100) : null;
                 row.Activity = activityIndex >= 0 ? NullIfEmpty(Get(fields, activityIndex), 100) : null;
                 row.Symbol = symbolIndex >= 0 ? NullIfEmpty(Get(fields, symbolIndex), 40) : null;
                 row.Cusip = cusipIndex >= 0 ? NullIfEmpty(Get(fields, cusipIndex), 20) : null;
@@ -101,8 +102,7 @@ public sealed class CsvStatementParser
                     row.Type = amount < 0 ? TransactionType.Expense : TransactionType.Income;
                 else row.Type = parsedType;
 
-                /*LEGACY_TYPE_MAPPING*/
-                
+
 
                 row.Category = categoryIndex >= 0 ? NullIfEmpty(Get(fields, categoryIndex), 80) : null;
                 row.Reference = referenceIndex >= 0 ? NullIfEmpty(Get(fields, referenceIndex), 100) : null;
