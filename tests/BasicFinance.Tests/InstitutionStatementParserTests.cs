@@ -1,5 +1,6 @@
 using BasicFinance.Web.Services;
 using BasicFinance.Web.Data;
+using BasicFinance.Web.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
