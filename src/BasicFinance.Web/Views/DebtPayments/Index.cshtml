@@ -1,0 +1,47 @@
+@using BasicFinance.Web.Models
+@model IReadOnlyList<DebtPaymentRecord>
+@{
+    ViewData["Title"] = "Debt payment calendar";
+    var overdue = (int)ViewBag.OverdueCount;
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PLANNING</p><h1>Debt payment calendar</h1><p class="page-description">Review upcoming obligations, overdue scheduled payments, and actual payment history.</p></div></section>
+<div class="summary-grid">
+    <div class="summary-card"><span>Overdue scheduled payments</span><strong>@overdue</strong></div>
+    @foreach (var total in (IEnumerable<dynamic>)ViewBag.ScheduledTotalByCurrency)
+    {
+        <div class="summary-card"><span>Scheduled · @total.CurrencyCode</span><strong>@(((decimal)total.Amount).ToString("N2"))</strong></div>
+    }
+</div>
+<form method="get" class="filter-bar">
+    <label>From <input type="date" name="from" value="@ViewBag.From" /></label>
+    <label>To <input type="date" name="to" value="@ViewBag.To" /></label>
+    <button class="button button-secondary" type="submit">Filter calendar</button>
+</form>
+<div class="quick-links"><a class="button button-secondary" asp-action="Progress">Debt payoff progress</a><a class="button button-secondary" asp-controller="AccountManagement" asp-action="Index">Debt management</a></div>
+<section class="section-block"><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Due date</th><th>Account</th><th>Expected</th><th>Status</th><th>Actual / paid</th><th>Payment actions</th></tr></thead><tbody>
+@if (!Model.Any())
+{
+    <tr><td colspan="6">No debt payments in this date range. Schedule one from a debt account.</td></tr>
+}
+@foreach (var payment in Model)
+{
+    <tr>
+        <td>@payment.DueDate.ToString("MMM d, yyyy") @if (payment.IsPastDue(DateTime.Today)) { <span class="status-badge status-warning">Overdue</span> }</td>
+        <td>@payment.Account.Name<div class="table-subtext">@payment.Account.CurrencyCode</div></td>
+        <td>@payment.ExpectedAmount.ToString("N2")</td>
+        <td>@payment.Status</td>
+        <td>@(payment.ActualAmount?.ToString("N2") ?? "—") @if (payment.PaidDate.HasValue) { <div class="table-subtext">@payment.PaidDate.Value.ToString("MMM d, yyyy")</div> }</td>
+        <td>
+        @if (payment.Status == DebtPaymentStatus.Scheduled)
+        {
+            <a asp-action="Record" asp-route-id="@payment.Id">Record payment</a>
+            <form asp-action="Skip" asp-route-id="@payment.Id" method="post" style="display:inline"><button class="button button-secondary" type="submit">Skip</button></form>
+        }
+        else if (payment.TransactionId.HasValue)
+        {
+            <a asp-controller="Transactions" asp-action="Index" asp-route-accountId="@payment.AccountId">View transactions</a>
+        }
+        </td>
+    </tr>
+}
+</tbody></table></div></div></section>
