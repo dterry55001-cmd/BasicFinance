@@ -23,6 +23,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<DebtFreeTarget> DebtFreeTargets => Set<DebtFreeTarget>();
     public DbSet<MonthlyDebtReductionGoal> MonthlyDebtReductionGoals => Set<MonthlyDebtReductionGoal>();
     public DbSet<DebtFreeMilestone> DebtFreeMilestones => Set<DebtFreeMilestone>();
+    public DbSet<DebtNotification> DebtNotifications => Set<DebtNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -212,6 +213,16 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         {
             entity.HasIndex(x => new { x.AccountId, x.AchievedDate });
             entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DebtNotification>(entity =>
+        {
+            entity.Property(x => x.NotificationKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Level).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Category).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.Message).HasMaxLength(500).IsRequired();
+            entity.HasIndex(x => x.NotificationKey).IsUnique();
+            entity.HasIndex(x => new { x.IsRead, x.CreatedUtc });
         });
 
         modelBuilder.Entity<InterestRecord>(entity =>
