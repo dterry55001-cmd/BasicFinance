@@ -2,7 +2,6 @@
 @{
     ViewData["Title"] = "Budget Management";
     var monthName = new DateTime(Model.Year, Model.Month, 1).ToString("MMMM yyyy");
-    var utilization = Model.TotalPlanned > 0 ? Math.Min(100m, Model.TotalActual / Model.TotalPlanned * 100m) : 0m;
 }
 <section class="page-heading">
     <div><p class="eyebrow">FINANCIAL PLANNING</p><h1>Budget Management</h1><p class="page-description">Plan monthly spending and compare it with posted expense transactions.</p></div>
@@ -18,33 +17,28 @@
     <article class="summary-card"><span>Actual spending</span><strong>@Model.TotalActual.ToString("C")</strong><small>Posted expense transactions</small></article>
     <article class="summary-card"><span>Remaining budget</span><strong>@((Model.TotalPlanned - Model.TotalActual).ToString("C"))</strong><small>@(Model.TotalActual > Model.TotalPlanned ? "Over budget" : "Available")</small></article>
 </div>
-<div class="table-card">
-    <div class="table-scroll"><table>
-        <thead><tr><th>Expense category</th><th>Planned</th><th>Actual</th><th>Remaining</th><th>Usage</th></tr></thead>
-        <tbody>
-        @for (var i = 0; i < Model.Lines.Count; i++)
-        {
-            var line = Model.Lines[i];
-            var percent = line.PlannedAmount > 0 ? line.ActualAmount / line.PlannedAmount * 100m : 0m;
-            <tr>
-                <td><strong>@line.CategoryName</strong><input type="hidden" name="Lines[@i].CategoryId" value="@line.CategoryId" /></td>
-                <td><input type="number" name="Lines[@i].PlannedAmount" min="0" max="999999999999" step="0.01" value="@line.PlannedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" aria-label="Planned amount for @line.CategoryName" /></td>
-                <td>@line.ActualAmount.ToString("C")</td>
-                <td class="@(line.Remaining < 0 ? "text-danger" : "")">@line.Remaining.ToString("C")</td>
-                <td>@(line.PlannedAmount > 0 ? percent.ToString("0") + "%" : "—")</td>
-            </tr>
-        }
-        </tbody>
-    </table></div>
-    @if (Model.Lines.Count == 0) { <p class="empty-state">Create active expense categories to begin setting budgets.</p> }
-</div>
-<form asp-action="Save" method="post" class="form-actions">
+<form asp-action="Save" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" name="Year" value="@Model.Year" /><input type="hidden" name="Month" value="@Model.Month" />
-    @for (var i = 0; i < Model.Lines.Count; i++)
-    {
-        <input type="hidden" name="Lines[@i].CategoryId" value="@Model.Lines[i].CategoryId" />
-        <input type="hidden" name="Lines[@i].PlannedAmount" value="@Model.Lines[i].PlannedAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
-    }
-    <button class="button button-primary" type="submit">Save budget</button>
+    <div class="table-card">
+        <div class="table-scroll"><table>
+            <thead><tr><th>Expense category</th><th>Planned</th><th>Actual</th><th>Remaining</th><th>Usage</th></tr></thead>
+            <tbody>
+            @for (var i = 0; i < Model.Lines.Count; i++)
+            {
+                var line = Model.Lines[i];
+                var percent = line.PlannedAmount > 0 ? line.ActualAmount / line.PlannedAmount * 100m : 0m;
+                <tr>
+                    <td><strong>@line.CategoryName</strong><input type="hidden" name="Lines[@i].CategoryId" value="@line.CategoryId" /></td>
+                    <td><input type="number" name="Lines[@i].PlannedAmount" min="0" max="999999999999" step="0.01" value="@line.PlannedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" aria-label="Planned amount for @line.CategoryName" /></td>
+                    <td>@line.ActualAmount.ToString("C")</td>
+                    <td class="@(line.Remaining < 0 ? "text-danger" : "")">@line.Remaining.ToString("C")</td>
+                    <td>@(line.PlannedAmount > 0 ? percent.ToString("0") + "%" : "—")</td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+        @if (Model.Lines.Count == 0) { <p class="empty-state">Create active expense categories to begin setting budgets.</p> }
+    </div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Save budget</button></div>
 </form>
