@@ -22,7 +22,7 @@ public sealed class DebtPaymentsController(ApplicationDbContext database, Accoun
             .Include(p => p.Account).Include(p => p.SourceAccount)
             .Where(p => p.DueDate >= start && p.DueDate <= end)
             .OrderBy(p => p.DueDate).ThenBy(p => p.Account.Name).ToListAsync(cancellationToken);
-        ViewBag.From = start.ToString("yyyy-MM-dd");
+        ViewBag.DebtAccounts = await DebtAccounts().AsNoTracking().OrderBy(a => a.Name).ToListAsync(cancellationToken);\n        ViewBag.From = start.ToString("yyyy-MM-dd");
         ViewBag.To = end.ToString("yyyy-MM-dd");
         ViewBag.OverdueCount = records.Count(p => p.IsPastDue(DateTime.Today));
         ViewBag.ScheduledTotalByCurrency = records.Where(p => p.Status == DebtPaymentStatus.Scheduled)
