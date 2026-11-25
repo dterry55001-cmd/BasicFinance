@@ -72,6 +72,8 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
             Status = input.Status, CreatedUtc = DateTime.UtcNow, UpdatedUtc = DateTime.UtcNow
         };
         database.Accounts.Add(account);
+        if (account.CreditLimit is > 0 && IsRevolving(account))
+            database.CreditLimitHistory.Add(new CreditLimitHistory { Account = account, PreviousLimit = null, NewLimit = account.CreditLimit.Value, EffectiveDate = DateTime.Today, Source = "Initial account setup" });
         await database.SaveChangesAsync();
         TempData["SuccessMessage"] = "Account created.";
         return RedirectToAction(nameof(Details), new { id = account.Id });
@@ -113,6 +115,8 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         }
         var account = await database.Accounts.FindAsync(id);
         if (account is null) return NotFound();
+        var previousCreditLimit = account.CreditLimit;
+        var wasRevolving = IsRevolving(account);
         account.Name = input.Name.Trim(); account.Type = input.Type;
         account.RetirementType = input.Type == AccountType.Retirement ? input.RetirementType : null;
         account.DebtType = input.Type == AccountType.Debt ? input.DebtType : null;
@@ -132,6 +136,11 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         account.CurrencyCode = input.CurrencyCode.Trim().ToUpperInvariant();
         account.OpeningBalance = input.OpeningBalance; account.OpenedOn = input.OpenedOn;
         account.Status = input.Status; account.UpdatedUtc = DateTime.UtcNow;
+        var isRevolving = IsRevolving(account);
+        if (isRevolving && account.CreditLimit is > 0 && (!wasRevolving || previousCreditLimit != account.CreditLimit))
+        {
+            database.CreditLimitHistory.Add(new CreditLimitHistory { AccountId = account.Id, PreviousLimit = wasRevolving ? previousCreditLimit : null, NewLimit = account.CreditLimit.Value, EffectiveDate = DateTime.Today, Source = "Account details" });
+        }
         await database.SaveChangesAsync();
         TempData["SuccessMessage"] = "Account updated.";
         return RedirectToAction(nameof(Details), new { id = account.Id });
@@ -209,6 +218,8 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         RetirementAccountType.Annuity => "Retirement annuity",
         _ => "Other retirement account"
     };
+
+    private static bool IsRevolving(Account account) => account.Type == AccountType.CreditCard || (account.Type == AccountType.Debt && account.DebtType is DebtAccountType.LineOfCredit or DebtAccountType.HomeEquityLineOfCredit);
 
     private static string? CleanOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
