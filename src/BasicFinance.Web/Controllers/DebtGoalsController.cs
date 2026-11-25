@@ -75,7 +75,7 @@ public sealed class DebtGoalsController(
                         AccountId = a.Id, Name = a.Name, Balance = currentBalances[a.Id],
                         AnnualRatePercent = a.InterestRatePercent!.Value, MinimumPayment = a.MinimumPayment!.Value
                     }).ToList();
-                    var plan = debtService.CalculatePayoff(debts, extra, avalanche: true, startDate: DateTime.Today);
+                    var plan = debtService.CalculatePayoff(debts, extra, avalanche: true, startDate: DateTime.Today, applyMinimumPaymentFloor: false);
                     if (plan.ReachedDebtFree)
                     {
                         estimate.EstimatedDebtFreeDate = plan.DebtFreeDate;
@@ -172,25 +172,39 @@ public sealed class DebtGoalsController(
                 continue;
             }
 
-            var hasDebtHistory = account.OpeningBalance > 0m || account.OriginalLoanAmount > 0m ||
-                await database.AccountBalanceSnapshots.AnyAsync(x => x.AccountId == account.Id && x.Balance > 0m, cancellationToken) ||
-                await database.DebtPaymentRecords.AnyAsync(x => x.AccountId == account.Id && x.Status == DebtPaymentStatus.Paid && (x.PrincipalPaid ?? 0m) > 0m, cancellationToken);
-            if (!hasDebtHistory) continue;
-
-            var dates = await database.Transactions.AsNoTracking()
+            var snapshots = await database.AccountBalanceSnapshots.AsNoTracking()
+                .Where(x => x.AccountId == account.Id)
+                .Select(x => new { x.SnapshotDate, x.Balance })
+                .ToListAsync(cancellationToken);
+            var transactionDates = await database.Transactions.AsNoTracking()
                 .Where(x => x.AccountId == account.Id || x.RelatedAccountId == account.Id)
-                .Select(x => x.TransactionDate).Distinct().OrderBy(x => x).ToListAsync(cancellationToken);
-            var achieved = DateTime.Today;
+                .Select(x => x.TransactionDate).Distinct().ToListAsync(cancellationToken);
+            var dates = transactionDates.Concat(snapshots.Select(x => x.SnapshotDate))
+                .Select(x => x.Date).Distinct().OrderBy(x => x).ToList();
+            var hasObservedDebt = account.OpeningBalance > 0m || snapshots.Any(x => x.Balance > 0m);
+            if (!hasObservedDebt && dates.Count == 0) continue;
+
+            DateTime? achieved = null;
             foreach (var date in dates)
             {
-                if (await balances.GetBalanceAtAsync(account.Id, date, cancellationToken) <= 0m)
+                var snapshotShowsDebt = snapshots.Any(x => x.SnapshotDate.Date == date && x.Balance > 0m);
+                var balanceAtDate = await balances.GetBalanceAtAsync(account.Id, date, cancellationToken);
+                if (snapshotShowsDebt || balanceAtDate > 0m)
                 {
-                    achieved = date.Date;
+                    hasObservedDebt = true;
+                    continue;
+                }
+                if (hasObservedDebt)
+                {
+                    achieved = date;
                     break;
                 }
             }
+            if (achieved is null && hasObservedDebt && dates.Count > 0)
+                achieved = dates[^1];
+            if (achieved is null) continue;
             database.DebtFreeMilestones.Add(new DebtFreeMilestone {
-                AccountId = account.Id, AchievedDate = achieved, CreatedUtc = DateTime.UtcNow
+                AccountId = account.Id, AchievedDate = achieved.Value, CreatedUtc = DateTime.UtcNow
             });
         }
         if (database.ChangeTracker.HasChanges()) await database.SaveChangesAsync(cancellationToken);
