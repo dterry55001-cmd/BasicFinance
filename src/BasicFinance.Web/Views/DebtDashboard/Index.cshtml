@@ -30,6 +30,77 @@
     </tbody></table></div></div>
 </section>
 <section class="section-block">
+    <h2>Debt balance trend charts</h2>
+    <p class="muted">Each bar shows the latest recorded snapshot total for that month and currency. Bar lengths are scaled within each currency group; they are not combined across currencies.</p>
+    @foreach (var currencyGroup in Model.BalanceTrends.GroupBy(x => x.CurrencyCode).OrderBy(x => x.Key))
+    {
+        var points = currencyGroup.OrderBy(x => x.Month).ToList();
+        var maximum = points.Max(x => x.Balance);
+        <div class="table-card">
+            <h3>@currencyGroup.Key</h3>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>Month</th><th>Recorded balance</th><th>Relative level</th><th>Accounts</th></tr></thead>
+                    <tbody>
+                    @foreach (var point in points)
+                    {
+                        var percent = maximum > 0m ? Math.Round(point.Balance / maximum * 100m, 1) : 0m;
+                        <tr>
+                            <td>@point.Month.ToString("MMM yyyy")</td>
+                            <td>@point.Balance.ToString("N2")</td>
+                            <td><progress max="100" value="@percent" aria-label="@($"{point.Month:MMMM yyyy} balance relative to this chart's highest month: {percent}%")"></progress> @percent.ToString("N1")%</td>
+                            <td>@point.AccountsWithSnapshots</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    @if (!Model.BalanceTrends.Any())
+    {
+        <p>No historical snapshots are available to chart yet.</p>
+    }
+</section>
+<section class="section-block">
+    <h2>Payoff forecast comparison</h2>
+    <p class="muted">Forecasts use each currency's current recorded balances, APRs, and minimum payments. The month bars compare estimated time to debt-free; interest amounts remain separated by currency. These are simulations, not payment instructions.</p>
+    @foreach (var forecast in Model.StrategyComparisons.Where(x => x.IsComplete).OrderBy(x => x.CurrencyCode))
+    {
+        var months = new[] {
+            (Name: "Snowball", Date: forecast.SnowballDebtFreeDate, Interest: forecast.SnowballInterest),
+            (Name: "Avalanche", Date: forecast.AvalancheDebtFreeDate, Interest: forecast.AvalancheInterest)
+        };
+        var maxMonths = Math.Max(1, months.Max(x => x.Date.HasValue ? ((x.Date.Value.Year - DateTime.Today.Year) * 12 + x.Date.Value.Month - DateTime.Today.Month) : 1));
+        <div class="table-card">
+            <h3>@forecast.CurrencyCode forecast</h3>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>Strategy</th><th>Estimated debt-free</th><th>Months remaining</th><th>Relative timeline</th><th>Projected interest</th></tr></thead>
+                    <tbody>
+                    @foreach (var scenario in months)
+                    {
+                        var remainingMonths = scenario.Date.HasValue ? Math.Max(0, (scenario.Date.Value.Year - DateTime.Today.Year) * 12 + scenario.Date.Value.Month - DateTime.Today.Month) : 0;
+                        var percent = maxMonths > 0 ? Math.Round((decimal)remainingMonths / maxMonths * 100m, 1) : 0m;
+                        <tr>
+                            <td>@scenario.Name</td>
+                            <td>@scenario.Date?.ToString("MMM yyyy")</td>
+                            <td>@remainingMonths</td>
+                            <td><progress max="100" value="@percent" aria-label="@($"{scenario.Name} timeline relative to the longer strategy: {percent}%")"></progress> @percent.ToString("N1")%</td>
+                            <td>@scenario.Interest.ToString("N2") @forecast.CurrencyCode</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    @if (!Model.StrategyComparisons.Any(x => x.IsComplete))
+    {
+        <p>Complete the missing APR and minimum-payment details to display payoff forecasts.</p>
+    }
+</section>
+<section class="section-block">
     <h2>Balance history trend</h2>
     <p class="muted">Monthly totals use the latest saved balance snapshot for each account in that month. Months without snapshots are not estimated or filled in.</p>
     <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Currency</th><th>Snapshot balance total</th><th>Accounts represented</th></tr></thead><tbody>
