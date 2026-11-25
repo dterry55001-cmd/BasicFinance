@@ -184,7 +184,7 @@ public sealed class DebtManagementService
     {
         if (oneTimePayment < 0 || extraMonthlyPayment < 0 || oneTimePaymentMonth < 1)
             throw new ArgumentOutOfRangeException(nameof(oneTimePayment), "Additional payments and the one-time payment month must be non-negative and valid.");
-        var baseline = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, 0m, 0m, 1, firstPaymentDate);
+        var baseline = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, 0m, 1, 0m, firstPaymentDate);
         var lump = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, oneTimePayment, oneTimePaymentMonth, 0m, firstPaymentDate);
         var monthly = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, 0m, 1, extraMonthlyPayment, firstPaymentDate);
         var combined = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, oneTimePayment, oneTimePaymentMonth, extraMonthlyPayment, firstPaymentDate);
