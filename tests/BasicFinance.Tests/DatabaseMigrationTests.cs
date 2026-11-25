@@ -25,7 +25,8 @@ public sealed class DatabaseMigrationTests
             "TransactionCategories", "TransactionCategoryMappings", "TransactionRules",
             "AccountBalanceSnapshots", "InterestRecords", "DebtToIncomeRecords", "DebtPaymentRecords",
             "CreditLimitHistory", "ReportedBalanceSnapshots", "CreditInquiries",
-            "DebtFreeTargets", "MonthlyDebtReductionGoals", "DebtFreeMilestones"
+            "DebtFreeTargets", "MonthlyDebtReductionGoals", "DebtFreeMilestones",
+            "DebtNotifications", "DebtInterestRateHistory"
         };
 
         foreach (var table in expectedTables)
