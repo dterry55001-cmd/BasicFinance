@@ -42,6 +42,8 @@ public sealed class DebtPlanningController(ApplicationDbContext database, Accoun
             existing.GrossMonthlyIncome = input.GrossMonthlyIncome;
             existing.HousingMonthlyPayment = input.HousingMonthlyPayment;
             existing.OtherMonthlyDebtPayment = input.OtherMonthlyDebtPayment;
+            existing.NetMonthlyIncome = input.NetMonthlyIncome;
+            existing.OtherEssentialMonthlyExpenses = input.OtherEssentialMonthlyExpenses;
             existing.UpdatedUtc = DateTime.UtcNow;
         }
         await database.SaveChangesAsync(cancellationToken);
