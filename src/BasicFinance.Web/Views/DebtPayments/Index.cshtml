@@ -17,7 +17,17 @@
     <label>To <input type="date" name="to" value="@ViewBag.To" /></label>
     <button class="button button-secondary" type="submit">Filter calendar</button>
 </form>
-<div class="quick-links"><a class="button button-secondary" asp-action="Progress">Debt payoff progress</a><a class="button button-secondary" asp-controller="AccountManagement" asp-action="Index">Debt management</a></div>\n<section class="section-block"><h2>Schedule a payment</h2><p class="page-description">Choose an active debt or credit-card account to create a scheduled payment.</p><div class="quick-links">\n@foreach (var account in (IEnumerable<Account>)ViewBag.DebtAccounts)\n{\n    <a class="button button-secondary" asp-action="Schedule" asp-route-accountId="@account.Id">@account.Name</a>\n}\n@if (!((IEnumerable<Account>)ViewBag.DebtAccounts).Any())\n{\n    <p>No active debt or credit-card accounts are available.</p>\n}\n</div></section>
+<div class="quick-links"><a class="button button-secondary" asp-action="Progress">Debt payoff progress</a><a class="button button-secondary" asp-controller="AccountManagement" asp-action="Index">Debt management</a></div>
+<section class="section-block"><h2>Schedule a payment</h2><p class="page-description">Choose an active debt or credit-card account to create a scheduled payment.</p><div class="quick-links">
+@foreach (var account in (IEnumerable<Account>)ViewBag.DebtAccounts)
+{
+    <a class="button button-secondary" asp-action="Schedule" asp-route-accountId="@account.Id">@account.Name</a>
+}
+@if (!((IEnumerable<Account>)ViewBag.DebtAccounts).Any())
+{
+    <p>No active debt or credit-card accounts are available.</p>
+}
+</div></section>
 <section class="section-block"><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Due date</th><th>Account</th><th>Expected</th><th>Status</th><th>Actual / paid</th><th>Payment actions</th></tr></thead><tbody>
 @if (!Model.Any())
 {
