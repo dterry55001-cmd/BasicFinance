@@ -43,7 +43,12 @@ public sealed class CreditMonitoringController(ApplicationDbContext database, Ac
         ViewBag.LimitHistory = await limits.OrderByDescending(x => x.EffectiveDate).ThenByDescending(x => x.Id).Take(250).ToListAsync(cancellationToken);
         var inquiries = database.CreditInquiries.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(bureau)) inquiries = inquiries.Where(x => x.Bureau == bureau);
-        ViewBag.Inquiries = await inquiries.OrderByDescending(x => x.InquiryDate).Take(250).ToListAsync(cancellationToken);
+        var inquiryRows = await inquiries.OrderByDescending(x => x.InquiryDate).Take(250).ToListAsync(cancellationToken);
+        ViewBag.Inquiries = inquiryRows;
+        var currentYearInquiries = inquiryRows.Where(x => x.InquiryDate.Year == DateTime.Today.Year).ToList();
+        ViewBag.HardInquiryCount = currentYearInquiries.Count(x => x.Type == CreditInquiryType.Hard);
+        ViewBag.SoftInquiryCount = currentYearInquiries.Count(x => x.Type == CreditInquiryType.Soft);
+        ViewBag.RecentHardInquiryCount = inquiryRows.Count(x => x.Type == CreditInquiryType.Hard && x.InquiryDate.Date >= DateTime.Today.AddDays(-365));
         return View();
     }
 
