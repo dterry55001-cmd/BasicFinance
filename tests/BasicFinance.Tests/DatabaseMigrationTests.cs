@@ -42,7 +42,7 @@ public sealed class DatabaseMigrationTests
     public async Task Migrate_CreatesDebtNotificationUniquenessAndAprHistoryRelationship()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.Open();
+        await connection.OpenAsync();
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlite(connection)
             .Options;
