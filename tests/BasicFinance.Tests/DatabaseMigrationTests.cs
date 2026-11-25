@@ -37,4 +37,51 @@ public sealed class DatabaseMigrationTests
             Assert.Equal(1, exists);
         }
     }
+
+    [Fact]
+    public async Task Migrate_CreatesDebtNotificationUniquenessAndAprHistoryRelationship()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.Open();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var database = new ApplicationDbContext(options);
+        await database.Database.MigrateAsync();
+
+        var notificationIndexIsUnique = false;
+        await using (var indexCommand = connection.CreateCommand())
+        {
+            indexCommand.CommandText = "PRAGMA index_list('DebtNotifications')";
+            await using var reader = await indexCommand.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                if (reader.GetString(1) == "IX_DebtNotifications_NotificationKey")
+                    notificationIndexIsUnique = reader.GetInt32(2) == 1;
+            }
+        }
+
+        Assert.True(notificationIndexIsUnique);
+
+        var hasAccountForeignKey = false;
+        await using (var foreignKeyCommand = connection.CreateCommand())
+        {
+            foreignKeyCommand.CommandText = "PRAGMA foreign_key_list('DebtInterestRateHistory')";
+            await using var reader = await foreignKeyCommand.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                if (reader.GetString(2) == "Accounts" &&
+                    reader.GetString(3) == "AccountId" &&
+                    reader.GetString(4) == "Id" &&
+                    reader.GetString(6).Equals("RESTRICT", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasAccountForeignKey = true;
+                }
+            }
+        }
+
+        Assert.True(hasAccountForeignKey);
+    }
+
 }
