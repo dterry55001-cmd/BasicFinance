@@ -69,7 +69,7 @@ public sealed class DebtManagementServiceTests
     {
         var debts = new[]
         {
-            new DebtPayoffDebtInput { AccountId = 1, Name = "Card", Balance = 1200m, AnnualRatePercent = 0m, MinimumPayment = 10m }
+            new DebtPayoffDebtInput { AccountId = 1, Name = "Card", Balance = 1200m, AnnualRatePercent = 0m, MinimumPayment = 1m }
         };
 
         var exactMinimum = _service.CalculatePayoff(debts, 0m, avalanche: true,
