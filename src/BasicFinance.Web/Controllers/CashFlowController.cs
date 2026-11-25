@@ -19,7 +19,7 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
         var accountIds = accounts.Select(x => x.Id).ToArray();
         var transactions = await database.Transactions.AsNoTracking()
             .Where(x => accountIds.Contains(x.AccountId) || (x.RelatedAccountId != null && accountIds.Contains(x.RelatedAccountId.Value)))
-            .Where(x => x.CurrencyCode == "USD")
+            .Where(x => x.CurrencyCode == "USD" && x.TransactionDate <= DateTime.Today)
             .ToListAsync(cancellationToken);
 
         var openingCash = accounts.Sum(account =>
