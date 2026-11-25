@@ -82,6 +82,38 @@ public sealed class AccountManagementController(
     }
 
     [HttpGet]
+    
+    [HttpGet]
+    public async Task<IActionResult> AccountPayoff(int accountId, CancellationToken cancellationToken)
+    {
+        var account = await database.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId &&
+            a.Status == AccountStatus.Active && (a.Type == AccountType.Debt || a.Type == AccountType.CreditCard), cancellationToken);
+        if (account is null) return NotFound();
+        ViewBag.Account = account;
+        ViewBag.Balance = Math.Max(0m, await balances.GetBalanceAsync(account.Id, cancellationToken));
+        return View(new AccountDebtPayoffInput { AccountId = account.Id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AccountPayoff(AccountDebtPayoffInput input, CancellationToken cancellationToken)
+    {
+        var account = await database.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == input.AccountId &&
+            a.Status == AccountStatus.Active && (a.Type == AccountType.Debt || a.Type == AccountType.CreditCard), cancellationToken);
+        if (account is null) return NotFound();
+        var balance = Math.Max(0m, await balances.GetBalanceAsync(account.Id, cancellationToken));
+        ViewBag.Account = account;
+        ViewBag.Balance = balance;
+        if (balance <= 0) ModelState.AddModelError(string.Empty, "This account has no outstanding balance.");
+        if (ModelState.IsValid)
+        {
+            try { ViewBag.Result = debtService.CalculateAccountPayoff(balance, account.InterestRatePercent ?? 0m,
+                account.MinimumPayment ?? 0m, input.ExtraMonthlyPayment); }
+            catch (ArgumentException ex) { ModelState.AddModelError(string.Empty, ex.Message); }
+            catch (InvalidOperationException ex) { ModelState.AddModelError(string.Empty, ex.Message); }
+        }
+        return View(input);
+    }
+
     public async Task<IActionResult> Amortization(int? accountId, CancellationToken cancellationToken)
     {
         await PopulateDebtAccountsAsync(cancellationToken);
