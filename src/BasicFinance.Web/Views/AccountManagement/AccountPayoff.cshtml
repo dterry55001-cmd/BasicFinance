@@ -1,0 +1,57 @@
+@using BasicFinance.Web.Models
+@model AccountDebtPayoffInput
+@{
+    var account = (Account)ViewBag.Account;
+    var balance = (decimal)ViewBag.Balance;
+    var result = ViewBag.Result as AccountDebtPayoffResult;
+    ViewData["Title"] = "Account payoff plan";
+    var points = result is null || result.Payments.Count == 0 ? "" : string.Join(" ", result.Payments.Select((p, i) =>
+    {
+        var x = 48d + (result.Payments.Count == 1 ? 0 : i * 704d / (result.Payments.Count - 1));
+        var y = 18d + (double)(result.StartingBalance == 0 ? 0 : (result.StartingBalance - p.RemainingBalance) / result.StartingBalance) * 222d;
+        return $"{x:0.0},{240d-y:0.0}";
+    }));
+}
+<section class="page-heading"><div><p class="eyebrow">INDIVIDUAL DEBT PLAN</p><h1>@account.Name payoff plan</h1><p class="page-description">Model the payoff of this account using its saved APR and minimum payment. The plan is a projection and does not post transactions.</p></div></section>
+<div class="summary-grid">
+    <div class="summary-card"><span>Current balance</span><strong>@balance.ToString("N2") @account.CurrencyCode</strong></div>
+    <div class="summary-card"><span>APR</span><strong>@((account.InterestRatePercent ?? 0m).ToString("0.###"))%</strong></div>
+    <div class="summary-card"><span>Saved minimum payment</span><strong>@((account.MinimumPayment ?? 0m).ToString("N2")) @account.CurrencyCode</strong></div>
+</div>
+<form asp-action="AccountPayoff" method="post" class="form-card">
+    <input asp-for="AccountId" type="hidden" />
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <div class="form-field"><label asp-for="ExtraMonthlyPayment"></label><input asp-for="ExtraMonthlyPayment" type="number" min="0" step="0.01" /><span asp-validation-for="ExtraMonthlyPayment" class="field-error"></span><small>Added to the account's saved minimum payment each month.</small></div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Calculate account payoff</button><a class="button button-secondary" asp-action="Index">Back to debt overview</a></div>
+</form>
+@if (result is not null)
+{
+    <div class="summary-grid">
+        <div class="summary-card"><span>Estimated payoff date</span><strong>@result.PayoffDate.ToString("MMM yyyy")</strong><span>@result.Payments.Count months</span></div>
+        <div class="summary-card"><span>Total interest</span><strong>@result.TotalInterest.ToString("N2") @account.CurrencyCode</strong></div>
+        <div class="summary-card"><span>Total paid</span><strong>@result.TotalPaid.ToString("N2") @account.CurrencyCode</strong></div>
+    </div>
+    <section class="section-block">
+        <h2>Account balance paydown</h2>
+        <p class="page-description">Projected remaining principal after each monthly payment.</p>
+        <div class="table-card" style="padding:1rem">
+            <svg viewBox="0 0 800 280" role="img" aria-label="Projected account balance decreases from @result.StartingBalance to zero over @result.Payments.Count months" style="width:100%;height:auto">
+                <line x1="48" y1="18" x2="48" y2="240" stroke="currentColor" opacity=".35" />
+                <line x1="48" y1="240" x2="752" y2="240" stroke="currentColor" opacity=".35" />
+                <line x1="48" y1="18" x2="752" y2="18" stroke="currentColor" opacity=".15" stroke-dasharray="4 5" />
+                <line x1="48" y1="129" x2="752" y2="129" stroke="currentColor" opacity=".15" stroke-dasharray="4 5" />
+                <polyline points="@points" fill="none" stroke="#16856b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                <text x="48" y="264" font-size="12" fill="currentColor">Start</text>
+                <text x="752" y="264" text-anchor="end" font-size="12" fill="currentColor">@result.PayoffDate.ToString("MMM yyyy")</text>
+                <text x="40" y="15" text-anchor="end" font-size="11" fill="currentColor">@result.StartingBalance.ToString("N0")</text>
+                <text x="40" y="244" text-anchor="end" font-size="11" fill="currentColor">0</text>
+            </svg>
+        </div>
+    </section>
+    <section class="section-block"><h2>Monthly payoff schedule</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Date</th><th>Starting balance</th><th>Interest</th><th>Payment</th><th>Principal paid</th><th>Remaining balance</th></tr></thead><tbody>
+    @foreach (var payment in result.Payments)
+    {
+        <tr><td>@payment.MonthNumber</td><td>@payment.PaymentDate.ToString("MMM yyyy")</td><td>@payment.StartingBalance.ToString("N2") @account.CurrencyCode</td><td>@payment.Interest.ToString("N2")</td><td>@payment.Payment.ToString("N2")</td><td>@payment.Principal.ToString("N2")</td><td>@payment.RemainingBalance.ToString("N2")</td></tr>
+    }
+    </tbody></table></div></div></section>
+}
