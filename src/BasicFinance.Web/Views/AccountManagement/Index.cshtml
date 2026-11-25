@@ -3,7 +3,7 @@
     ViewData["Title"] = "Account & debt management";
     var rows = (IReadOnlyList<BasicFinance.Web.Controllers.AccountManagementRow>)ViewBag.Rows;
 }
-<section class="page-heading"><div><p class="eyebrow">ACCOUNTS & LIABILITIES</p><h1>Account & debt management</h1><p class="page-description">Monitor credit, loan obligations, interest activity, and historical balances.</p></div></section>
+<section class="page-heading debt-account-management"><div><p class="eyebrow">ACCOUNTS & LIABILITIES</p><h1>Account & debt management</h1><p class="page-description">Monitor credit, loan obligations, interest activity, and historical balances.</p></div></section>
 <div class="summary-grid">
     <div class="summary-card"><span>Debt balances by currency</span>@foreach (var total in (IReadOnlyList<BasicFinance.Web.Controllers.DebtCurrencyTotal>)ViewBag.DebtTotals) { <strong>@total.Amount.ToString("N2") @total.CurrencyCode</strong> }</div>
     <div class="summary-card"><span>Interest earned by currency</span>@foreach (var total in (IReadOnlyList<BasicFinance.Web.Controllers.InterestCurrencyTotal>)ViewBag.InterestEarnedTotals) { <strong>@total.Amount.ToString("N2") @total.CurrencyCode</strong> }</div>
