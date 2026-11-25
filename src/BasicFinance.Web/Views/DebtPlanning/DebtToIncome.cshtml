@@ -1,0 +1,53 @@
+@using BasicFinance.Web.Models
+@model DebtToIncomeRecord
+@{
+    var history = (IReadOnlyList<DebtToIncomeRecord>)(ViewBag.History ?? new List<DebtToIncomeRecord>());
+    var ordered = history.OrderBy(r => r.Month).ToList();
+    var points = ordered.Count < 2 ? "" : string.Join(" ", ordered.Select((r, i) =>
+    {
+        var x = 48d + i * 704d / Math.Max(1, ordered.Count - 1);
+        var max = Math.Max(60m, ordered.Max(v => v.TotalDebtRatioPercent));
+        var y = 18d + (double)(r.TotalDebtRatioPercent / max) * 205d;
+        return $"{x:0.0},{y:0.0}";
+    }));
+    ViewData["Title"] = "Debt-to-income";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PLANNING</p><h1>Debt-to-income ratio</h1><p class="page-description">Record gross monthly income and monthly debt obligations. Housing and total debt ratios are calculated separately and tracked by month.</p></div></section>
+<form asp-action="DebtToIncome" method="post" class="form-card">
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <div class="form-grid">
+        <div class="form-field"><label asp-for="Month"></label><input asp-for="Month" type="month" value="@Model.Month.ToString("yyyy-MM")" /><span asp-validation-for="Month" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="CurrencyCode"></label><input asp-for="CurrencyCode" maxlength="3" /></div>
+        <div class="form-field"><label asp-for="GrossMonthlyIncome">Gross monthly income</label><input asp-for="GrossMonthlyIncome" type="number" min="0.01" step="0.01" /><span asp-validation-for="GrossMonthlyIncome" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="HousingMonthlyPayment">Monthly housing obligations</label><input asp-for="HousingMonthlyPayment" type="number" min="0" step="0.01" /><span asp-validation-for="HousingMonthlyPayment" class="field-error"></span><small>Include rent or mortgage, property tax, homeowners insurance and HOA if applicable.</small></div>
+        <div class="form-field"><label asp-for="OtherMonthlyDebtPayment">Other monthly debt obligations</label><input asp-for="OtherMonthlyDebtPayment" type="number" min="0" step="0.01" /><span asp-validation-for="OtherMonthlyDebtPayment" class="field-error"></span><small>Include required minimum payments on credit cards, auto, student and other loans.</small></div>
+    </div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Save monthly DTI record</button><a class="button button-secondary" asp-action="DebtToIncome">Clear</a></div>
+</form>
+@if (history.Count > 0)
+{
+    var latest = history.OrderByDescending(r => r.Month).First();
+    <div class="summary-grid">
+        <div class="summary-card"><span>Housing ratio</span><strong>@latest.HousingRatioPercent.ToString("0.0")%</strong><span>Housing / gross income</span></div>
+        <div class="summary-card"><span>Total debt-to-income</span><strong>@latest.TotalDebtRatioPercent.ToString("0.0")%</strong><span>Housing + other debt / gross income</span></div>
+        <div class="summary-card"><span>Monthly obligations</span><strong>@latest.TotalMonthlyDebtObligations.ToString("N2") @latest.CurrencyCode</strong><span>Most recent month: @latest.Month.ToString("MMM yyyy")</span></div>
+    </div>
+    @if (ordered.Count > 1)
+    {
+        <section class="section-block"><h2>DTI trend</h2><div class="table-card" style="padding:1rem">
+            <svg viewBox="0 0 800 260" role="img" aria-label="Historical total debt-to-income ratio trend" style="width:100%;height:auto">
+                <line x1="48" y1="18" x2="48" y2="225" stroke="currentColor" opacity=".35" />
+                <line x1="48" y1="225" x2="752" y2="225" stroke="currentColor" opacity=".35" />
+                <polyline points="@points" fill="none" stroke="#16856b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                <text x="48" y="248" font-size="12" fill="currentColor">@ordered.First().Month.ToString("MMM yy")</text>
+                <text x="752" y="248" text-anchor="end" font-size="12" fill="currentColor">@ordered.Last().Month.ToString("MMM yy")</text>
+            </svg>
+        </div></section>
+    }
+    <section class="section-block"><h2>Monthly DTI history</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Gross income</th><th>Housing</th><th>Other debt</th><th>Housing DTI</th><th>Total DTI</th></tr></thead><tbody>
+    @foreach (var row in history)
+    {
+        <tr><td>@row.Month.ToString("MMM yyyy")</td><td>@row.GrossMonthlyIncome.ToString("N2") @row.CurrencyCode</td><td>@row.HousingMonthlyPayment.ToString("N2")</td><td>@row.OtherMonthlyDebtPayment.ToString("N2")</td><td>@row.HousingRatioPercent.ToString("0.0")%</td><td>@row.TotalDebtRatioPercent.ToString("0.0")%</td></tr>
+    }
+    </tbody></table></div></div></section>
+}
