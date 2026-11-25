@@ -40,6 +40,7 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
                 CategoryId = category.Id,
                 CategoryName = category.Name,
                 PlannedAmount = line?.PlannedAmount ?? 0m,
+                RolloverAmount = line?.RolloverAmount ?? 0m,
                 ActualAmount = actual,
                 Notes = line?.Notes
             };
@@ -91,8 +92,78 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
             PeriodName = period?.Name ?? start.ToString("MMMM yyyy"),
             Lines = lines,
             Alerts = alerts,
-            AlertsEnabled = alertsEnabled
+            AlertsEnabled = alertsEnabled,
+            IsRecurring = period?.IsRecurring ?? false,
+            RolloverEnabled = period?.RolloverEnabled ?? false
         });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CopyPreviousMonth(int year, int month, CancellationToken cancellationToken)
+    {
+        if (month is < 1 or > 12 || year is < 2000 or > 2200) return BadRequest();
+        var currentStart = new DateTime(year, month, 1);
+        var previousStart = currentStart.AddMonths(-1);
+        var current = await database.BudgetPeriods
+            .FirstOrDefaultAsync(x => x.Year == year && x.Month == month && x.CurrencyCode == "USD", cancellationToken);
+        if (current is not null)
+        {
+            TempData["SuccessMessage"] = "A budget already exists for this month. Edit it directly instead of copying over existing allocations.";
+            return RedirectToAction(nameof(Index), new { year, month });
+        }
+
+        var previous = await database.BudgetPeriods.AsNoTracking()
+            .Include(x => x.Lines)
+            .FirstOrDefaultAsync(x => x.Year == previousStart.Year && x.Month == previousStart.Month && x.CurrencyCode == "USD", cancellationToken);
+        if (previous is null)
+        {
+            TempData["SuccessMessage"] = "There is no previous-month budget to copy.";
+            return RedirectToAction(nameof(Index), new { year, month });
+        }
+
+        var previousEnd = currentStart;
+        var actuals = await database.Transactions.AsNoTracking()
+            .Where(x => x.Type == TransactionType.Expense && x.CurrencyCode == "USD"
+                && x.TransactionDate >= previousStart && x.TransactionDate < previousEnd && x.CategoryId != null)
+            .GroupBy(x => x.CategoryId!.Value)
+            .Select(g => new { CategoryId = g.Key, Amount = g.Sum(x => x.Amount) })
+            .ToDictionaryAsync(x => x.CategoryId, x => x.Amount, cancellationToken);
+
+        var target = new BudgetPeriod
+        {
+            Name = currentStart.ToString("MMMM yyyy"),
+            Year = year,
+            Month = month,
+            CurrencyCode = "USD",
+            IsRecurring = previous.IsRecurring,
+            RolloverEnabled = previous.RolloverEnabled,
+            CreatedUtc = DateTime.UtcNow,
+            UpdatedUtc = DateTime.UtcNow
+        };
+
+        foreach (var line in previous.Lines)
+        {
+            actuals.TryGetValue(line.CategoryId, out var previousActual);
+            var rollover = previous.RolloverEnabled
+                ? line.PlannedAmount + line.RolloverAmount - previousActual
+                : 0m;
+            target.Lines.Add(new BudgetLine
+            {
+                CategoryId = line.CategoryId,
+                PlannedAmount = line.PlannedAmount,
+                RolloverAmount = rollover,
+                Notes = line.Notes,
+                CreatedUtc = DateTime.UtcNow,
+                UpdatedUtc = DateTime.UtcNow
+            });
+        }
+
+        database.BudgetPeriods.Add(target);
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = previous.IsRecurring
+            ? "Recurring budget created from the previous month."
+            : "Previous month's budget copied successfully.";
+        return RedirectToAction(nameof(Index), new { year, month });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -162,11 +233,13 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
         if (period is null)
         {
             var date = new DateTime(input.Year, input.Month, 1);
-            period = new BudgetPeriod { Name = date.ToString("MMMM yyyy"), Year = input.Year, Month = input.Month, CurrencyCode = "USD" };
+            period = new BudgetPeriod { Name = date.ToString("MMMM yyyy"), Year = input.Year, Month = input.Month, CurrencyCode = "USD", IsRecurring = input.IsRecurring, RolloverEnabled = input.RolloverEnabled };
             database.BudgetPeriods.Add(period);
         }
 
         var now = DateTime.UtcNow;
+        period.IsRecurring = input.IsRecurring;
+        period.RolloverEnabled = input.RolloverEnabled;
         foreach (var item in input.Lines)
         {
             var existing = period.Lines.FirstOrDefault(x => x.CategoryId == item.CategoryId);
@@ -197,6 +270,8 @@ public sealed class BudgetIndexViewModel
     public List<BudgetLineViewModel> Lines { get; set; } = [];
     public List<BudgetAlert> Alerts { get; set; } = [];
     public bool AlertsEnabled { get; set; } = true;
+    public bool IsRecurring { get; set; }
+    public bool RolloverEnabled { get; set; }
     public decimal TotalPlanned => Lines.Sum(x => x.PlannedAmount);
     public decimal TotalActual => Lines.Sum(x => x.ActualAmount);
 }
@@ -207,6 +282,8 @@ public sealed class BudgetLineViewModel
     public string CategoryName { get; set; } = string.Empty;
     public decimal PlannedAmount { get; set; }
     public decimal ActualAmount { get; set; }
+    public decimal RolloverAmount { get; set; }
+    public decimal AdjustedBudget => PlannedAmount + RolloverAmount;
     public string? Notes { get; set; }
-    public decimal Remaining => PlannedAmount - ActualAmount;
+    public decimal Remaining => AdjustedBudget - ActualAmount;
 }
