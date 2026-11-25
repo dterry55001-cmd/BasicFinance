@@ -59,12 +59,16 @@ public sealed class DebtConsolidationController(ApplicationDbContext database, A
             .Where(a => a.Status == AccountStatus.Active && (a.Type == AccountType.Debt || a.Type == AccountType.CreditCard))
             .OrderBy(a => a.Name).ToListAsync(cancellationToken);
         var rows = new List<Account>();
+        var accountBalances = new Dictionary<int, decimal>();
         foreach (var account in accounts)
         {
-            var balance = await balances.GetBalanceAsync(account.Id, cancellationToken);
-            if (balance > 0) rows.Add(account);
+            var balance = Math.Max(0m, await balances.GetBalanceAsync(account.Id, cancellationToken));
+            if (balance <= 0) continue;
+            rows.Add(account);
+            accountBalances[account.Id] = balance;
         }
-        ViewBag.AccountBalances = rows.ToDictionary(a => a.Id, a => balances.GetBalanceAsync(a.Id, cancellationToken).GetAwaiter().GetResult());
+        ViewBag.DebtAccounts = rows;
+        ViewBag.AccountBalances = accountBalances;
         return rows;
     }
 
