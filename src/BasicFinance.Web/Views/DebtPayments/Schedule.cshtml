@@ -1,0 +1,17 @@
+@using BasicFinance.Web.Models
+@model ScheduleDebtPaymentInput
+@{
+    var account = (Account)ViewBag.Account;
+    ViewData["Title"] = "Schedule debt payment";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PAYMENT TRACKING</p><h1>Schedule payment · @account.Name</h1><p class="page-description">Add an expected payment to the calendar. This does not withdraw money or change account balances.</p></div></section>
+<form asp-action="Schedule" method="post" class="form-card">
+    <input asp-for="AccountId" type="hidden" />
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <div class="form-grid">
+        <div class="form-field"><label asp-for="DueDate">Due date</label><input asp-for="DueDate" type="date" /><span asp-validation-for="DueDate" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="ExpectedAmount">Expected payment (@account.CurrencyCode)</label><input asp-for="ExpectedAmount" type="number" min="0.01" step="0.01" /><span asp-validation-for="ExpectedAmount" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="Notes"></label><textarea asp-for="Notes" rows="3"></textarea></div>
+    </div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Schedule payment</button><a class="button button-secondary" asp-action="Index">Cancel</a></div>
+</form>
