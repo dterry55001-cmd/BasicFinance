@@ -11,7 +11,7 @@ public sealed class CreditMonitoringController(ApplicationDbContext database, Ac
     public async Task<IActionResult> Index(int? accountId, string? bureau, CancellationToken cancellationToken)
     {
         var eligible = database.Accounts.AsNoTracking()
-            .Where(a => a.Status == AccountStatus.Active && (a.Type == AccountType.CreditCard || a.DebtType == DebtAccountType.LineOfCredit || a.DebtType == DebtAccountType.HomeEquityLineOfCredit));
+            .Where(a => a.Status == AccountStatus.Active && (a.Type == AccountType.CreditCard || a.DebtType == DebtAccountType.CreditCard || a.DebtType == DebtAccountType.LineOfCredit || a.DebtType == DebtAccountType.HomeEquityLineOfCredit));
         ViewBag.Accounts = await eligible.OrderBy(a => a.Name).ToListAsync(cancellationToken);
         ViewBag.SelectedAccountId = accountId;
         ViewBag.BureauFilter = bureau;
