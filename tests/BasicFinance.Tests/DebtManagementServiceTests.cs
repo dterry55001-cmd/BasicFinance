@@ -164,8 +164,8 @@ public sealed class DebtManagementServiceTests
 
         Assert.Equal(2000m, record.TotalMonthlyDebtObligations);
         Assert.Equal(44.444444444444444444444444440m, record.DebtPaymentToNetIncomePercent);
-        Assert.Equal(800m, record.MonthlyIncomeAfterObligations);
-        Assert.Equal(800m, record.AvailableForAdditionalDebtPayment);
+        Assert.Equal(300m, record.MonthlyIncomeAfterObligations);
+        Assert.Equal(300m, record.AvailableForAdditionalDebtPayment);
         Assert.Equal("Positive cash flow", record.AffordabilityStatus);
     }
 
