@@ -168,11 +168,7 @@ public sealed class DebtGoalsController(
             }
             if (milestone is not null)
             {
-                if (milestone.IsReopened)
-                {
-                    milestone.IsReopened = false;
-                    milestone.ReopenedDate = null;
-                }
+                // Preserve the historical reopened flag even if the balance is paid off again.
                 continue;
             }
 
