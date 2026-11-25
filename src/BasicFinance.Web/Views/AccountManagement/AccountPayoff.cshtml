@@ -8,8 +8,8 @@
     var points = result is null || result.Payments.Count == 0 ? "" : string.Join(" ", result.Payments.Select((p, i) =>
     {
         var x = 48d + (result.Payments.Count == 1 ? 0 : i * 704d / (result.Payments.Count - 1));
-        var y = 18d + (double)(result.StartingBalance == 0 ? 0 : (result.StartingBalance - p.RemainingBalance) / result.StartingBalance) * 222d;
-        return $"{x:0.0},{240d-y:0.0}";
+        var y = 18d + (double)(result.StartingBalance == 0 ? 1 : (result.StartingBalance - p.RemainingBalance) / result.StartingBalance) * 222d;
+        return $"{x:0.0},{y:0.0}";
     }));
 }
 <section class="page-heading"><div><p class="eyebrow">INDIVIDUAL DEBT PLAN</p><h1>@account.Name payoff plan</h1><p class="page-description">Model the payoff of this account using its saved APR and minimum payment. The plan is a projection and does not post transactions.</p></div></section>
