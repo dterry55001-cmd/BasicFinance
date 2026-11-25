@@ -156,32 +156,39 @@ public sealed class DebtGoalsController(
         foreach (var account in accounts)
         {
             var current = await balances.GetBalanceAsync(account.Id, cancellationToken);
-            var milestone = await database.DebtFreeMilestones.FirstOrDefaultAsync(x => x.AccountId == account.Id, cancellationToken);
+            var latestMilestone = await database.DebtFreeMilestones
+                .Where(x => x.AccountId == account.Id)
+                .OrderByDescending(x => x.AchievedDate)
+                .ThenByDescending(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
             if (current > 0m)
             {
-                if (milestone is { IsReopened: false })
+                if (latestMilestone is { IsReopened: false })
                 {
-                    milestone.IsReopened = true;
-                    milestone.ReopenedDate = DateTime.Today;
+                    latestMilestone.IsReopened = true;
+                    latestMilestone.ReopenedDate = DateTime.Today;
                 }
                 continue;
             }
-            if (milestone is not null)
-            {
-                // Preserve the historical reopened flag even if the balance is paid off again.
-                continue;
-            }
+
+            // A reopened account may earn another milestone. The new payoff must be
+            // supported by balance evidence dated after the latest reopening.
+            if (latestMilestone is { IsReopened: false }) continue;
+            var historyStart = latestMilestone?.ReopenedDate?.Date;
 
             var snapshots = await database.AccountBalanceSnapshots.AsNoTracking()
-                .Where(x => x.AccountId == account.Id)
+                .Where(x => x.AccountId == account.Id &&
+                    (!historyStart.HasValue || x.SnapshotDate >= historyStart.Value))
                 .Select(x => new { x.SnapshotDate, x.Balance })
                 .ToListAsync(cancellationToken);
             var transactionDates = await database.Transactions.AsNoTracking()
-                .Where(x => x.AccountId == account.Id || x.RelatedAccountId == account.Id)
+                .Where(x => (x.AccountId == account.Id || x.RelatedAccountId == account.Id) &&
+                    (!historyStart.HasValue || x.TransactionDate >= historyStart.Value))
                 .Select(x => x.TransactionDate).Distinct().ToListAsync(cancellationToken);
             var dates = transactionDates.Concat(snapshots.Select(x => x.SnapshotDate))
                 .Select(x => x.Date).Distinct().OrderBy(x => x).ToList();
-            var hasObservedDebt = account.OpeningBalance > 0m || snapshots.Any(x => x.Balance > 0m);
+            var hasObservedDebt = historyStart.HasValue ||
+                (latestMilestone is null && (account.OpeningBalance > 0m || snapshots.Any(x => x.Balance > 0m)));
             if (!hasObservedDebt && dates.Count == 0) continue;
 
             DateTime? achieved = null;
