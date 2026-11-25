@@ -17,6 +17,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<InterestRecord> InterestRecords => Set<InterestRecord>();
     public DbSet<DebtToIncomeRecord> DebtToIncomeRecords => Set<DebtToIncomeRecord>();
     public DbSet<DebtPaymentRecord> DebtPaymentRecords => Set<DebtPaymentRecord>();
+    public DbSet<DebtInterestRateHistory> DebtInterestRateHistory => Set<DebtInterestRateHistory>();
     public DbSet<CreditLimitHistory> CreditLimitHistory => Set<CreditLimitHistory>();
     public DbSet<ReportedBalanceSnapshot> ReportedBalanceSnapshots => Set<ReportedBalanceSnapshot>();
     public DbSet<CreditInquiry> CreditInquiries => Set<CreditInquiry>();
@@ -158,6 +159,14 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasOne(payment => payment.Account).WithMany().HasForeignKey(payment => payment.AccountId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(payment => payment.SourceAccount).WithMany().HasForeignKey(payment => payment.SourceAccountId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(payment => payment.Transaction).WithMany().HasForeignKey(payment => payment.TransactionId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DebtInterestRateHistory>(entity =>
+        {
+            entity.Property(x => x.AnnualRatePercent).HasColumnType("TEXT");
+            entity.Property(x => x.RateType).HasMaxLength(30).IsRequired();
+            entity.HasIndex(x => new { x.AccountId, x.EffectiveDate });
+            entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<DebtToIncomeRecord>(entity =>
