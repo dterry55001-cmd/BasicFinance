@@ -17,6 +17,40 @@
     <article class="summary-card"><span>Actual spending</span><strong>@Model.TotalActual.ToString("C")</strong><small>Posted expense transactions</small></article>
     <article class="summary-card"><span>Remaining budget</span><strong>@((Model.TotalPlanned - Model.TotalActual).ToString("C"))</strong><small>@(Model.TotalActual > Model.TotalPlanned ? "Over budget" : "Available")</small></article>
 </div>
+<section class="table-card" aria-labelledby="budget-alert-heading">
+    <div class="section-heading"><div><h2 id="budget-alert-heading">Spending alerts</h2><p>Alerts are generated when actual spending reaches 50%, 75%, 90%, or 100% of a category budget.</p></div>
+        <form asp-action="UpdateAlertSettings" method="post" class="inline-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="year" value="@Model.Year" /><input type="hidden" name="month" value="@Model.Month" />
+            <input type="hidden" name="isEnabled" value="false" />
+            <label><input type="checkbox" name="isEnabled" value="true" checked="@Model.AlertsEnabled" /> Enable alerts</label>
+            <button class="button button-secondary" type="submit">Save setting</button>
+        </form>
+    </div>
+    @if (Model.Alerts.Count == 0)
+    {
+        <p class="empty-state">No spending threshold alerts for this period.</p>
+    }
+    else
+    {
+        <div class="table-scroll"><table>
+            <thead><tr><th>Alert</th><th>Threshold</th><th>Actual spending when reached</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+            @foreach (var alert in Model.Alerts)
+            {
+                <tr>
+                    <td><strong>@alert.Category.Name</strong><div>@alert.Message</div></td>
+                    <td>@alert.ThresholdPercent%</td>
+                    <td>@alert.ActualAmount.ToString("C")</td>
+                    <td>@alert.CreatedUtc.ToLocalTime().ToString("g")</td>
+                    <td>@(alert.IsRead ? "Read" : "New")</td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    }
+</section>
+
 <form asp-action="Save" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" name="Year" value="@Model.Year" /><input type="hidden" name="Month" value="@Model.Month" />
