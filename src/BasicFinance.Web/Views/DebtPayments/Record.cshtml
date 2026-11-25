@@ -1,0 +1,22 @@
+@using BasicFinance.Web.Models
+@model RecordDebtPaymentInput
+@{
+    var payment = (DebtPaymentRecord)ViewBag.Payment;
+    ViewData["Title"] = "Record debt payment";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PAYMENT TRACKING</p><h1>Record payment · @payment.Account.Name</h1><p class="page-description">Due @payment.DueDate.ToString("MMM d, yyyy") · Expected @payment.ExpectedAmount.ToString("N2") @payment.Account.CurrencyCode</p></div></section>
+<form asp-action="Record" method="post" class="form-card">
+    <input asp-for="PaymentRecordId" type="hidden" />
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <div class="form-grid">
+        <div class="form-field"><label asp-for="SourceAccountId">Paid from</label><select asp-for="SourceAccountId" asp-items="ViewBag.FundingAccounts"><option value="">Select funding account</option></select><span asp-validation-for="SourceAccountId" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="PaidDate">Payment date</label><input asp-for="PaidDate" type="date" /><span asp-validation-for="PaidDate" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="PrincipalPaid">Principal paid</label><input asp-for="PrincipalPaid" type="number" min="0" step="0.01" /><span asp-validation-for="PrincipalPaid" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="InterestPaid">Interest paid</label><input asp-for="InterestPaid" type="number" min="0" step="0.01" /><span asp-validation-for="InterestPaid" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="FeesPaid">Fees paid</label><input asp-for="FeesPaid" type="number" min="0" step="0.01" /><span asp-validation-for="FeesPaid" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="ActualAmount">Total actual payment</label><input asp-for="ActualAmount" type="number" min="0.01" step="0.01" /><span asp-validation-for="ActualAmount" class="field-error"></span><small>Must equal principal + interest + fees.</small></div>
+        <div class="form-field"><label asp-for="Notes"></label><textarea asp-for="Notes" rows="3"></textarea></div>
+    </div>
+    <p class="page-description">Saving posts linked transaction entries to the funding and debt accounts. Principal reduces debt; interest and fees are recorded separately.</p>
+    <div class="form-actions"><button class="button button-primary" type="submit">Record payment</button><a class="button button-secondary" asp-action="Index">Cancel</a></div>
+</form>
