@@ -21,7 +21,7 @@ public sealed class CreditMonitoringController(ApplicationDbContext database, Ac
         {
             var balance = Math.Max(0m, await balances.GetBalanceAsync(account.Id, cancellationToken));
             var limit = account.CreditLimit;
-            var utilization = limit is > 0 ? Math.Round(balance / limit.Value * 100m, 1) : null;
+            decimal? utilization = limit is > 0 ? Math.Round(balance / limit.Value * 100m, 1) : null;
             var alert = utilization switch
             {
                 >= 90m => "Critical",
