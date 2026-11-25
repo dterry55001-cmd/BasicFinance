@@ -21,6 +21,8 @@
         <div class="form-field"><label asp-for="GrossMonthlyIncome">Gross monthly income</label><input asp-for="GrossMonthlyIncome" type="number" min="0.01" step="0.01" /><span asp-validation-for="GrossMonthlyIncome" class="field-error"></span></div>
         <div class="form-field"><label asp-for="HousingMonthlyPayment">Monthly housing obligations</label><input asp-for="HousingMonthlyPayment" type="number" min="0" step="0.01" /><span asp-validation-for="HousingMonthlyPayment" class="field-error"></span><small>Include rent or mortgage, property tax, homeowners insurance and HOA if applicable.</small></div>
         <div class="form-field"><label asp-for="OtherMonthlyDebtPayment">Other monthly debt obligations</label><input asp-for="OtherMonthlyDebtPayment" type="number" min="0" step="0.01" /><span asp-validation-for="OtherMonthlyDebtPayment" class="field-error"></span><small>Include required minimum payments on credit cards, auto, student and other loans.</small></div>
+        <div class="form-field"><label asp-for="NetMonthlyIncome"></label><input asp-for="NetMonthlyIncome" type="number" min="0" step="0.01" /><span asp-validation-for="NetMonthlyIncome" class="field-error"></span><small>Income after taxes and payroll deductions.</small></div>
+        <div class="form-field"><label asp-for="OtherEssentialMonthlyExpenses"></label><input asp-for="OtherEssentialMonthlyExpenses" type="number" min="0" step="0.01" /><span asp-validation-for="OtherEssentialMonthlyExpenses" class="field-error"></span><small>Utilities, groceries, insurance, transportation and other essential costs, excluding debt payments and housing already entered.</small></div>
     </div>
     <div class="form-actions"><button class="button button-primary" type="submit">Save monthly DTI record</button><a class="button button-secondary" asp-action="DebtToIncome">Clear</a></div>
 </form>
@@ -31,6 +33,9 @@
         <div class="summary-card"><span>Housing ratio</span><strong>@latest.HousingRatioPercent.ToString("0.0")%</strong><span>Housing / gross income</span></div>
         <div class="summary-card"><span>Total debt-to-income</span><strong>@latest.TotalDebtRatioPercent.ToString("0.0")%</strong><span>Housing + other debt / gross income</span></div>
         <div class="summary-card"><span>Monthly obligations</span><strong>@latest.TotalMonthlyDebtObligations.ToString("N2") @latest.CurrencyCode</strong><span>Most recent month: @latest.Month.ToString("MMM yyyy")</span></div>
+        <div class="summary-card"><span>Debt payments / net income</span><strong>@latest.DebtPaymentToNetIncomePercent.ToString("0.0")%</strong><span>Uses recorded net income</span></div>
+        <div class="summary-card"><span>Income after listed costs</span><strong>@latest.MonthlyIncomeAfterObligations.ToString("N2") @latest.CurrencyCode</strong><span>@latest.AffordabilityStatus</span></div>
+        <div class="summary-card"><span>Potential additional debt budget</span><strong>@latest.AvailableForAdditionalDebtPayment.ToString("N2") @latest.CurrencyCode</strong><span>Before savings and unlisted expenses</span></div>
     </div>
     @if (ordered.Count > 1)
     {
@@ -44,10 +49,11 @@
             </svg>
         </div></section>
     }
-    <section class="section-block"><h2>Monthly DTI history</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Gross income</th><th>Housing</th><th>Other debt</th><th>Housing DTI</th><th>Total DTI</th></tr></thead><tbody>
+    <p class="page-description">Affordability figures are estimates based on the income and expenses entered. Available cash flow is not a recommended payment amount; retain funds for savings, irregular expenses and emergencies. DTI ratios are not credit-score predictions or loan-approval decisions.</p>
+    <section class="section-block"><h2>Monthly DTI history</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Gross income</th><th>Housing</th><th>Other debt</th><th>Housing DTI</th><th>Total DTI</th><th>Net income</th><th>Remaining cash flow</th></tr></thead><tbody>
     @foreach (var row in history)
     {
-        <tr><td>@row.Month.ToString("MMM yyyy")</td><td>@row.GrossMonthlyIncome.ToString("N2") @row.CurrencyCode</td><td>@row.HousingMonthlyPayment.ToString("N2")</td><td>@row.OtherMonthlyDebtPayment.ToString("N2")</td><td>@row.HousingRatioPercent.ToString("0.0")%</td><td>@row.TotalDebtRatioPercent.ToString("0.0")%</td></tr>
+        <tr><td>@row.Month.ToString("MMM yyyy")</td><td>@row.GrossMonthlyIncome.ToString("N2") @row.CurrencyCode</td><td>@row.HousingMonthlyPayment.ToString("N2")</td><td>@row.OtherMonthlyDebtPayment.ToString("N2")</td><td>@row.HousingRatioPercent.ToString("0.0")%</td><td>@row.TotalDebtRatioPercent.ToString("0.0")%</td><td>@row.NetMonthlyIncome.ToString("N2")</td><td>@row.MonthlyIncomeAfterObligations.ToString("N2")</td></tr>
     }
     </tbody></table></div></div></section>
 }
