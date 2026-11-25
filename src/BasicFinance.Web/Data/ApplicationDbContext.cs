@@ -16,6 +16,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<AccountBalanceSnapshot> AccountBalanceSnapshots => Set<AccountBalanceSnapshot>();
     public DbSet<InterestRecord> InterestRecords => Set<InterestRecord>();
     public DbSet<DebtToIncomeRecord> DebtToIncomeRecords => Set<DebtToIncomeRecord>();
+    public DbSet<DebtPaymentRecord> DebtPaymentRecords => Set<DebtPaymentRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -135,6 +136,21 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(snapshot => snapshot.Balance).HasColumnType("TEXT");
             entity.HasIndex(snapshot => new { snapshot.AccountId, snapshot.SnapshotDate }).IsUnique();
             entity.HasOne(snapshot => snapshot.Account).WithMany().HasForeignKey(snapshot => snapshot.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DebtPaymentRecord>(entity =>
+        {
+            entity.Property(payment => payment.ExpectedAmount).HasColumnType("TEXT");
+            entity.Property(payment => payment.ActualAmount).HasColumnType("TEXT");
+            entity.Property(payment => payment.PrincipalPaid).HasColumnType("TEXT");
+            entity.Property(payment => payment.InterestPaid).HasColumnType("TEXT");
+            entity.Property(payment => payment.FeesPaid).HasColumnType("TEXT");
+            entity.HasIndex(payment => new { payment.AccountId, payment.DueDate }).IsUnique();
+            entity.HasIndex(payment => new { payment.Status, payment.DueDate });
+            entity.HasIndex(payment => payment.TransactionId).IsUnique();
+            entity.HasOne(payment => payment.Account).WithMany().HasForeignKey(payment => payment.AccountId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(payment => payment.SourceAccount).WithMany().HasForeignKey(payment => payment.SourceAccountId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(payment => payment.Transaction).WithMany().HasForeignKey(payment => payment.TransactionId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<DebtToIncomeRecord>(entity =>
