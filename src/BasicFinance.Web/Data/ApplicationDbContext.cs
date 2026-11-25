@@ -17,6 +17,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<InterestRecord> InterestRecords => Set<InterestRecord>();
     public DbSet<DebtToIncomeRecord> DebtToIncomeRecords => Set<DebtToIncomeRecord>();
     public DbSet<DebtPaymentRecord> DebtPaymentRecords => Set<DebtPaymentRecord>();
+    public DbSet<CreditLimitHistory> CreditLimitHistory => Set<CreditLimitHistory>();
+    public DbSet<ReportedBalanceSnapshot> ReportedBalanceSnapshots => Set<ReportedBalanceSnapshot>();
+    public DbSet<CreditInquiry> CreditInquiries => Set<CreditInquiry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -160,6 +163,32 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(record => record.OtherMonthlyDebtPayment).HasColumnType("TEXT");
             entity.Property(record => record.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(record => new { record.Month, record.CurrencyCode }).IsUnique();
+        });
+
+        modelBuilder.Entity<CreditLimitHistory>(entity =>
+        {
+            entity.Property(x => x.PreviousLimit).HasColumnType("TEXT");
+            entity.Property(x => x.NewLimit).HasColumnType("TEXT");
+            entity.Property(x => x.Source).HasMaxLength(30).IsRequired();
+            entity.HasIndex(x => new { x.AccountId, x.EffectiveDate });
+            entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReportedBalanceSnapshot>(entity =>
+        {
+            entity.Property(x => x.ReportedBalance).HasColumnType("TEXT");
+            entity.Property(x => x.ReportedCreditLimit).HasColumnType("TEXT");
+            entity.Property(x => x.Source).HasMaxLength(40).IsRequired();
+            entity.HasIndex(x => new { x.AccountId, x.ReportedDate, x.Source }).IsUnique();
+            entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CreditInquiry>(entity =>
+        {
+            entity.Property(x => x.Bureau).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.Lender).HasMaxLength(120).IsRequired();
+            entity.HasIndex(x => x.InquiryDate);
+            entity.HasIndex(x => x.Bureau);
         });
 
         modelBuilder.Entity<InterestRecord>(entity =>
