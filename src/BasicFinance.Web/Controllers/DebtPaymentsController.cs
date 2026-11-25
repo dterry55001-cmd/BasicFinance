@@ -119,12 +119,6 @@ public sealed class DebtPaymentsController(ApplicationDbContext database, Accoun
                 CurrencyCode = source.CurrencyCode, TransactionDate = input.PaidDate.Date,
                 CreatedUtc = now, UpdatedUtc = now
             });
-            database.Transactions.Add(new FinancialTransaction {
-                AccountId = payment.AccountId, Type = TransactionType.Expense,
-                Description = "Interest and fees - " + payment.Account.Name, Amount = nonPrincipal,
-                CurrencyCode = payment.Account.CurrencyCode, TransactionDate = input.PaidDate.Date,
-                CreatedUtc = now, UpdatedUtc = now
-            });
         }
         await database.SaveChangesAsync(cancellationToken);
         payment.Status = DebtPaymentStatus.Paid;
