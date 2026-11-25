@@ -189,15 +189,15 @@ public sealed class DebtManagementServiceTests
     }
 
     [Theory]
-    [InlineData(5m, "Below 10%")]
-    [InlineData(10m, "Below 30%")]
-    [InlineData(30m, "30–49.9%")]
-    [InlineData(50m, "50–74.9%")]
-    [InlineData(75m, "75–89.9%")]
-    [InlineData(90m, "90% or higher")]
-    public void CreditImpact_MapsProjectedUtilizationToIndicator(decimal utilization, string expected)
+    [InlineData(5, "Below 10%")]
+    [InlineData(10, "Below 30%")]
+    [InlineData(30, "30–49.9%")]
+    [InlineData(50, "50–74.9%")]
+    [InlineData(75, "75–89.9%")]
+    [InlineData(90, "90% or higher")]
+    public void CreditImpact_MapsProjectedUtilizationToIndicator(double utilization, string expected)
     {
-        var result = new CreditScoreImpactResult { ProjectedUtilizationPercent = utilization };
+        var result = new CreditScoreImpactResult { ProjectedUtilizationPercent = (decimal)utilization };
         Assert.Equal(expected, result.UtilizationIndicator);
     }
 
