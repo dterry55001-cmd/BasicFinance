@@ -1,0 +1,26 @@
+@using BasicFinance.Web.Models
+@model DebtAnalyticsViewModel
+@{
+    ViewData["Title"] = "Debt analytics";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT MANAGEMENT</p><h1>Debt analytics</h1><p class="page-description">Understand how much goes to principal, interest, and fees, review annual payment totals, and follow reported revolving-credit utilization over time.</p></div></section>
+<section class="section-block"><h2>Lifetime recorded debt payments</h2><p class="muted">These totals use payments marked Paid with a recorded paid date. Principal, interest, and fees are shown only when entered on the payment record; totals are not reconstructed from bank transactions.</p>
+<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Currency</th><th>Principal paid</th><th>Interest paid</th><th>Fees paid</th><th>Total recorded</th><th>Interest / principal</th><th>Payments</th></tr></thead><tbody>
+@foreach(var row in Model.CurrencySummaries){<tr><td>@row.CurrencyCode</td><td>@row.PrincipalPaid.ToString("N2")</td><td>@row.InterestPaid.ToString("N2")</td><td>@row.FeesPaid.ToString("N2")</td><td>@row.TotalPaid.ToString("N2")</td><td>@row.InterestToPrincipalPercent.ToString("N1")%</td><td>@row.PaymentCount</td></tr>}
+@if(!Model.CurrencySummaries.Any()){<tr><td colspan="7">No paid debt payment records are available yet. Record payments with principal, interest, and fee breakdowns to build analytics.</td></tr>}
+</tbody></table></div></div></section>
+<section class="section-block"><h2>Monthly payment breakdown</h2>
+<form method="get" asp-action="Index" class="form-card"><div class="form-grid"><div class="form-field"><label for="year">Report year</label><select id="year" name="year">@for(var y=Model.AvailableYearsEnd;y>=Model.AvailableYearsStart;y--){<option value="@y" selected="@(y==Model.SelectedYear)">@y</option>}</select></div><div class="form-field"><label>&nbsp;</label><button class="button button-primary" type="submit">View year</button></div></div></form>
+<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Currency</th><th>Principal</th><th>Interest</th><th>Fees</th><th>Total payment</th><th>Payments</th></tr></thead><tbody>
+@foreach(var row in Model.MonthlyBreakdown){<tr><td>@row.Month.ToString("MMMM yyyy")</td><td>@row.CurrencyCode</td><td>@row.PrincipalPaid.ToString("N2")</td><td>@row.InterestPaid.ToString("N2")</td><td>@row.FeesPaid.ToString("N2")</td><td>@row.TotalPaid.ToString("N2")</td><td>@row.PaymentCount</td></tr>}
+@if(!Model.MonthlyBreakdown.Any()){<tr><td colspan="7">No paid debt payments recorded for @Model.SelectedYear.</td></tr>}
+</tbody></table></div></div></section>
+<section class="section-block"><h2>Reported credit utilization trends</h2><p class="muted">Uses the latest reported balance per revolving account within each month and only includes accounts with a reported credit limit. It does not substitute current ledger balances for bureau-reported balances.</p>
+<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Currency</th><th>Reported balance</th><th>Reported limits</th><th>Utilization</th><th>Accounts reported</th></tr></thead><tbody>
+@foreach(var row in Model.UtilizationTrends.OrderByDescending(x=>x.Month).ThenBy(x=>x.CurrencyCode)){<tr><td>@row.Month.ToString("MMM yyyy")</td><td>@row.CurrencyCode</td><td>@row.ReportedBalance.ToString("N2")</td><td>@row.ReportedLimit.ToString("N2")</td><td>@row.UtilizationPercent.ToString("N1")%</td><td>@row.AccountsReported</td></tr>}
+@if(!Model.UtilizationTrends.Any()){<tr><td colspan="6">No reported balance snapshots with reported credit limits are available. Add bureau-reported balances in Credit Monitoring to begin the trend.</td></tr>}
+</tbody></table></div></div><p><a asp-controller="CreditMonitoring" asp-action="Index">Open credit monitoring</a></p></section>
+<section class="section-block"><h2>Annual debt payment report</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Year</th><th>Currency</th><th>Principal</th><th>Interest</th><th>Fees</th><th>Total recorded</th><th>Payments</th></tr></thead><tbody>
+@foreach(var row in Model.AnnualReports){<tr><td>@row.Year</td><td>@row.CurrencyCode</td><td>@row.PrincipalPaid.ToString("N2")</td><td>@row.InterestPaid.ToString("N2")</td><td>@row.FeesPaid.ToString("N2")</td><td>@row.TotalPaid.ToString("N2")</td><td>@row.PaymentCount</td></tr>}
+@if(!Model.AnnualReports.Any()){<tr><td colspan="7">No annual debt payment history is available yet.</td></tr>}
+</tbody></table></div></div></section>
