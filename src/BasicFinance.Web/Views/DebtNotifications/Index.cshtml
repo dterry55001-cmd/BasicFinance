@@ -1,0 +1,43 @@
+@model IReadOnlyList<BasicFinance.Web.Controllers.DebtNotificationRow>
+@{
+    ViewData["Title"] = "Debt notifications";
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">DEBT MANAGEMENT</p>
+        <h1>Notifications</h1>
+        <p class="page-description">Current credit-utilization alerts, recent credit-limit changes, debt-goal progress, target reminders, and payoff milestones.</p>
+    </div>
+</section>
+<div class="alert alert-info" role="note">
+    Alerts are generated from records currently stored in BasicFinance whenever this page is opened. They are not push notifications and do not connect to banks or credit bureaus.
+    Generated: @(((DateTime)ViewBag.GeneratedAt).ToString("MMM d, yyyy h:mm tt"))
+</div>
+<section class="section-block">
+    <h2>Current alerts (@Model.Count)</h2>
+    @if (!Model.Any())
+    {
+        <div class="form-card"><p>No debt or credit alerts currently require attention.</p></div>
+    }
+    else
+    {
+        <div class="table-card">
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>Level</th><th>Category</th><th>Alert</th><th>Date</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><strong>@item.Level</strong></td>
+                            <td>@item.Category</td>
+                            <td>@item.Message</td>
+                            <td>@item.Date.ToString("MMM d, yyyy")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</section>
