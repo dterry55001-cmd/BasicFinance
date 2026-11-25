@@ -1,0 +1,60 @@
+@using BasicFinance.Web.Models
+@model DebtConsolidationInput
+@{
+    var balances = (IReadOnlyDictionary<int, decimal>)(ViewBag.AccountBalances ?? new Dictionary<int, decimal>());
+    var selectedIds = (int[])(ViewBag.SelectedIds ?? Model.AccountIds.ToArray());
+    var result = ViewBag.Result as DebtConsolidationResult;
+    ViewData["Title"] = "Debt consolidation planner";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PLANNING · PHASE 1</p><h1>Debt consolidation planner</h1><p class="page-description">Compare a proposed consolidation loan against selected outstanding debts. Estimates include the origination fee and a monthly amortization calculation; no accounts or payments are changed.</p></div></section>
+<form asp-action="Index" method="post" class="form-card">
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="section-block"><h2>1. Select debts to consolidate</h2>
+        @if (balances.Count == 0)
+        {
+            <p>No active debt or credit-card accounts with outstanding balances were found.</p>
+        }
+        else
+        {
+            <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Select</th><th>Account</th><th>Balance</th><th>APR</th><th>Minimum payment</th></tr></thead><tbody>
+            @foreach (var account in (IReadOnlyList<Account>)(ViewBag.DebtAccounts ?? new List<Account>()))
+            {
+                <tr><td><input type="checkbox" name="AccountIds" value="@account.Id" checked="@selectedIds.Contains(account.Id)" /></td><td>@account.Name</td><td>@balances[account.Id].ToString("N2") @account.CurrencyCode</td><td>@((account.InterestRatePercent ?? 0m).ToString("0.###"))%</td><td>@((account.MinimumPayment ?? 0m).ToString("N2"))</td></tr>
+            }
+            </tbody></table></div></div>
+        }
+    </section>
+    <section class="section-block"><h2>2. Proposed consolidation terms</h2><div class="form-grid">
+        <div class="form-field"><label asp-for="AnnualRatePercent"></label><input asp-for="AnnualRatePercent" type="number" min="0" max="100" step="0.001" /><span asp-validation-for="AnnualRatePercent" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="OriginationFeePercent"></label><input asp-for="OriginationFeePercent" type="number" min="0" max="100" step="0.01" /><span asp-validation-for="OriginationFeePercent" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="TermMonths"></label><input asp-for="TermMonths" type="number" min="1" max="600" /><span asp-validation-for="TermMonths" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="FirstPaymentDate"></label><input asp-for="FirstPaymentDate" type="date" /><span asp-validation-for="FirstPaymentDate" class="field-error"></span></div>
+    </div></section>
+    <div class="form-actions"><button class="button button-primary" type="submit">Compare consolidation</button><a class="button button-secondary" asp-action="Index">Reset</a></div>
+</form>
+@if (result is not null)
+{
+    var currency = result.Debts.First().CurrencyCode;
+    <section class="section-block"><h2>Consolidation estimate</h2><div class="summary-grid">
+        <div class="summary-card"><span>Combined debt</span><strong>@result.Principal.ToString("N2") @currency</strong></div>
+        <div class="summary-card"><span>New monthly payment</span><strong>@result.MonthlyPayment.ToString("N2") @currency</strong></div>
+        <div class="summary-card"><span>Weighted current APR</span><strong>@result.CurrentWeightedApr.ToString("0.00")%</strong></div>
+        <div class="summary-card"><span>New loan total cost</span><strong>@result.TotalCost.ToString("N2") @currency</strong></div>
+    </div>
+    <div class="table-card"><div class="table-scroll"><table><tbody>
+        <tr><th>Consolidation APR</th><td>@result.ConsolidationApr.ToString("0.###")%</td></tr>
+        <tr><th>Origination fee</th><td>@result.OriginationFee.ToString("N2") @currency</td></tr>
+        <tr><th>Amount financed</th><td>@result.FinancedAmount.ToString("N2") @currency</td></tr>
+        <tr><th>Total interest over new loan</th><td>@result.TotalInterest.ToString("N2") @currency</td></tr>
+        <tr><th>Current minimum payments (sum)</th><td>@result.CurrentMonthlyMinimums.ToString("N2") @currency</td></tr>
+        <tr><th>Monthly cash-flow difference</th><td>@result.MonthlyCashFlowDifference.ToString("N2") @currency</td></tr>
+        <tr><th>Estimated final payment</th><td>@result.PayoffDate.ToString("MMM yyyy")</td></tr>
+    </tbody></table></div></div>
+    <p class="page-description">A positive monthly cash-flow difference means the estimated consolidation payment is lower than the sum of the saved minimum payments. A longer term can reduce the monthly payment while increasing total interest. This comparison does not include payoff quotes, variable-rate changes, late fees, prepayment penalties, or lender approval. Confirm actual loan terms before making a decision.</p>
+    <section class="section-block"><h2>Debts included</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Balance</th><th>APR</th><th>Minimum payment</th></tr></thead><tbody>
+    @foreach (var debt in result.Debts)
+    {
+        <tr><td>@debt.Name</td><td>@debt.Balance.ToString("N2") @debt.CurrencyCode</td><td>@debt.AnnualRatePercent.ToString("0.###")%</td><td>@debt.MinimumPayment.ToString("N2")</td></tr>
+    }
+    </tbody></table></div></div></section>
+}
