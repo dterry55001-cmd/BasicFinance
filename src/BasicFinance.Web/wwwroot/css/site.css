@@ -179,3 +179,33 @@ body:has(.debt-analytics-page) .table-scroll td {
         font-size: .76rem;
     }
 }
+
+
+/* Keep payment allocation and debt notifications tables within the page width. */
+body:has(.payment-allocation-page) .table-scroll,
+body:has(.debt-notifications-page) .table-scroll {
+    overflow-x: hidden;
+}
+body:has(.payment-allocation-page) .table-scroll table,
+body:has(.debt-notifications-page) .table-scroll table {
+    width: 100%;
+    table-layout: fixed;
+    white-space: normal;
+}
+body:has(.payment-allocation-page) .table-scroll th,
+body:has(.payment-allocation-page) .table-scroll td,
+body:has(.debt-notifications-page) .table-scroll th,
+body:has(.debt-notifications-page) .table-scroll td {
+    padding: .7rem .55rem;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+@media (max-width: 720px) {
+    body:has(.payment-allocation-page) .table-scroll th,
+    body:has(.payment-allocation-page) .table-scroll td,
+    body:has(.debt-notifications-page) .table-scroll th,
+    body:has(.debt-notifications-page) .table-scroll td {
+        padding: .5rem .35rem;
+        font-size: .76rem;
+    }
+}
