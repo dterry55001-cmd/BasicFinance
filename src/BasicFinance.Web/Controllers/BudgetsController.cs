@@ -96,6 +96,29 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkAlertRead(int id, int year, int month, CancellationToken cancellationToken)
+    {
+        if (month is < 1 or > 12 || year is < 2000 or > 2200) return BadRequest();
+        var alert = await database.BudgetAlerts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (alert is null) return NotFound();
+        alert.IsRead = true;
+        await database.SaveChangesAsync(cancellationToken);
+        return RedirectToAction(nameof(Index), new { year, month });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkAllAlertsRead(int year, int month, CancellationToken cancellationToken)
+    {
+        if (month is < 1 or > 12 || year is < 2000 or > 2200) return BadRequest();
+        var period = await database.BudgetPeriods.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Year == year && x.Month == month && x.CurrencyCode == "USD", cancellationToken);
+        if (period is not null)
+            await database.BudgetAlerts.Where(x => x.BudgetPeriodId == period.Id && !x.IsRead)
+                .ExecuteUpdateAsync(update => update.SetProperty(x => x.IsRead, true), cancellationToken);
+        return RedirectToAction(nameof(Index), new { year, month });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateAlertSettings(bool isEnabled, int year, int month, CancellationToken cancellationToken)
     {
         if (month is < 1 or > 12 || year is < 2000 or > 2200) return BadRequest();
