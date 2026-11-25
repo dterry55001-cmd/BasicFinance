@@ -1,0 +1,31 @@
+@using BasicFinance.Web.Models
+@model DebtTaxInterestReport
+@{
+    ViewData["Title"] = "Tax and interest report";
+    var currency = Model.CurrencyCode;
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT MANAGEMENT · PHASE 6</p><h1>Tax and interest report</h1><p class="page-description">Annual summary of recorded interest, debt payments, principal, and fees. Figures are based on manually recorded data and paid payment records.</p></div></section>
+<form asp-action="TaxInterest" method="get" class="form-card">
+    <div class="form-grid">
+        <div class="form-field"><label for="Year">Tax year / reporting year</label><input id="Year" name="Year" type="number" min="2000" max="2100" value="@Model.Year" /></div>
+        <div class="form-field"><label for="CurrencyCode">Currency</label><select id="CurrencyCode" name="CurrencyCode">@foreach(var code in (IEnumerable<string>)((Microsoft.AspNetCore.Mvc.Rendering.SelectList)ViewBag.Currencies).Items){<option value="@code" selected="@(code == currency)">@code</option>}</select></div>
+    </div>
+    <button class="button button-primary" type="submit">Generate report</button>
+</form>
+<section class="section-block"><h2>@Model.Year annual summary</h2><div class="summary-grid">
+    <article class="summary-card"><span>Interest charged</span><strong>@Model.InterestCharged.ToString("N2") @currency</strong></article>
+    <article class="summary-card"><span>Interest earned</span><strong>@Model.InterestEarned.ToString("N2") @currency</strong></article>
+    <article class="summary-card"><span>Net recorded interest cost</span><strong>@Model.NetInterestCost.ToString("N2") @currency</strong></article>
+    <article class="summary-card"><span>Principal paid</span><strong>@Model.PrincipalPaid.ToString("N2") @currency</strong></article>
+    <article class="summary-card"><span>Interest paid with debt payments</span><strong>@Model.DebtInterestPaid.ToString("N2") @currency</strong></article>
+    <article class="summary-card"><span>Fees paid</span><strong>@Model.FeesPaid.ToString("N2") @currency</strong></article>
+    <article class="summary-card"><span>Total recorded debt payments</span><strong>@Model.TotalDebtPayments.ToString("N2") @currency</strong></article>
+</div></section>
+<section class="section-block"><h2>Account breakdown</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Interest charged</th><th>Interest earned</th><th>Principal paid</th><th>Interest paid</th><th>Fees</th><th>Total payments</th></tr></thead><tbody>
+@if(!Model.Accounts.Any()){<tr><td colspan="7">No interest or paid debt-payment records were found for this year and currency.</td></tr>}
+@foreach(var row in Model.Accounts){<tr><td>@row.AccountName</td><td>@row.InterestCharged.ToString("N2")</td><td>@row.InterestEarned.ToString("N2")</td><td>@row.PrincipalPaid.ToString("N2")</td><td>@row.DebtInterestPaid.ToString("N2")</td><td>@row.FeesPaid.ToString("N2")</td><td>@row.TotalPayments.ToString("N2")</td></tr>}
+</tbody></table></div></div></section>
+<section class="section-block"><h2>Monthly breakdown</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Interest charged</th><th>Interest earned</th><th>Principal paid</th><th>Interest paid</th><th>Fees paid</th><th>Total payments</th></tr></thead><tbody>
+@foreach(var row in Model.Monthly){<tr><td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(row.Month)</td><td>@row.InterestCharged.ToString("N2")</td><td>@row.InterestEarned.ToString("N2")</td><td>@row.PrincipalPaid.ToString("N2")</td><td>@row.DebtInterestPaid.ToString("N2")</td><td>@row.FeesPaid.ToString("N2")</td><td>@row.TotalPayments.ToString("N2")</td></tr>}
+</tbody></table></div></div></section>
+<div class="alert alert-info" role="note">This is a personal financial record summary, not a tax determination or tax form. Interest paid is not necessarily tax-deductible; deductibility depends on the type of debt, use of proceeds, applicable law, and individual circumstances. Interest records and payment allocations must be complete and accurate. Consult a qualified tax professional for tax treatment.</div>
