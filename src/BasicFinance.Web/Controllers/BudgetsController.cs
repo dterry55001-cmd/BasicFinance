@@ -45,13 +45,74 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
             };
         }).ToList();
 
+        var preferences = await database.BudgetAlertPreferences.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
+        var alertsEnabled = preferences?.IsEnabled ?? true;
+        if (period is not null && alertsEnabled)
+        {
+            var existingThresholds = await database.BudgetAlerts.AsNoTracking()
+                .Where(x => x.BudgetPeriodId == period.Id)
+                .Select(x => new { x.CategoryId, x.ThresholdPercent })
+                .ToListAsync(cancellationToken);
+            var thresholds = new[] { 50, 75, 90, 100 };
+            foreach (var line in lines.Where(x => x.PlannedAmount > 0m))
+            {
+                var utilization = line.ActualAmount / line.PlannedAmount * 100m;
+                foreach (var threshold in thresholds.Where(x => utilization >= x))
+                {
+                    if (existingThresholds.Any(x => x.CategoryId == line.CategoryId && x.ThresholdPercent == threshold))
+                        continue;
+                    var level = threshold >= 100 ? "Critical" : threshold >= 90 ? "High" : threshold >= 75 ? "Warning" : "Information";
+                    database.BudgetAlerts.Add(new BudgetAlert
+                    {
+                        BudgetPeriodId = period.Id,
+                        CategoryId = line.CategoryId,
+                        ThresholdPercent = threshold,
+                        ActualAmount = line.ActualAmount,
+                        Level = level,
+                        Message = $"{line.CategoryName} has reached {utilization:0.#}% of its {line.PlannedAmount:C} budget.",
+                        CreatedUtc = DateTime.UtcNow
+                    });
+                }
+            }
+            await database.SaveChangesAsync(cancellationToken);
+        }
+
+        var alerts = period is null
+            ? new List<BudgetAlert>()
+            : await database.BudgetAlerts.AsNoTracking().Include(x => x.Category)
+                .Where(x => x.BudgetPeriodId == period.Id)
+                .OrderByDescending(x => x.CreatedUtc).Take(20).ToListAsync(cancellationToken);
+
         return View(new BudgetIndexViewModel
         {
             Year = selectedYear,
             Month = selectedMonth,
             PeriodName = period?.Name ?? start.ToString("MMMM yyyy"),
-            Lines = lines
+            Lines = lines,
+            Alerts = alerts,
+            AlertsEnabled = alertsEnabled
         });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateAlertSettings(bool isEnabled, int year, int month, CancellationToken cancellationToken)
+    {
+        if (month is < 1 or > 12 || year is < 2000 or > 2200) return BadRequest();
+        var preferences = await database.BudgetAlertPreferences.FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
+        if (preferences is null)
+        {
+            preferences = new BudgetAlertPreference { Id = 1, IsEnabled = isEnabled, UpdatedUtc = DateTime.UtcNow };
+            database.BudgetAlertPreferences.Add(preferences);
+        }
+        else
+        {
+            preferences.IsEnabled = isEnabled;
+            preferences.UpdatedUtc = DateTime.UtcNow;
+        }
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = isEnabled ? "Budget alerts enabled." : "Budget alerts disabled.";
+        return RedirectToAction(nameof(Index), new { year, month });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -111,6 +172,8 @@ public sealed class BudgetIndexViewModel
     public int Month { get; set; }
     public string PeriodName { get; set; } = string.Empty;
     public List<BudgetLineViewModel> Lines { get; set; } = [];
+    public List<BudgetAlert> Alerts { get; set; } = [];
+    public bool AlertsEnabled { get; set; } = true;
     public decimal TotalPlanned => Lines.Sum(x => x.PlannedAmount);
     public decimal TotalActual => Lines.Sum(x => x.ActualAmount);
 }
