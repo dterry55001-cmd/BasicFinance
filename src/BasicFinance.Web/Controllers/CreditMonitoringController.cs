@@ -21,7 +21,17 @@ public sealed class CreditMonitoringController(ApplicationDbContext database, Ac
         {
             var balance = Math.Max(0m, await balances.GetBalanceAsync(account.Id, cancellationToken));
             var limit = account.CreditLimit;
-            rows.Add(new CreditUtilizationRow(account, balance, limit, limit is > 0 ? Math.Round(balance / limit.Value * 100m, 1) : null));
+            var utilization = limit is > 0 ? Math.Round(balance / limit.Value * 100m, 1) : null;
+            var alert = utilization switch
+            {
+                >= 90m => "Critical",
+                >= 75m => "High",
+                >= 50m => "Elevated",
+                >= 30m => "Watch",
+                _ when utilization.HasValue => "Within threshold",
+                _ => "Limit unavailable"
+            };
+            rows.Add(new CreditUtilizationRow(account, balance, limit, utilization, alert));
         }
         ViewBag.UtilizationRows = rows;
         var reported = database.ReportedBalanceSnapshots.AsNoTracking().Include(x => x.Account).AsQueryable();
@@ -42,7 +52,7 @@ public sealed class CreditMonitoringController(ApplicationDbContext database, Ac
     {
         var account = await database.Accounts.FirstOrDefaultAsync(a => a.Id == accountId && a.Status == AccountStatus.Active, cancellationToken);
         if (account is null) return NotFound();
-        if (account.Type != AccountType.CreditCard && account.DebtType is not (DebtAccountType.LineOfCredit or DebtAccountType.HomeEquityLineOfCredit))
+        if (account.Type != AccountType.CreditCard && account.DebtType is not (DebtAccountType.CreditCard or DebtAccountType.LineOfCredit or DebtAccountType.HomeEquityLineOfCredit))
             ModelState.AddModelError(nameof(accountId), "Reported credit balances can only be recorded for revolving-credit accounts.");
         if (reportedDate == default) ModelState.AddModelError(nameof(reportedDate), "Enter the report date.");
         if (reportedBalance < 0) ModelState.AddModelError(nameof(reportedBalance), "Reported balance cannot be negative.");
@@ -86,4 +96,4 @@ public sealed class CreditMonitoringController(ApplicationDbContext database, Ac
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
-public sealed record CreditUtilizationRow(Account Account, decimal LedgerBalance, decimal? CreditLimit, decimal? UtilizationPercent);
+public sealed record CreditUtilizationRow(Account Account, decimal LedgerBalance, decimal? CreditLimit, decimal? UtilizationPercent, string AlertLevel);
