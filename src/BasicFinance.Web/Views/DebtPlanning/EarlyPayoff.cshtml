@@ -1,0 +1,42 @@
+@using BasicFinance.Web.Models
+@model EarlyPayoffScenarioInput
+@{
+    var account = (Account)ViewBag.Account;
+    var balance = (decimal)ViewBag.Balance;
+    var scenarios = ViewBag.Scenarios as IReadOnlyList<EarlyPayoffScenarioResult>;
+    ViewData["Title"] = "Early payoff scenarios";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PLANNING</p><h1>@account.Name early payoff scenarios</h1><p class="page-description">Compare your current payment against lump-sum, recurring extra, and combined payment strategies. These are estimates only and do not post transactions.</p></div></section>
+<div class="summary-grid">
+    <div class="summary-card"><span>Current balance</span><strong>@balance.ToString("N2") @account.CurrencyCode</strong></div>
+    <div class="summary-card"><span>APR</span><strong>@((account.InterestRatePercent ?? 0m).ToString("0.###"))%</strong></div>
+    <div class="summary-card"><span>Saved minimum</span><strong>@((account.MinimumPayment ?? 0m).ToString("N2")) @account.CurrencyCode</strong></div>
+</div>
+<form asp-action="EarlyPayoff" method="post" class="form-card">
+    <input asp-for="AccountId" type="hidden" />
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <div class="form-grid">
+        <div class="form-field"><label asp-for="OneTimePayment"></label><input asp-for="OneTimePayment" type="number" min="0" step="0.01" /><span asp-validation-for="OneTimePayment" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="OneTimePaymentMonth"></label><input asp-for="OneTimePaymentMonth" type="number" min="1" max="1200" /><span asp-validation-for="OneTimePaymentMonth" class="field-error"></span><small>Month 1 means the first projected payment month.</small></div>
+        <div class="form-field"><label asp-for="ExtraMonthlyPayment"></label><input asp-for="ExtraMonthlyPayment" type="number" min="0" step="0.01" /><span asp-validation-for="ExtraMonthlyPayment" class="field-error"></span></div>
+    </div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Compare payoff strategies</button><a class="button button-secondary" asp-controller="AccountManagement" asp-action="Index">Back to debt management</a></div>
+</form>
+@if (scenarios is not null)
+{
+    <section class="section-block"><h2>Scenario comparison</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Strategy</th><th>Payoff date</th><th>Months</th><th>Total interest</th><th>Interest saved</th><th>Months saved</th><th>Total paid</th></tr></thead><tbody>
+    @foreach (var scenario in scenarios)
+    {
+        <tr><td>@scenario.Strategy</td><td>@scenario.PayoffDate.ToString("MMM yyyy")</td><td>@scenario.MonthsToPayoff</td><td>@scenario.TotalInterest.ToString("N2") @account.CurrencyCode</td><td>@scenario.InterestSavings.ToString("N2") @account.CurrencyCode</td><td>@scenario.MonthsSaved</td><td>@scenario.TotalPaid.ToString("N2") @account.CurrencyCode</td></tr>
+    }
+    </tbody></table></div></div></section>
+    @foreach (var scenario in scenarios)
+    {
+        <section class="section-block"><h3>@scenario.Strategy schedule</h3><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Date</th><th>Payment</th><th>Interest</th><th>Principal</th><th>Remaining balance</th></tr></thead><tbody>
+        @foreach (var row in scenario.Payments)
+        {
+            <tr><td>@row.MonthNumber</td><td>@row.PaymentDate.ToString("MMM yyyy")</td><td>@row.Payment.ToString("N2")</td><td>@row.Interest.ToString("N2")</td><td>@row.Principal.ToString("N2")</td><td>@row.RemainingBalance.ToString("N2")</td></tr>
+        }
+        </tbody></table></div></div></section>
+    }
+}
