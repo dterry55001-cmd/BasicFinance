@@ -31,6 +31,17 @@ public sealed class DebtPaymentsController(ApplicationDbContext database, Accoun
         return View(records);
     }
 
+    // Backward-compatible entry point for links that use the GenerateSchedule name.
+    [HttpGet]
+    public IActionResult GenerateSchedule(int? accountId)
+    {
+        if (accountId.HasValue)
+            return RedirectToAction(nameof(Schedule), new { accountId = accountId.Value });
+
+        TempData["ErrorMessage"] = "Choose a debt or credit-card account before scheduling a payment.";
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpGet]
     public async Task<IActionResult> Schedule(int accountId, CancellationToken cancellationToken)
     {
