@@ -152,7 +152,7 @@ public sealed class DebtNotificationsController(
         var scheduledPayments = await database.DebtPaymentRecords.AsNoTracking()
             .Include(x => x.Account)
             .Where(x => x.Status == DebtPaymentStatus.Scheduled && x.Account.Status == AccountStatus.Active &&
-                x.DueDate.Date <= today.AddDays(7))
+                x.DueDate <= today.AddDays(7))
             .OrderBy(x => x.DueDate).Take(100).ToListAsync(cancellationToken);
         foreach (var payment in scheduledPayments)
         {
