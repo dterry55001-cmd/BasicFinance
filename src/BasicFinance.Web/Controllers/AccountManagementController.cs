@@ -82,8 +82,6 @@ public sealed class AccountManagementController(
     }
 
     [HttpGet]
-    
-    [HttpGet]
     public async Task<IActionResult> AccountPayoff(int accountId, CancellationToken cancellationToken)
     {
         var account = await database.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId &&
@@ -114,6 +112,7 @@ public sealed class AccountManagementController(
         return View(input);
     }
 
+    [HttpGet]
     public async Task<IActionResult> Amortization(int? accountId, CancellationToken cancellationToken)
     {
         await PopulateDebtAccountsAsync(cancellationToken);
