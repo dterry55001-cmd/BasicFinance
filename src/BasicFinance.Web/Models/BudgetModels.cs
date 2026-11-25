@@ -18,6 +18,9 @@ public sealed class BudgetPeriod
     [Required, StringLength(3, MinimumLength = 3)]
     public string CurrencyCode { get; set; } = "USD";
 
+    public bool IsRecurring { get; set; }
+    public bool RolloverEnabled { get; set; }
+
     public ICollection<BudgetLine> Lines { get; set; } = new List<BudgetLine>();
 
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
@@ -36,6 +39,8 @@ public sealed class BudgetLine
 
     [Range(typeof(decimal), "0.00", "999999999999")]
     public decimal PlannedAmount { get; set; }
+
+    public decimal RolloverAmount { get; set; }
 
     [StringLength(300)]
     public string? Notes { get; set; }
