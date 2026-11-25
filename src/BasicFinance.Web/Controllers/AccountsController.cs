@@ -219,7 +219,7 @@ public sealed class AccountsController(ApplicationDbContext database, AccountBal
         _ => "Other retirement account"
     };
 
-    private static bool IsRevolving(Account account) => account.Type == AccountType.CreditCard || (account.Type == AccountType.Debt && account.DebtType is DebtAccountType.LineOfCredit or DebtAccountType.HomeEquityLineOfCredit);
+    private static bool IsRevolving(Account account) => account.Type == AccountType.CreditCard || (account.Type == AccountType.Debt && account.DebtType is DebtAccountType.CreditCard or DebtAccountType.LineOfCredit or DebtAccountType.HomeEquityLineOfCredit);
 
     private static string? CleanOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
