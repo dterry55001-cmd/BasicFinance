@@ -10,7 +10,7 @@
     <div class="summary-card"><span>Interest charged by currency</span>@foreach (var total in (IReadOnlyList<BasicFinance.Web.Controllers.InterestCurrencyTotal>)ViewBag.InterestChargedTotals) { <strong>@total.Amount.ToString("N2") @total.CurrencyCode</strong> }</div>
 </div>
 <div class="quick-links">
-    <a class="button button-primary" asp-action="Payoff">Debt payoff planner</a>
+    <a class="button button-primary" asp-action="Payoff">Debt payoff overview</a>
     <a class="button button-secondary" asp-action="Amortization">Loan amortization</a>
     <a class="button button-secondary" asp-action="Interest">Interest tracking</a>
 </div>
@@ -21,6 +21,6 @@
 <tr><td><a class="table-link" asp-controller="Accounts" asp-action="Details" asp-route-id="@row.Account.Id">@row.Account.Name</a><div class="table-subtext">@row.Account.Type / @row.Account.DebtType</div></td>
 <td>@row.Balance.ToString("N2") @row.Account.CurrencyCode</td><td>@(row.Account.InterestRatePercent?.ToString("0.###") ?? "—")%</td>
 <td>@(row.UtilizationPercent.HasValue ? $"{row.UtilizationPercent:0.0}%" : "—")</td><td>@(row.Account.MinimumPayment?.ToString("N2") ?? "—")</td><td>@(row.Account.PaymentDueDay?.ToString() ?? "—")</td>
-<td><a asp-action="BalanceHistory" asp-route-accountId="@row.Account.Id">Balance history</a></td></tr>
+<td><a asp-action="BalanceHistory" asp-route-accountId="@row.Account.Id">Balance history</a> @if (row.Account.Type is AccountType.Debt or AccountType.CreditCard) { <span>·</span> <a asp-action="AccountPayoff" asp-route-accountId="@row.Account.Id">Payoff plan</a> }</td></tr>
 }
 </tbody></table></div></div></section>
