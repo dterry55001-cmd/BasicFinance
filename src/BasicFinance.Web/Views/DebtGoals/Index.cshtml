@@ -1,0 +1,40 @@
+@using BasicFinance.Web.Models
+@model DebtGoalsPageViewModel
+@{
+    ViewData["Title"] = "Debt-free goals";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PLANNING</p><h1>Debt-free goals</h1><p class="page-description">Set debt-free targets, measure monthly principal reduction, celebrate paid-off accounts, and estimate payoff dates. Estimates are planning scenarios, not guarantees.</p></div></section>
+@if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="alert alert-error" role="alert">@error</div> }
+<section class="section-block"><h2>Outstanding debt by currency</h2><div class="summary-grid">
+@foreach(var balance in Model.Balances){<div class="summary-card"><span>@balance.CurrencyCode outstanding</span><strong>@balance.Balance.ToString("N2") @balance.CurrencyCode</strong><span>@balance.AccountCount active debt accounts</span></div>}
+@if(!Model.Balances.Any()){<p>No active debt balances found.</p>}
+</div></section>
+<section class="section-block"><h2>Overall debt-free target</h2><p class="muted">Targets and estimates are tracked separately for each currency. Extra monthly payment is included in the payoff estimate.</p>
+<div class="grid grid-two">
+@foreach(var target in Model.Targets){<div class="form-card"><h3>@target.CurrencyCode target</h3><p>Target date: <strong>@target.TargetDate.ToString("MMM d, yyyy")</strong></p><p>Extra monthly payment: @target.ExtraMonthlyPayment.ToString("N2") @target.CurrencyCode</p><p>@target.Notes</p></div>}
+</div>
+<form asp-action="SaveTarget" method="post" class="form-card"><div class="form-grid">
+<div class="form-field"><label for="targetCurrency">Currency code</label><input id="targetCurrency" name="currencyCode" maxlength="3" minlength="3" pattern="[A-Za-z]{3}" value="USD" required /></div>
+<div class="form-field"><label for="targetDate">Target debt-free date</label><input id="targetDate" name="targetDate" type="date" required /></div>
+<div class="form-field"><label for="extraMonthlyPayment">Extra monthly payment</label><input id="extraMonthlyPayment" name="extraMonthlyPayment" type="number" min="0" step="0.01" value="0" /></div>
+<div class="form-field form-field-full"><label for="targetNotes">Notes</label><input id="targetNotes" name="notes" maxlength="500" /></div></div><button class="button button-primary" type="submit">Save debt-free target</button></form></section>
+<section class="section-block"><h2>Estimated debt-free dates</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Currency</th><th>Outstanding</th><th>Estimated payoff</th><th>Saved target</th><th>Variance</th><th>Estimated interest</th></tr></thead><tbody>
+@foreach(var estimate in Model.Estimates){<tr><td>@estimate.CurrencyCode</td><td>@estimate.TotalBalance.ToString("N2")</td><td>@(estimate.EstimatedDebtFreeDate?.ToString("MMM yyyy") ?? "Unavailable") @if(estimate.MonthsRemaining.HasValue){<span class="table-subtext">@estimate.MonthsRemaining months</span>}</td><td>@(estimate.TargetDebtFreeDate?.ToString("MMM yyyy") ?? "Not set")</td><td>@if(estimate.EstimatedDebtFreeDate.HasValue && estimate.TargetDebtFreeDate.HasValue){var days=(estimate.EstimatedDebtFreeDate.Value.Date-estimate.TargetDebtFreeDate.Value.Date).Days;<span>@(days <= 0 ? $"{Math.Abs(days)} days ahead" : $"{days} days after target")</span>}else{<span>—</span>}</td><td>@(estimate.IsComplete ? estimate.EstimatedInterest.ToString("N2") + " " + estimate.CurrencyCode : "—")</td></tr>
+@if(!string.IsNullOrWhiteSpace(estimate.MissingInputs)){<tr><td colspan="6"><span class="table-subtext">@estimate.MissingInputs</span></td></tr>}}
+@if(!Model.Estimates.Any()){<tr><td colspan="6">No outstanding debts to estimate.</td></tr>}
+</tbody></table></div></div><p class="muted">Estimates use monthly interest at APR ÷ 12, saved minimum payments, and any extra monthly payment in the target. Missing APR or minimum-payment inputs prevent a date estimate. Update account details for more accurate projections.</p></section>
+<section class="section-block"><h2>Monthly debt reduction goals</h2><p class="muted">Actual reduction is opening debt principal minus closing debt principal for the month-to-date or completed month. Payments are not counted as reduction if interest or fees offset principal.</p>
+<form asp-action="SaveMonthlyGoal" method="post" class="form-card"><div class="form-grid">
+<div class="form-field"><label for="goalCurrency">Currency code</label><input id="goalCurrency" name="currencyCode" maxlength="3" minlength="3" pattern="[A-Za-z]{3}" value="USD" required /></div>
+<div class="form-field"><label for="goalMonth">Goal month</label><input id="goalMonth" name="month" type="month" value="@DateTime.Today.ToString("yyyy-MM")" required /></div>
+<div class="form-field"><label for="targetReduction">Monthly reduction target</label><input id="targetReduction" name="targetReduction" type="number" min="0.01" step="0.01" required /></div>
+<div class="form-field form-field-full"><label for="goalNotes">Notes</label><input id="goalNotes" name="notes" maxlength="500" /></div></div><button class="button button-primary" type="submit">Save monthly goal</button></form>
+<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Currency</th><th>Target reduction</th><th>Actual reduction</th><th>Progress</th><th>Remaining / over goal</th></tr></thead><tbody>
+@foreach(var p in Model.MonthlyGoals){var pct=p.Goal.TargetReduction > 0 ? p.ActualReduction / p.Goal.TargetReduction * 100m : 0m;<tr><td>@p.Goal.Month.ToString("MMM yyyy")</td><td>@p.Goal.CurrencyCode</td><td>@p.Goal.TargetReduction.ToString("N2")</td><td>@p.ActualReduction.ToString("N2")</td><td>@pct.ToString("0.0")%</td><td>@(p.RemainingToGoal > 0 ? p.RemainingToGoal.ToString("N2") + " remaining" : Math.Abs(p.RemainingToGoal).ToString("N2") + " exceeded")</td></tr>}
+@if(!Model.MonthlyGoals.Any()){<tr><td colspan="6">No monthly goals have been set.</td></tr>}
+</tbody></table></div></div></section>
+<section class="section-block"><h2>Individual debt-free milestones</h2><p class="muted">Milestones are detected from account balance history. If a previously paid-off account later has a positive balance, its original achievement remains and is marked reopened.</p><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Currency</th><th>Debt-free date</th><th>Status</th><th>Reopened date</th></tr></thead><tbody>
+@foreach(var milestone in Model.Milestones){<tr><td>@milestone.Account.Name</td><td>@milestone.Account.CurrencyCode</td><td>@milestone.AchievedDate.ToString("MMM d, yyyy")</td><td>@(milestone.IsReopened ? "Reopened" : "Paid off")</td><td>@(milestone.ReopenedDate?.ToString("MMM d, yyyy") ?? "—")</td></tr>}
+@if(!Model.Milestones.Any()){<tr><td colspan="5">No debt-free milestones yet. Milestones are created when an account with recorded debt history reaches zero.</td></tr>}
+</tbody></table></div></div></section>
