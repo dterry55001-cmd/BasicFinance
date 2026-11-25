@@ -177,4 +177,73 @@ public sealed class DebtManagementService
             Debts = payoffLines
         };
     }
+    public IReadOnlyList<EarlyPayoffScenarioResult> CalculateEarlyPayoffScenarios(
+        decimal startingBalance, decimal annualRatePercent, decimal minimumPayment,
+        decimal oneTimePayment, int oneTimePaymentMonth, decimal extraMonthlyPayment,
+        DateTime? firstPaymentDate = null)
+    {
+        if (oneTimePayment < 0 || extraMonthlyPayment < 0 || oneTimePaymentMonth < 1)
+            throw new ArgumentOutOfRangeException(nameof(oneTimePayment), "Additional payments and the one-time payment month must be non-negative and valid.");
+        var baseline = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, 0m, 0m, 1, firstPaymentDate);
+        var lump = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, oneTimePayment, oneTimePaymentMonth, 0m, firstPaymentDate);
+        var monthly = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, 0m, 1, extraMonthlyPayment, firstPaymentDate);
+        var combined = CalculateEarlyPayoff(startingBalance, annualRatePercent, minimumPayment, oneTimePayment, oneTimePaymentMonth, extraMonthlyPayment, firstPaymentDate);
+        var scenarios = new[] { baseline, lump, monthly, combined };
+        foreach (var scenario in scenarios)
+        {
+            scenario.InterestSavings = baseline.TotalInterest - scenario.TotalInterest;
+            scenario.MonthsSaved = baseline.MonthsToPayoff - scenario.MonthsToPayoff;
+        }
+        return scenarios;
+    }
+
+    private static EarlyPayoffScenarioResult CalculateEarlyPayoff(
+        decimal startingBalance, decimal annualRatePercent, decimal minimumPayment,
+        decimal oneTimePayment, int oneTimePaymentMonth, decimal extraMonthlyPayment,
+        DateTime? firstPaymentDate)
+    {
+        if (startingBalance <= 0 || annualRatePercent is < 0 or > 100 || minimumPayment < 0)
+            throw new ArgumentOutOfRangeException(nameof(startingBalance), "Enter a positive balance, valid APR, and non-negative minimum payment.");
+        if (minimumPayment + extraMonthlyPayment <= 0)
+            throw new InvalidOperationException("The monthly payment must be greater than zero.");
+        var balance = decimal.Round(startingBalance, 2, MidpointRounding.AwayFromZero);
+        var monthlyRate = annualRatePercent / 1200m;
+        var rows = new List<AccountDebtPayoffRow>();
+        var totalInterest = 0m;
+        var totalPaid = 0m;
+        var firstDate = (firstPaymentDate ?? DateTime.Today.AddMonths(1)).Date;
+        for (var month = 1; month <= 1200 && balance > 0; month++)
+        {
+            var opening = balance;
+            var interest = decimal.Round(balance * monthlyRate, 2, MidpointRounding.AwayFromZero);
+            var due = balance + interest;
+            var scheduled = Math.Min(due, minimumPayment + extraMonthlyPayment);
+            if (scheduled <= interest)
+                throw new InvalidOperationException("The monthly payment does not cover interest. Increase the payment amount.");
+            var principal = scheduled - interest;
+            balance = Math.Max(0m, decimal.Round(balance - principal, 2, MidpointRounding.AwayFromZero));
+            var payment = scheduled;
+            if (month == oneTimePaymentMonth && balance > 0 && oneTimePayment > 0)
+            {
+                var lump = Math.Min(balance, oneTimePayment);
+                balance = decimal.Round(balance - lump, 2, MidpointRounding.AwayFromZero);
+                principal += lump;
+                payment += lump;
+            }
+            totalInterest += interest;
+            totalPaid += payment;
+            rows.Add(new AccountDebtPayoffRow { MonthNumber = month, PaymentDate = firstDate.AddMonths(month - 1),
+                StartingBalance = opening, Interest = interest, Payment = payment, Principal = principal, RemainingBalance = balance });
+        }
+        if (balance > 0) throw new InvalidOperationException("This payment plan exceeds the 100-year planning limit.");
+        return new EarlyPayoffScenarioResult
+        {
+            Strategy = oneTimePayment > 0 && extraMonthlyPayment > 0 ? "One-time + monthly extra"
+                : oneTimePayment > 0 ? "One-time extra payment"
+                : extraMonthlyPayment > 0 ? "Monthly extra payment" : "Current payment",
+            TotalInterest = totalInterest, TotalPaid = totalPaid, MonthsToPayoff = rows.Count,
+            PayoffDate = rows[^1].PaymentDate, Payments = rows
+        };
+    }
+
 }
