@@ -23,7 +23,7 @@ public sealed class DatabaseMigrationTests
         {
             "Accounts", "Transactions", "StatementImports", "StatementImportRows",
             "TransactionCategories", "TransactionCategoryMappings", "TransactionRules",
-            "AccountBalanceSnapshots", "InterestRecords"
+            "AccountBalanceSnapshots", "InterestRecords", "DebtToIncomeRecords"
         };
 
         foreach (var table in expectedTables)
