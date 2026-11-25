@@ -7,30 +7,6 @@ public enum DebtPaymentStatus
     Scheduled,
     Paid,
     Skipped
-
-public sealed class ScheduleDebtPaymentInput
-{
-    public int AccountId { get; set; }
-    [DataType(DataType.Date)]
-    public DateTime DueDate { get; set; } = DateTime.Today.AddMonths(1);
-    [Range(typeof(decimal), "0.01", "999999999999")]
-    public decimal ExpectedAmount { get; set; }
-    [StringLength(500)]
-    public string? Notes { get; set; }
-}
-
-public sealed class DebtProgressRow
-{
-    public int AccountId { get; set; }
-    public string AccountName { get; set; } = string.Empty;
-    public string CurrencyCode { get; set; } = "USD";
-    public decimal OriginalBalance { get; set; }
-    public decimal CurrentBalance { get; set; }
-    public decimal PrincipalReduced { get; set; }
-    public decimal PercentPaid { get; set; }
-    public decimal PrincipalRecorded { get; set; }
-}
-
 }
 
 public sealed class DebtPaymentRecord
@@ -57,7 +33,6 @@ public sealed class DebtPaymentRecord
     public string? Notes { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
-
     public bool IsPastDue(DateTime today) => Status == DebtPaymentStatus.Scheduled && DueDate.Date < today.Date;
 }
 
@@ -78,4 +53,27 @@ public sealed class RecordDebtPaymentInput
     public decimal FeesPaid { get; set; }
     [StringLength(500)]
     public string? Notes { get; set; }
+}
+
+public sealed class ScheduleDebtPaymentInput
+{
+    public int AccountId { get; set; }
+    [DataType(DataType.Date)]
+    public DateTime DueDate { get; set; } = DateTime.Today.AddMonths(1);
+    [Range(typeof(decimal), "0.01", "999999999999")]
+    public decimal ExpectedAmount { get; set; }
+    [StringLength(500)]
+    public string? Notes { get; set; }
+}
+
+public sealed class DebtProgressRow
+{
+    public int AccountId { get; set; }
+    public string AccountName { get; set; } = string.Empty;
+    public string CurrencyCode { get; set; } = "USD";
+    public decimal OriginalBalance { get; set; }
+    public decimal CurrentBalance { get; set; }
+    public decimal PrincipalReduced { get; set; }
+    public decimal PercentPaid { get; set; }
+    public decimal PrincipalRecorded { get; set; }
 }
