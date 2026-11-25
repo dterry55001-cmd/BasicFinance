@@ -25,7 +25,6 @@ public sealed class DebtPlanningController(ApplicationDbContext database, Accoun
         input.Month = new DateTime(input.Month.Year, input.Month.Month, 1);
         input.CurrencyCode = (input.CurrencyCode ?? "USD").ToUpperInvariant();
         var existing = await database.DebtToIncomeRecords.FirstOrDefaultAsync(r => r.Month == input.Month && r.CurrencyCode == input.CurrencyCode, cancellationToken);
-        if (existing is not null) ModelState.AddModelError(string.Empty, "A record already exists for this month and currency. Edit the existing record instead.");
         if (!ModelState.IsValid)
         {
             ViewBag.CurrencyCode = input.CurrencyCode;
@@ -33,10 +32,20 @@ public sealed class DebtPlanningController(ApplicationDbContext database, Accoun
                 .OrderByDescending(r => r.Month).Take(36).ToListAsync(cancellationToken);
             return View(input);
         }
-        input.CreatedUtc = input.UpdatedUtc = DateTime.UtcNow;
-        database.DebtToIncomeRecords.Add(input);
+        if (existing is null)
+        {
+            input.CreatedUtc = input.UpdatedUtc = DateTime.UtcNow;
+            database.DebtToIncomeRecords.Add(input);
+        }
+        else
+        {
+            existing.GrossMonthlyIncome = input.GrossMonthlyIncome;
+            existing.HousingMonthlyPayment = input.HousingMonthlyPayment;
+            existing.OtherMonthlyDebtPayment = input.OtherMonthlyDebtPayment;
+            existing.UpdatedUtc = DateTime.UtcNow;
+        }
         await database.SaveChangesAsync(cancellationToken);
-        TempData["SuccessMessage"] = "Monthly income and debt obligations saved.";
+        TempData["SuccessMessage"] = existing is null ? "Monthly income and debt obligations saved." : "Monthly DTI record updated.";
         return RedirectToAction(nameof(DebtToIncome), new { currencyCode = input.CurrencyCode });
     }
 
