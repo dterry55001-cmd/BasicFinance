@@ -32,13 +32,17 @@ public sealed class BudgetRolloverCalculatorTests
         Assert.Equal(0m, result);
     }
 
-    [Theory]
-    [InlineData(-1, 0, 0, true)]
-    [InlineData(100, 0, -1, true)]
-    public void CalculateNextMonth_RejectsNegativeBudgetOrSpending(
-        decimal planned, decimal rollover, decimal actual, bool enabled)
+    [Fact]
+    public void CalculateNextMonth_RejectsNegativePlannedBudget()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            BudgetRolloverCalculator.CalculateNextMonth(planned, rollover, actual, enabled));
+            BudgetRolloverCalculator.CalculateNextMonth(-1m, 0m, 0m, true));
+    }
+
+    [Fact]
+    public void CalculateNextMonth_RejectsNegativeActualSpending()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            BudgetRolloverCalculator.CalculateNextMonth(100m, 0m, -1m, true));
     }
 }
