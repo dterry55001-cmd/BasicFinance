@@ -65,6 +65,24 @@ public sealed class DebtManagementServiceTests
 
 
     [Fact]
+    public void PayoffPlanner_CanUseEnteredMinimumPaymentsWithoutFallbackFloor()
+    {
+        var debts = new[]
+        {
+            new DebtPayoffDebtInput { AccountId = 1, Name = "Card", Balance = 1200m, AnnualRatePercent = 0m, MinimumPayment = 10m }
+        };
+
+        var exactMinimum = _service.CalculatePayoff(debts, 0m, avalanche: true,
+            startDate: new DateTime(2026, 1, 1), applyMinimumPaymentFloor: false);
+        var floored = _service.CalculatePayoff(debts, 0m, avalanche: true,
+            startDate: new DateTime(2026, 1, 1), applyMinimumPaymentFloor: true);
+
+        Assert.True(exactMinimum.ReachedDebtFree);
+        Assert.True(floored.ReachedDebtFree);
+        Assert.True(exactMinimum.MonthsToPayoff > floored.MonthsToPayoff);
+    }
+
+    [Fact]
     public void AccountPayoff_ProducesDecliningBalanceScheduleAndFinalZero()
     {
         var result = _service.CalculateAccountPayoff(1200m, 12m, 100m, 25m,
