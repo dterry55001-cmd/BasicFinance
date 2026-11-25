@@ -1,0 +1,23 @@
+@using BasicFinance.Web.Models
+@model IReadOnlyList<DebtInterestRateHistory>
+@{
+    var account = (Account)ViewBag.Account;
+    ViewData["Title"] = "Interest rate history";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT MANAGEMENT</p><h1>Interest rate history · @account.Name</h1><p class="page-description">Record historical and promotional APRs. Entries are retained separately from the account's current APR.</p></div></section>
+<form asp-action="Add" method="post" class="form-card">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="AccountId" value="@account.Id" />
+    <div class="form-grid">
+        <div class="form-field"><label>APR (%)</label><input name="AnnualRatePercent" type="number" min="0" max="100" step="0.001" required /></div>
+        <div class="form-field"><label>Effective date</label><input name="EffectiveDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+        <div class="form-field"><label>Rate type</label><select name="RateType"><option>Variable</option><option>Fixed</option><option>Promotional</option></select></div>
+        <div class="form-field"><label>Promotional expiration (optional)</label><input name="PromotionalEndDate" type="date" /></div>
+        <div class="form-field"><label>Notes</label><textarea name="Notes" maxlength="500"></textarea></div>
+    </div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Add rate history</button></div>
+</form>
+<section class="section-block"><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Effective</th><th>APR</th><th>Type</th><th>Promotion ends</th><th>Notes</th></tr></thead><tbody>
+@if (!Model.Any()) { <tr><td colspan="5">No rate history recorded yet.</td></tr> }
+@foreach (var item in Model) { <tr><td>@item.EffectiveDate.ToString("MMM d, yyyy")</td><td>@item.AnnualRatePercent.ToString("0.###")%</td><td>@item.RateType</td><td>@(item.PromotionalEndDate?.ToString("MMM d, yyyy") ?? "—")</td><td>@item.Notes</td></tr> }
+</tbody></table></div></div></section>
