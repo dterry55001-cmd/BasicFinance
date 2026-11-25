@@ -1,0 +1,36 @@
+@using BasicFinance.Web.Models
+@{
+    ViewData["Title"] = "Credit monitoring";
+    var accounts = (IReadOnlyList<Account>)ViewBag.Accounts;
+    var rows = (IReadOnlyList<CreditUtilizationRow>)ViewBag.UtilizationRows;
+    var reports = (IReadOnlyList<ReportedBalanceSnapshot>)ViewBag.ReportedBalances;
+    var limits = (IReadOnlyList<CreditLimitHistory>)ViewBag.LimitHistory;
+    var inquiries = (IReadOnlyList<CreditInquiry>)ViewBag.Inquiries;
+}
+<section class="page-heading"><div><p class="eyebrow">CREDIT MONITORING</p><h1>Credit monitoring</h1><p class="page-description">Track revolving-credit utilization, reported balances, credit-limit changes, and inquiries. Records are entered manually; no credit bureau connection is used.</p></div></section>
+@if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="alert alert-error" role="alert">@error</div> }
+<section class="section-block"><h2>Current utilization</h2><p class="muted">Based on current ledger balances and current account limits. Accounts with no positive limit show unavailable.</p><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Ledger balance</th><th>Current limit</th><th>Utilization</th></tr></thead><tbody>
+@foreach (var row in rows) { <tr><td>@row.Account.Name</td><td>@row.LedgerBalance.ToString("N2") @row.Account.CurrencyCode</td><td>@(row.CreditLimit?.ToString("N2") ?? "—")</td><td>@(row.UtilizationPercent.HasValue ? $"{row.UtilizationPercent:0.0}%" : "Unavailable")</td></tr> }
+@if (!rows.Any()) { <tr><td colspan="4">No active revolving-credit accounts found.</td></tr> }
+</tbody></table></div></div></section>
+<section class="section-block"><h2>Record reported balance</h2><form asp-action="AddReportedBalance" method="post" class="form-card"><div class="form-grid">
+<div class="form-field"><label for="accountId">Account</label><select id="accountId" name="accountId" required><option value="">Choose account</option>@foreach(var a in accounts.Where(a => a.Type == AccountType.CreditCard || a.DebtType is DebtAccountType.LineOfCredit or DebtAccountType.HomeEquityLineOfCredit)){<option value="@a.Id">@a.Name</option>}</select></div>
+<div class="form-field"><label for="reportedDate">Report date</label><input id="reportedDate" name="reportedDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+<div class="form-field"><label for="reportedBalance">Reported balance</label><input id="reportedBalance" name="reportedBalance" type="number" min="0" step="0.01" required /></div>
+<div class="form-field"><label for="reportedCreditLimit">Reported credit limit (optional)</label><input id="reportedCreditLimit" name="reportedCreditLimit" type="number" min="0" step="0.01" /></div>
+<div class="form-field"><label for="source">Bureau / source</label><input id="source" name="source" maxlength="40" value="Manual" required /></div>
+<div class="form-field"><label for="receivedDate">Date received (optional)</label><input id="receivedDate" name="receivedDate" type="date" /></div>
+<div class="form-field form-field-full"><label for="notes">Notes</label><input id="notes" name="notes" maxlength="500" /></div></div><button class="button button-primary" type="submit">Save reported balance</button></form></section>
+<section class="section-block"><h2>Reported balance history and utilization</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Report date</th><th>Account</th><th>Source</th><th>Reported balance</th><th>Limit used</th><th>Utilization</th></tr></thead><tbody>
+@foreach(var r in reports){var limit=r.ReportedCreditLimit ?? r.Account.CreditLimit;var pct=limit is > 0 ? (decimal?)(r.ReportedBalance / limit.Value * 100m) : null;<tr><td>@r.ReportedDate.ToString("MMM d, yyyy")</td><td>@r.Account.Name</td><td>@r.Source</td><td>@r.ReportedBalance.ToString("N2")</td><td>@(limit?.ToString("N2") ?? "Unavailable") <span class="table-subtext">@(r.ReportedCreditLimit.HasValue ? "Reported limit" : "Current account limit fallback")</span></td><td>@(pct.HasValue ? $"{pct.Value:0.0}%" : "Unavailable")</td></tr>}
+@if(!reports.Any()){<tr><td colspan="6">No reported balances recorded yet.</td></tr>}
+</tbody></table></div></div></section>
+<section class="section-block"><h2>Credit limit history</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Effective date</th><th>Account</th><th>Previous limit</th><th>New limit</th><th>Source</th></tr></thead><tbody>@foreach(var h in limits){<tr><td>@h.EffectiveDate.ToString("MMM d, yyyy")</td><td>@h.Account.Name</td><td>@(h.PreviousLimit?.ToString("N2") ?? "—")</td><td>@h.NewLimit.ToString("N2")</td><td>@h.Source</td></tr>}@if(!limits.Any()){<tr><td colspan="5">No credit limit changes recorded yet.</td></tr>}</tbody></table></div></div><p class="muted">New and changed credit limits are captured automatically when account details are saved.</p></section>
+<section class="section-block"><h2>Record credit inquiry</h2><form asp-action="AddInquiry" method="post" class="form-card"><div class="form-grid">
+<div class="form-field"><label for="inquiryDate">Inquiry date</label><input id="inquiryDate" name="inquiryDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+<div class="form-field"><label for="bureau">Credit bureau</label><select id="bureau" name="bureau" required><option>Experian</option><option>Equifax</option><option>TransUnion</option><option>Other</option></select></div>
+<div class="form-field"><label for="lender">Lender / creditor</label><input id="lender" name="lender" maxlength="120" required /></div>
+<div class="form-field"><label for="type">Inquiry type</label><select id="type" name="type"><option value="Hard">Hard</option><option value="Soft">Soft</option></select></div>
+<div class="form-field form-field-full"><label for="inquiryNotes">Notes</label><input id="inquiryNotes" name="notes" maxlength="500" /></div></div><button class="button button-primary" type="submit">Save inquiry</button></form></section>
+<section class="section-block"><h2>Inquiry history</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Bureau</th><th>Lender</th><th>Type</th><th>Notes</th><th></th></tr></thead><tbody>@foreach(var i in inquiries){<tr><td>@i.InquiryDate.ToString("MMM d, yyyy")</td><td>@i.Bureau</td><td>@i.Lender</td><td>@i.Type</td><td>@i.Notes</td><td><form asp-action="DeleteInquiry" method="post"><input type="hidden" name="id" value="@i.Id" /><button class="button button-secondary" type="submit">Delete</button></form></td></tr>}@if(!inquiries.Any()){<tr><td colspan="6">No inquiries recorded.</td></tr>}</tbody></table></div></div></section>
