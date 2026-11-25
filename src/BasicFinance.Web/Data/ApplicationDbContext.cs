@@ -20,6 +20,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<CreditLimitHistory> CreditLimitHistory => Set<CreditLimitHistory>();
     public DbSet<ReportedBalanceSnapshot> ReportedBalanceSnapshots => Set<ReportedBalanceSnapshot>();
     public DbSet<CreditInquiry> CreditInquiries => Set<CreditInquiry>();
+    public DbSet<DebtFreeTarget> DebtFreeTargets => Set<DebtFreeTarget>();
+    public DbSet<MonthlyDebtReductionGoal> MonthlyDebtReductionGoals => Set<MonthlyDebtReductionGoal>();
+    public DbSet<DebtFreeMilestone> DebtFreeMilestones => Set<DebtFreeMilestone>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -189,6 +192,26 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.Lender).HasMaxLength(120).IsRequired();
             entity.HasIndex(x => x.InquiryDate);
             entity.HasIndex(x => x.Bureau);
+        });
+
+        modelBuilder.Entity<DebtFreeTarget>(entity =>
+        {
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.ExtraMonthlyPayment).HasColumnType("TEXT");
+            entity.HasIndex(x => x.CurrencyCode).IsUnique();
+        });
+
+        modelBuilder.Entity<MonthlyDebtReductionGoal>(entity =>
+        {
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.TargetReduction).HasColumnType("TEXT");
+            entity.HasIndex(x => new { x.CurrencyCode, x.Month }).IsUnique();
+        });
+
+        modelBuilder.Entity<DebtFreeMilestone>(entity =>
+        {
+            entity.HasIndex(x => x.AccountId).IsUnique();
+            entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<InterestRecord>(entity =>
