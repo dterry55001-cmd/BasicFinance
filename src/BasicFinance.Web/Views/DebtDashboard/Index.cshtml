@@ -1,0 +1,47 @@
+@using BasicFinance.Web.Models
+@model DebtDashboardViewModel
+@{
+    ViewData["Title"] = "Debt dashboard";
+}
+<section class="page-heading">
+    <div><p class="eyebrow">DEBT MANAGEMENT</p><h1>Debt dashboard</h1>
+    <p class="page-description">A consolidated view of outstanding balances, payoff strategy projections, balance history, and debt-free milestones.</p></div>
+</section>
+<section class="summary-grid" aria-label="Debt overview">
+    <article class="summary-card"><span>Accounts with balances</span><strong>@Model.ActiveDebtAccountCount</strong></article>
+    <article class="summary-card"><span>Debt-free milestones</span><strong>@Model.PaidOffAccountCount</strong></article>
+    <article class="summary-card"><span>Currency groups</span><strong>@Model.CurrencySummaries.Count</strong></article>
+</section>
+<section class="section-block">
+    <div class="section-heading"><h2>Outstanding debt by currency</h2><a asp-controller="AccountManagement" asp-action="Index">Manage debts</a></div>
+    <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Currency</th><th>Current balance</th><th>Opening amount recorded</th><th>Net reduction*</th><th>Accounts with debt</th><th>Recorded minimums</th></tr></thead><tbody>
+    @foreach(var item in Model.CurrencySummaries){<tr><td>@item.CurrencyCode</td><td>@item.CurrentBalance.ToString("N2")</td><td>@item.OpeningBalance.ToString("N2")</td><td>@item.NetReduction.ToString("N2")</td><td>@item.AccountCount</td><td>@item.MonthlyMinimums.ToString("N2")</td></tr>}
+    @if(!Model.CurrencySummaries.Any()){<tr><td colspan="6">No active debt or credit-card accounts found.</td></tr>}
+    </tbody></table></div></div>
+    <p class="muted">*Net reduction compares current balances with account opening balances or original loan amounts where recorded. It is not a total of payments made. Currencies are kept separate.</p>
+</section>
+<section class="section-block">
+    <div class="section-heading"><h2>Snowball vs. avalanche</h2><a asp-controller="AccountManagement" asp-action="Payoff">Run a custom payoff plan</a></div>
+    <p class="muted">These projections use current balances, entered APRs, and entered minimum payments, with no extra payment. Results are estimates and do not include future rate changes, fees, or changing minimum-payment rules.</p>
+    <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Currency</th><th>Debt balance</th><th>Snowball payoff</th><th>Avalanche payoff</th><th>Snowball interest</th><th>Avalanche interest</th><th>Interest difference</th></tr></thead><tbody>
+    @foreach(var item in Model.StrategyComparisons){<tr><td>@item.CurrencyCode</td><td>@item.CurrentBalance.ToString("N2")</td><td>@(item.SnowballDebtFreeDate?.ToString("MMM yyyy") ?? "Unavailable")</td><td>@(item.AvalancheDebtFreeDate?.ToString("MMM yyyy") ?? "Unavailable")</td><td>@(item.IsComplete ? item.SnowballInterest.ToString("N2") : "—")</td><td>@(item.IsComplete ? item.AvalancheInterest.ToString("N2") : "—")</td><td>@(item.IsComplete ? (item.SnowballInterest - item.AvalancheInterest).ToString("N2") : "—")</td></tr>
+    @if(!string.IsNullOrWhiteSpace(item.MissingInputs)){<tr><td colspan="7"><span class="table-subtext">@item.MissingInputs</span></td></tr>}}
+    @if(!Model.StrategyComparisons.Any()){<tr><td colspan="7">Add an active debt account to see payoff strategy projections.</td></tr>}
+    </tbody></table></div></div>
+</section>
+<section class="section-block">
+    <h2>Balance history trend</h2>
+    <p class="muted">Monthly totals use the latest saved balance snapshot for each account in that month. Months without snapshots are not estimated or filled in.</p>
+    <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Currency</th><th>Snapshot balance total</th><th>Accounts represented</th></tr></thead><tbody>
+    @foreach(var point in Model.BalanceTrends.OrderByDescending(x => x.Month).ThenBy(x => x.CurrencyCode)){<tr><td>@point.Month.ToString("MMM yyyy")</td><td>@point.CurrencyCode</td><td>@point.Balance.ToString("N2")</td><td>@point.AccountsWithSnapshots</td></tr>}
+    @if(!Model.BalanceTrends.Any()){<tr><td colspan="4">No balance snapshots yet. Capture account balances from Debt Management to begin tracking trends.</td></tr>}
+    </tbody></table></div></div>
+    <p><a asp-controller="AccountManagement" asp-action="Index">Open balance history and capture snapshots</a></p>
+</section>
+<section class="section-block">
+    <div class="section-heading"><h2>Recent debt-free milestones</h2><a asp-controller="DebtGoals" asp-action="Index">View debt-free goals</a></div>
+    <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Currency</th><th>Paid-off date</th><th>Status</th><th>Reopened date</th></tr></thead><tbody>
+    @foreach(var item in Model.RecentMilestones){<tr><td>@item.AccountName</td><td>@item.CurrencyCode</td><td>@item.AchievedDate.ToString("MMM d, yyyy")</td><td>@(item.IsReopened ? "Reopened" : "Paid off")</td><td>@(item.ReopenedDate?.ToString("MMM d, yyyy") ?? "—")</td></tr>}
+    @if(!Model.RecentMilestones.Any()){<tr><td colspan="5">No debt-free milestones recorded yet.</td></tr>}
+    </tbody></table></div></div>
+</section>
