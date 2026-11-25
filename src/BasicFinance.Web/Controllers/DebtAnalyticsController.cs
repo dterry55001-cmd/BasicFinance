@@ -104,4 +104,39 @@ public sealed class DebtAnalyticsController(ApplicationDbContext database) : Con
 
         return View(model);
     }
+    [HttpGet]
+    public async Task<IActionResult> ExportAnnual(int year, CancellationToken cancellationToken)
+    {
+        if (year < 1900 || year > DateTime.Today.Year + 1)
+            return BadRequest("Choose a valid report year.");
+
+        var payments = await database.DebtPaymentRecords.AsNoTracking()
+            .Where(p => p.Status == DebtPaymentStatus.Paid && p.PaidDate != null && p.PaidDate.Value.Year == year)
+            .Include(p => p.Account)
+            .ToListAsync(cancellationToken);
+
+        var builder = new System.Text.StringBuilder();
+        builder.AppendLine("Year,Currency,Principal Paid,Interest Paid,Fees Paid,Total Recorded,Payment Count");
+        foreach (var group in payments.GroupBy(p => p.Account.CurrencyCode).OrderBy(g => g.Key))
+        {
+            var principal = group.Sum(p => p.PrincipalPaid ?? 0m);
+            var interest = group.Sum(p => p.InterestPaid ?? 0m);
+            var fees = group.Sum(p => p.FeesPaid ?? 0m);
+            var total = group.Sum(p => p.ActualAmount ?? p.ExpectedAmount);
+            builder.Append(year).Append(',')
+                .Append(Csv(group.Key)).Append(',')
+                .Append(principal.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(interest.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(fees.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(total.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(group.Count()).AppendLine();
+        }
+
+        var bytes = new System.Text.UTF8Encoding(true).GetBytes(builder.ToString());
+        return File(bytes, "text/csv; charset=utf-8", $"debt-annual-report-{year}.csv");
+    }
+
+    private static string Csv(string value) =>
+        "\"" + value.Replace("\"", "\"\"") + "\"";
+
 }
