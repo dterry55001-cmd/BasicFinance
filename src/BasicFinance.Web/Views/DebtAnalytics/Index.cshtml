@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Debt analytics";
 }
-<section class="page-heading"><div><p class="eyebrow">DEBT MANAGEMENT</p><h1>Debt analytics</h1><p class="page-description">Understand how much goes to principal, interest, and fees, review annual payment totals, and follow reported revolving-credit utilization over time.</p></div></section>
+<section class="page-heading debt-analytics-page"><div><p class="eyebrow">DEBT MANAGEMENT</p><h1>Debt analytics</h1><p class="page-description">Understand how much goes to principal, interest, and fees, review annual payment totals, and follow reported revolving-credit utilization over time.</p></div></section>
 <section class="section-block"><h2>Lifetime recorded debt payments</h2><p class="muted">These totals use payments marked Paid with a recorded paid date. Principal, interest, and fees are shown only when entered on the payment record; totals are not reconstructed from bank transactions.</p>
 <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Currency</th><th>Principal paid</th><th>Interest paid</th><th>Fees paid</th><th>Total recorded</th><th>Interest / principal</th><th>Payments</th></tr></thead><tbody>
 @foreach(var row in Model.CurrencySummaries){<tr><td>@row.CurrencyCode</td><td>@row.PrincipalPaid.ToString("N2")</td><td>@row.InterestPaid.ToString("N2")</td><td>@row.FeesPaid.ToString("N2")</td><td>@row.TotalPaid.ToString("N2")</td><td>@row.InterestToPrincipalPercent.ToString("N1")%</td><td>@row.PaymentCount</td></tr>}
