@@ -16,11 +16,23 @@ public sealed class DebtToIncomeRecord
     public decimal HousingMonthlyPayment { get; set; }
     [Range(typeof(decimal), "0", "999999999999")]
     public decimal OtherMonthlyDebtPayment { get; set; }
+    [Range(typeof(decimal), "0", "999999999999")]
+    [Display(Name = "Net monthly income")]
+    public decimal NetMonthlyIncome { get; set; }
+    [Range(typeof(decimal), "0", "999999999999")]
+    [Display(Name = "Other essential monthly expenses")]
+    public decimal OtherEssentialMonthlyExpenses { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
     public decimal HousingRatioPercent => GrossMonthlyIncome <= 0 ? 0 : HousingMonthlyPayment / GrossMonthlyIncome * 100m;
     public decimal TotalDebtRatioPercent => GrossMonthlyIncome <= 0 ? 0 : (HousingMonthlyPayment + OtherMonthlyDebtPayment) / GrossMonthlyIncome * 100m;
     public decimal TotalMonthlyDebtObligations => HousingMonthlyPayment + OtherMonthlyDebtPayment;
+    public decimal MonthlyIncomeAfterObligations => NetMonthlyIncome - TotalMonthlyDebtObligations - OtherEssentialMonthlyExpenses;
+    public decimal DebtPaymentToNetIncomePercent => NetMonthlyIncome <= 0 ? 0 : TotalMonthlyDebtObligations / NetMonthlyIncome * 100m;
+    public decimal AvailableForAdditionalDebtPayment => Math.Max(0m, MonthlyIncomeAfterObligations);
+    public string AffordabilityStatus => NetMonthlyIncome <= 0 ? "Net income not recorded" :
+        MonthlyIncomeAfterObligations < 0 ? "Expenses exceed net income" :
+        MonthlyIncomeAfterObligations < NetMonthlyIncome * 0.10m ? "Limited flexibility" : "Positive cash flow";
 }
 
 public sealed class EarlyPayoffScenarioInput
