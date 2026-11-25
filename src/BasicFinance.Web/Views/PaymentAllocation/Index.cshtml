@@ -1,0 +1,37 @@
+@using BasicFinance.Web.Models
+@model PaymentAllocationInputModel
+@{
+    ViewData["Title"] = "Payment allocation";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT OPTIMIZATION</p><h1>Payment allocation recommendations</h1><p class="page-description">Compare how an additional monthly amount could change payoff timing and interest. Every result is a what-if simulation; no payment is initiated and no account data is changed.</p></div></section>
+<form asp-action="Index" method="post" class="form-card">
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <div class="form-grid">
+        <div class="form-field"><label asp-for="CurrencyCode"></label><select asp-for="CurrencyCode" asp-items="(SelectList)ViewBag.DebtCurrencies"></select><span asp-validation-for="CurrencyCode" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="ExtraMonthlyPayment"></label><input asp-for="ExtraMonthlyPayment" type="number" min="0" step="0.01" /><span asp-validation-for="ExtraMonthlyPayment" class="field-error"></span><small>Amount available in addition to all entered minimum payments.</small></div>
+    </div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Compare allocation scenarios</button></div>
+</form>
+@if (!string.IsNullOrWhiteSpace(Model.Notice)) { <div class="notice" role="status">@Model.Notice</div> }
+@if (Model.MissingInputs.Count > 0)
+{
+    <section class="section-block"><h2>Account details needed</h2><p>Enter an APR and a positive minimum payment for each listed account, then run the comparison again.</p><ul>@foreach(var item in Model.MissingInputs){<li>@item</li>}</ul><p><a asp-controller="Accounts" asp-action="Index">Update account details</a></p></section>
+}
+@if (Model.CurrentPlan is not null && Model.SnowballPlan is not null && Model.AvalanchePlan is not null)
+{
+    <section class="section-block"><h2>Scenario comparison</h2>
+    <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Scenario</th><th>Estimated debt-free date</th><th>Months</th><th>Projected interest</th><th>Interest saved vs. current</th></tr></thead><tbody>
+    <tr><td>Current minimums</td><td>@(Model.CurrentPlan.ReachedDebtFree ? Model.CurrentPlan.DebtFreeDate.ToString("MMM yyyy") : "Not reached within 100 years")</td><td>@Model.CurrentPlan.MonthsToPayoff</td><td>@Model.CurrentPlan.TotalInterest.ToString("N2") @Model.CurrencyCode</td><td>—</td></tr>
+    <tr><td>Snowball + extra</td><td>@(Model.SnowballPlan.ReachedDebtFree ? Model.SnowballPlan.DebtFreeDate.ToString("MMM yyyy") : "Not reached within 100 years")</td><td>@Model.SnowballPlan.MonthsToPayoff</td><td>@Model.SnowballPlan.TotalInterest.ToString("N2") @Model.CurrencyCode</td><td>@(Model.CurrentPlan.ReachedDebtFree && Model.SnowballPlan.ReachedDebtFree ? (Model.CurrentPlan.TotalInterest - Model.SnowballPlan.TotalInterest).ToString("N2") + " " + Model.CurrencyCode : "—")</td></tr>
+    <tr><td><strong>Avalanche + extra</strong></td><td><strong>@(Model.AvalanchePlan.ReachedDebtFree ? Model.AvalanchePlan.DebtFreeDate.ToString("MMM yyyy") : "Not reached within 100 years")</strong></td><td>@Model.AvalanchePlan.MonthsToPayoff</td><td>@Model.AvalanchePlan.TotalInterest.ToString("N2") @Model.CurrencyCode</td><td>@(Model.CurrentPlan.ReachedDebtFree && Model.AvalanchePlan.ReachedDebtFree ? (Model.CurrentPlan.TotalInterest - Model.AvalanchePlan.TotalInterest).ToString("N2") + " " + Model.CurrencyCode : "—")</td></tr>
+    </tbody></table></div></div>
+    @if (Model.InterestSavingsVsCurrent.HasValue)
+    {
+        <div class="summary-grid"><article class="summary-card"><span>Potential interest savings with avalanche</span><strong>@Model.InterestSavingsVsCurrent.Value.ToString("N2") @Model.CurrencyCode</strong></article><article class="summary-card"><span>Potential months saved</span><strong>@Model.MonthsSavedVsCurrent</strong></article></div>
+    }
+    </section>
+    <section class="section-block"><h2>Recommended allocation order</h2><p class="muted">Continue paying each account's scheduled minimum. Apply the extra amount to the first remaining balance in the selected strategy's order. Avalanche prioritizes highest APR; snowball prioritizes smallest balance.</p>
+    <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Balance</th><th>APR</th><th>Minimum</th><th>Avalanche rank</th><th>Snowball rank</th><th>Avalanche payoff</th><th>Snowball payoff</th></tr></thead><tbody>
+    @foreach(var debt in Model.Debts.OrderBy(x=>x.AvalanchePriority)){<tr><td>@debt.AccountName</td><td>@debt.Balance.ToString("N2") @Model.CurrencyCode</td><td>@debt.AnnualRatePercent.ToString("N2")%</td><td>@debt.MinimumPayment.ToString("N2") @Model.CurrencyCode</td><td>@debt.AvalanchePriority</td><td>@debt.SnowballPriority</td><td>@debt.AvalanchePayoffDate?.ToString("MMM yyyy")</td><td>@debt.SnowballPayoffDate?.ToString("MMM yyyy")</td></tr>}
+    </tbody></table></div></div></section>
+}
