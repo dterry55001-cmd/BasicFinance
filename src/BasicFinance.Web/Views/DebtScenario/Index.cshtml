@@ -1,0 +1,61 @@
+@using BasicFinance.Web.Models
+@model DebtScenarioInput
+@{
+    var debts = (IReadOnlyList<DebtScenarioDebt>)(ViewBag.Debts ?? new List<DebtScenarioDebt>());
+    var comparison = ViewBag.Comparison as DebtScenarioComparison;
+    ViewData["Title"] = "Debt scenario simulator";
+}
+<section class="page-heading"><div><p class="eyebrow">DEBT PLANNING · PHASE 2</p><h1>Debt scenario simulator</h1><p class="page-description">Compare current payments with proposed monthly budgets, lump sums, and lower-APR assumptions. Simulations do not change account balances or create transactions.</p></div></section>
+@if (debts.Count == 0)
+{
+    <p>No active debt accounts with outstanding balances are available to simulate.</p>
+}
+else
+{
+<form asp-action="Index" method="post" class="form-card">
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="section-block"><h2>Current debts included</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Account</th><th>Balance</th><th>APR</th><th>Minimum</th></tr></thead><tbody>
+    @foreach (var debt in debts)
+    {
+        <tr><td>@debt.Name</td><td>@debt.StartingBalance.ToString("N2") @debt.CurrencyCode</td><td>@debt.AnnualRatePercent.ToString("0.###")%</td><td>@debt.MinimumPayment.ToString("N2")</td></tr>
+    }
+    </tbody></table></div></div></section>
+    <section class="section-block"><h2>Scenario assumptions</h2><div class="form-grid">
+        <div class="form-field"><label asp-for="ExtraMonthlyBudget"></label><input asp-for="ExtraMonthlyBudget" type="number" min="0" step="0.01" /><span asp-validation-for="ExtraMonthlyBudget" class="field-error"></span><small>Added to the estimated required minimum payments.</small></div>
+        <div class="form-field"><label asp-for="MonthlyBudgetOverride"></label><input asp-for="MonthlyBudgetOverride" type="number" min="0" step="0.01" /><span asp-validation-for="MonthlyBudgetOverride" class="field-error"></span><small>Optional total monthly budget, including minimum payments.</small></div>
+        <div class="form-field"><label asp-for="LumpSumPayment"></label><input asp-for="LumpSumPayment" type="number" min="0" step="0.01" /><span asp-validation-for="LumpSumPayment" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="LumpSumMonth"></label><input asp-for="LumpSumMonth" type="number" min="1" max="1200" /><span asp-validation-for="LumpSumMonth" class="field-error"></span></div>
+        <div class="form-field"><label asp-for="AprAdjustment"></label><input asp-for="AprAdjustment" type="number" min="0" max="100" step="0.01" /><span asp-validation-for="AprAdjustment" class="field-error"></span><small>Assumed reduction in percentage points for every debt; not a lender offer.</small></div>
+        <div class="form-field"><label asp-for="FirstPaymentDate"></label><input asp-for="FirstPaymentDate" type="date" /><span asp-validation-for="FirstPaymentDate" class="field-error"></span></div>
+    </div></section>
+    <div class="form-actions"><button class="button button-primary" type="submit">Run scenarios</button></div>
+</form>
+}
+@if (comparison is not null)
+{
+    var currency = debts.First().CurrencyCode;
+    <section class="section-block"><h2>Scenario comparison</h2><div class="summary-grid">
+        <div class="summary-card"><span>Starting debt</span><strong>@comparison.Baseline.StartingBalance.ToString("N2") @currency</strong></div>
+        <div class="summary-card"><span>Interest savings (best strategy)</span><strong>@comparison.InterestSavingsVsBaseline.ToString("N2") @currency</strong></div>
+        <div class="summary-card"><span>Months saved</span><strong>@comparison.MonthsSavedVsBaseline</strong></div>
+    </div>
+    <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Plan</th><th>Payoff date</th><th>Months</th><th>Total interest</th><th>Total paid</th><th>Status</th></tr></thead><tbody>
+    @foreach (var plan in new[] { comparison.Baseline, comparison.Snowball, comparison.Avalanche })
+    {
+        <tr><td>@plan.Strategy</td><td>@plan.DebtFreeDate.ToString("MMM yyyy")</td><td>@plan.MonthsToPayoff</td><td>@plan.TotalInterest.ToString("N2") @currency</td><td>@plan.TotalPaid.ToString("N2") @currency</td><td>@(plan.ReachedDebtFree ? "Paid off" : "Beyond 100 years")</td></tr>
+    }
+    </tbody></table></div></div></section>
+    <section class="section-block"><h2>Individual payoff projections — Avalanche</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Debt</th><th>Payoff date</th><th>Months</th><th>Interest paid</th></tr></thead><tbody>
+    @foreach (var debt in comparison.Avalanche.Debts)
+    {
+        <tr><td>@debt.Name</td><td>@debt.PayoffDate.ToString("MMM yyyy")</td><td>@debt.MonthsToPayoff</td><td>@debt.InterestPaid.ToString("N2") @currency</td></tr>
+    }
+    </tbody></table></div></div></section>
+    <section class="section-block"><h2>Projected avalanche balance path</h2><div class="table-card"><div class="table-scroll"><table><thead><tr><th>Month</th><th>Date</th><th>Payment</th><th>Interest</th><th>Remaining balance</th></tr></thead><tbody>
+    @foreach (var row in comparison.Avalanche.Payments.Take(120))
+    {
+        <tr><td>@row.Month</td><td>@row.PaymentDate.ToString("MMM yyyy")</td><td>@row.Payment.ToString("N2") @currency</td><td>@row.Interest.ToString("N2") @currency</td><td>@row.RemainingBalance.ToString("N2") @currency</td></tr>
+    }
+    </tbody></table></div></div><p class="page-description">Showing up to the first 120 months of the projection.</p></section>
+    <p class="page-description">These are estimates using the current recorded balances, APRs, and minimum payments. Actual lender calculations, changing minimums, fees, payment timing, promotional rates, and credit terms can change results. Verify assumptions before acting.</p>
+}
