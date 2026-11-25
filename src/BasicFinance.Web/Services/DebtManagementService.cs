@@ -88,7 +88,8 @@ public sealed class DebtManagementService
         IReadOnlyCollection<DebtPayoffDebtInput> debts,
         decimal extraMonthlyPayment,
         bool avalanche,
-        DateTime? startDate = null)
+        DateTime? startDate = null,
+        bool applyMinimumPaymentFloor = true)
     {
         if (extraMonthlyPayment < 0) throw new ArgumentOutOfRangeException(nameof(extraMonthlyPayment));
         if (debts.Any(debt => debt.Balance < 0 || debt.AnnualRatePercent is < 0 or > 100 || debt.MinimumPayment < 0))
@@ -119,14 +120,19 @@ public sealed class DebtManagementService
             var remainingBudget = debts.Sum(debt =>
             {
                 if (!balances.TryGetValue(debt.AccountId, out var balance) || balance <= 0) return 0m;
-                var fallback = Math.Max(1m, decimal.Round(balance * 0.01m, 2));
-                return Math.Min(balance, Math.Max(debt.MinimumPayment, fallback));
+                var minimum = applyMinimumPaymentFloor
+                    ? Math.Max(debt.MinimumPayment, Math.Max(1m, decimal.Round(balance * 0.01m, 2)))
+                    : debt.MinimumPayment;
+                return Math.Min(balance, minimum);
             }) + extraMonthlyPayment;
 
             foreach (var debt in debts)
             {
                 if (!balances.TryGetValue(debt.AccountId, out var balance) || balance <= 0) continue;
-                var minimum = Math.Min(balance, Math.Max(debt.MinimumPayment, Math.Max(1m, decimal.Round(balance * 0.01m, 2))));
+                var scheduledMinimum = applyMinimumPaymentFloor
+                    ? Math.Max(debt.MinimumPayment, Math.Max(1m, decimal.Round(balance * 0.01m, 2)))
+                    : debt.MinimumPayment;
+                var minimum = Math.Min(balance, scheduledMinimum);
                 var payment = Math.Min(balance, Math.Min(minimum, remainingBudget));
                 balances[debt.AccountId] -= payment;
                 remainingBudget -= payment;
