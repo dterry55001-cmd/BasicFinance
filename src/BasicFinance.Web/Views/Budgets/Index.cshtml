@@ -12,6 +12,11 @@
     <label>Month <select name="month">@for (var m = 1; m <= 12; m++) { <option value="@m" selected="@(m == Model.Month)">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option> }</select></label>
     <button class="button button-secondary" type="submit">View period</button>
 </form>
+<form asp-action="CopyPreviousMonth" method="post" class="form-actions">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="year" value="@Model.Year" /><input type="hidden" name="month" value="@Model.Month" />
+    <button class="button button-secondary" type="submit">Copy previous month budget</button>
+</form>
 <div class="summary-grid">
     <article class="summary-card"><span>Total planned</span><strong>@Model.TotalPlanned.ToString("C")</strong><small>@monthName</small></article>
     <article class="summary-card"><span>Actual spending</span><strong>@Model.TotalActual.ToString("C")</strong><small>Posted expense transactions</small></article>
@@ -56,9 +61,13 @@
 <form asp-action="Save" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" name="Year" value="@Model.Year" /><input type="hidden" name="Month" value="@Model.Month" />
+    <div class="form-options">
+        <label><input type="checkbox" name="IsRecurring" value="true" checked="@Model.IsRecurring" /> Use as a recurring monthly budget template</label>
+        <label><input type="checkbox" name="RolloverEnabled" value="true" checked="@Model.RolloverEnabled" /> Carry category balances into the next month</label>
+    </div>
     <div class="table-card">
         <div class="table-scroll"><table>
-            <thead><tr><th>Expense category</th><th>Planned</th><th>Actual</th><th>Remaining</th><th>Usage</th></tr></thead>
+            <thead><tr><th>Expense category</th><th>Planned</th><th>Rollover</th><th>Adjusted budget</th><th>Actual</th><th>Remaining</th><th>Usage</th></tr></thead>
             <tbody>
             @for (var i = 0; i < Model.Lines.Count; i++)
             {
@@ -67,9 +76,11 @@
                 <tr>
                     <td><strong>@line.CategoryName</strong><input type="hidden" name="Lines[@i].CategoryId" value="@line.CategoryId" /></td>
                     <td><input type="number" name="Lines[@i].PlannedAmount" min="0" max="999999999999" step="0.01" value="@line.PlannedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" aria-label="Planned amount for @line.CategoryName" /></td>
+                    <td>@line.RolloverAmount.ToString("C")</td>
+                    <td>@line.AdjustedBudget.ToString("C")</td>
                     <td>@line.ActualAmount.ToString("C")</td>
                     <td class="@(line.Remaining < 0 ? "text-danger" : "")">@line.Remaining.ToString("C")</td>
-                    <td>@(line.PlannedAmount > 0 ? percent.ToString("0") + "%" : "—")</td>
+                    <td>@(line.AdjustedBudget > 0 ? (line.ActualAmount / line.AdjustedBudget * 100m).ToString("0") + "%" : "—")</td>
                 </tr>
             }
             </tbody>
