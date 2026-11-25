@@ -27,6 +27,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<DebtNotification> DebtNotifications => Set<DebtNotification>();
     public DbSet<BudgetPeriod> BudgetPeriods => Set<BudgetPeriod>();
     public DbSet<BudgetLine> BudgetLines => Set<BudgetLine>();
+    public DbSet<BudgetAlertPreference> BudgetAlertPreferences => Set<BudgetAlertPreference>();
+    public DbSet<BudgetAlert> BudgetAlerts => Set<BudgetAlert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -242,6 +244,24 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(x => new { x.Year, x.Month, x.CurrencyCode }).IsUnique();
             entity.HasMany(x => x.Lines).WithOne(x => x.BudgetPeriod).HasForeignKey(x => x.BudgetPeriodId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BudgetAlertPreference>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.UpdatedUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<BudgetAlert>(entity =>
+        {
+            entity.Property(x => x.Level).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Message).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.ThresholdPercent).HasColumnType("INTEGER");
+            entity.Property(x => x.ActualAmount).HasColumnType("TEXT");
+            entity.HasIndex(x => new { x.BudgetPeriodId, x.CategoryId, x.ThresholdPercent }).IsUnique();
+            entity.HasIndex(x => new { x.IsRead, x.CreatedUtc });
+            entity.HasOne(x => x.BudgetPeriod).WithMany().HasForeignKey(x => x.BudgetPeriodId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<BudgetLine>(entity =>
