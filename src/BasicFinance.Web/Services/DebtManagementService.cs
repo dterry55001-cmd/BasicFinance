@@ -4,6 +4,41 @@ namespace BasicFinance.Web.Services;
 
 public sealed class DebtManagementService
 {
+
+    public AccountDebtPayoffResult CalculateAccountPayoff(decimal startingBalance, decimal annualRatePercent,
+        decimal minimumPayment, decimal extraMonthlyPayment, DateTime? firstPaymentDate = null)
+    {
+        if (startingBalance <= 0 || annualRatePercent is < 0 or > 100 || minimumPayment < 0 || extraMonthlyPayment < 0)
+            throw new ArgumentOutOfRangeException(nameof(startingBalance), "Enter a positive balance and non-negative payments with an APR from 0 to 100.");
+        var balance = decimal.Round(startingBalance, 2, MidpointRounding.AwayFromZero);
+        var monthlyBudget = minimumPayment + extraMonthlyPayment;
+        if (monthlyBudget <= 0)
+            throw new InvalidOperationException("Set a minimum payment on the account or enter an additional monthly payment.");
+        var monthlyRate = annualRatePercent / 1200m;
+        var rows = new List<AccountDebtPayoffRow>();
+        var totalInterest = 0m;
+        var totalPaid = 0m;
+        var start = (firstPaymentDate ?? DateTime.Today.AddMonths(1)).Date;
+        for (var month = 1; month <= 1200 && balance > 0; month++)
+        {
+            var opening = balance;
+            var interest = decimal.Round(balance * monthlyRate, 2, MidpointRounding.AwayFromZero);
+            var payment = Math.Min(balance + interest, monthlyBudget);
+            if (payment <= interest)
+                throw new InvalidOperationException("The monthly payment does not cover interest. Increase the payment amount.");
+            var principal = payment - interest;
+            balance = Math.Max(0m, decimal.Round(balance - principal, 2, MidpointRounding.AwayFromZero));
+            totalInterest += interest;
+            totalPaid += payment;
+            rows.Add(new AccountDebtPayoffRow { MonthNumber = month, PaymentDate = start.AddMonths(month - 1),
+                StartingBalance = opening, Interest = interest, Payment = payment, Principal = principal, RemainingBalance = balance });
+        }
+        if (balance > 0) throw new InvalidOperationException("This payment plan exceeds the 100-year planning limit. Increase the monthly payment.");
+        return new AccountDebtPayoffResult { StartingBalance = startingBalance, MonthlyMinimum = minimumPayment,
+            ExtraMonthlyPayment = extraMonthlyPayment, TotalInterest = totalInterest, TotalPaid = totalPaid,
+            PayoffDate = rows[^1].PaymentDate, Payments = rows };
+    }
+
     public LoanAmortizationResult CalculateAmortization(LoanAmortizationInput input)
     {
         if (input.Principal <= 0 || input.TermMonths is < 1 or > 600 || input.AnnualRatePercent is < 0 or > 100)
