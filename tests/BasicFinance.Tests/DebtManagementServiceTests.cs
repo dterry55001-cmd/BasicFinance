@@ -150,4 +150,67 @@ public sealed class DebtManagementServiceTests
         Assert.Equal(2400m, record.TotalMonthlyDebtObligations);
     }
 
+    [Fact]
+    public void DebtToIncomeRecord_CalculatesNetIncomeAffordabilityAndStressStatus()
+    {
+        var record = new DebtToIncomeRecord
+        {
+            GrossMonthlyIncome = 6000m,
+            NetMonthlyIncome = 4500m,
+            HousingMonthlyPayment = 1500m,
+            OtherMonthlyDebtPayment = 500m,
+            OtherEssentialMonthlyExpenses = 2200m
+        };
+
+        Assert.Equal(2000m, record.TotalMonthlyDebtObligations);
+        Assert.Equal(44.444444444444444444444444444m, record.DebtPaymentToNetIncomePercent);
+        Assert.Equal(800m, record.MonthlyIncomeAfterObligations);
+        Assert.Equal(800m, record.AvailableForAdditionalDebtPayment);
+        Assert.Equal("Positive cash flow", record.AffordabilityStatus);
+    }
+
+    [Fact]
+    public void DebtToIncomeRecord_DistinguishesNegativeAndMissingNetIncome()
+    {
+        var missing = new DebtToIncomeRecord { GrossMonthlyIncome = 5000m };
+        Assert.Equal("Net income not recorded", missing.AffordabilityStatus);
+        Assert.Equal(0m, missing.AvailableForAdditionalDebtPayment);
+
+        var negative = new DebtToIncomeRecord
+        {
+            NetMonthlyIncome = 3000m,
+            HousingMonthlyPayment = 1800m,
+            OtherMonthlyDebtPayment = 700m,
+            OtherEssentialMonthlyExpenses = 800m
+        };
+        Assert.Equal(-300m, negative.MonthlyIncomeAfterObligations);
+        Assert.Equal(0m, negative.AvailableForAdditionalDebtPayment);
+        Assert.Equal("Expenses exceed net income", negative.AffordabilityStatus);
+    }
+
+    [Theory]
+    [InlineData(5m, "Below 10%")]
+    [InlineData(10m, "Below 30%")]
+    [InlineData(30m, "30–49.9%")]
+    [InlineData(50m, "50–74.9%")]
+    [InlineData(75m, "75–89.9%")]
+    [InlineData(90m, "90% or higher")]
+    public void CreditImpact_MapsProjectedUtilizationToIndicator(decimal utilization, string expected)
+    {
+        var result = new CreditScoreImpactResult { ProjectedUtilizationPercent = utilization };
+        Assert.Equal(expected, result.UtilizationIndicator);
+    }
+
+    [Fact]
+    public void TaxInterestReport_CalculatesNetInterestCost()
+    {
+        var report = new DebtTaxInterestReport
+        {
+            InterestCharged = 325.50m,
+            InterestEarned = 25.50m
+        };
+
+        Assert.Equal(300m, report.NetInterestCost);
+    }
+
 }
