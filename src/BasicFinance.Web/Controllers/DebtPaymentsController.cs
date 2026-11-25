@@ -178,7 +178,7 @@ public sealed class DebtPaymentsController(ApplicationDbContext database, Accoun
             var original = configuredOriginal > 0m
                 ? configuredOriginal
                 : Math.Max(0m, earliestSnapshot.GetValueOrDefault() > 0m
-                    ? earliestSnapshot.Value
+                    ? earliestSnapshot.GetValueOrDefault()
                     : Math.Max(account.OpeningBalance, current));
             var reduced = Math.Clamp(original - current, 0m, original);
             var principal = await database.DebtPaymentRecords.AsNoTracking()
