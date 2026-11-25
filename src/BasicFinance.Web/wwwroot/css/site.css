@@ -137,3 +137,45 @@ tbody tr:last-child td { border-bottom: 0; }
     .nav-menu[open] { grid-column: 1 / -1; }
     .navigation-status { font-size: .7rem; }
 }
+
+
+/* Debt pages: keep wide data tables inside the page without horizontal scrollbars. */
+body:has(.debt-account-management) .table-scroll,
+body:has(.debt-payment-progress) .table-scroll,
+body:has(.debt-dashboard-page) .table-scroll,
+body:has(.debt-analytics-page) .table-scroll {
+    overflow-x: hidden;
+}
+body:has(.debt-account-management) .table-scroll table,
+body:has(.debt-payment-progress) .table-scroll table,
+body:has(.debt-dashboard-page) .table-scroll table,
+body:has(.debt-analytics-page) .table-scroll table {
+    width: 100%;
+    table-layout: fixed;
+    white-space: normal;
+}
+body:has(.debt-account-management) .table-scroll th,
+body:has(.debt-account-management) .table-scroll td,
+body:has(.debt-payment-progress) .table-scroll th,
+body:has(.debt-payment-progress) .table-scroll td,
+body:has(.debt-dashboard-page) .table-scroll th,
+body:has(.debt-dashboard-page) .table-scroll td,
+body:has(.debt-analytics-page) .table-scroll th,
+body:has(.debt-analytics-page) .table-scroll td {
+    padding: .7rem .55rem;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+@media (max-width: 720px) {
+    body:has(.debt-account-management) .table-scroll th,
+    body:has(.debt-account-management) .table-scroll td,
+    body:has(.debt-payment-progress) .table-scroll th,
+    body:has(.debt-payment-progress) .table-scroll td,
+    body:has(.debt-dashboard-page) .table-scroll th,
+    body:has(.debt-dashboard-page) .table-scroll td,
+    body:has(.debt-analytics-page) .table-scroll th,
+    body:has(.debt-analytics-page) .table-scroll td {
+        padding: .5rem .35rem;
+        font-size: .76rem;
+    }
+}
