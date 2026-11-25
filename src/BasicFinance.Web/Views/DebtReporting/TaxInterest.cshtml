@@ -8,7 +8,7 @@
 <form asp-action="TaxInterest" method="get" class="form-card">
     <div class="form-grid">
         <div class="form-field"><label for="Year">Tax year / reporting year</label><input id="Year" name="Year" type="number" min="2000" max="2100" value="@Model.Year" /></div>
-        <div class="form-field"><label for="CurrencyCode">Currency</label><select id="CurrencyCode" name="CurrencyCode">@foreach(var code in (IEnumerable<string>)((Microsoft.AspNetCore.Mvc.Rendering.SelectList)ViewBag.Currencies).Items){<option value="@code" selected="@(code == currency)">@code</option>}</select></div>
+        <div class="form-field"><label for="CurrencyCode">Currency</label><select id="CurrencyCode" name="CurrencyCode">@foreach(var item in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.Currencies.Items){<option value="@item.Value" selected="@item.Selected">@item.Text</option>}</select></div>
     </div>
     <button class="button button-primary" type="submit">Generate report</button>
 </form>
