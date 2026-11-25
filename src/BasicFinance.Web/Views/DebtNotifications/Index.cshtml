@@ -1,4 +1,4 @@
-@model IReadOnlyList<BasicFinance.Web.Controllers.DebtNotificationRow>
+@model IReadOnlyList<BasicFinance.Web.Models.DebtNotification>
 @{
     ViewData["Title"] = "Debt notifications";
 }
@@ -6,15 +6,24 @@
     <div>
         <p class="eyebrow">DEBT MANAGEMENT</p>
         <h1>Notifications</h1>
-        <p class="page-description">Current credit-utilization alerts, recent credit-limit changes, debt-goal progress, target reminders, and payoff milestones.</p>
+        <p class="page-description">Persistent credit-utilization alerts, recent credit-limit changes, debt-goal progress, target reminders, and payoff milestones.</p>
     </div>
 </section>
 <div class="alert alert-info" role="note">
-    Alerts are generated from records currently stored in BasicFinance whenever this page is opened. They are not push notifications and do not connect to banks or credit bureaus.
+    Notifications are saved in BasicFinance when this page is opened. New alerts are deduplicated; you can mark individual alerts or all alerts as read. No bank or credit bureau connection is used.
     Generated: @(((DateTime)ViewBag.GeneratedAt).ToString("MMM d, yyyy h:mm tt"))
 </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Notifications (@ViewBag.UnreadCount unread)</h2>
+    @if (ViewBag.UnreadCount > 0)
+    {
+        <form asp-action="MarkAllRead" method="post">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-outline-secondary" type="submit">Mark all read</button>
+        </form>
+    }
+</div>
 <section class="section-block">
-    <h2>Current alerts (@Model.Count)</h2>
     @if (!Model.Any())
     {
         <div class="form-card"><p>No debt or credit alerts currently require attention.</p></div>
@@ -24,15 +33,26 @@
         <div class="table-card">
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th>Level</th><th>Category</th><th>Alert</th><th>Date</th></tr></thead>
+                    <thead><tr><th>Status</th><th>Level</th><th>Category</th><th>Alert</th><th>Date</th><th></th></tr></thead>
                     <tbody>
                     @foreach (var item in Model)
                     {
                         <tr>
+                            <td>@(item.IsRead ? "Read" : "Unread")</td>
                             <td><strong>@item.Level</strong></td>
                             <td>@item.Category</td>
                             <td>@item.Message</td>
-                            <td>@item.Date.ToString("MMM d, yyyy")</td>
+                            <td>@item.EventDate.ToString("MMM d, yyyy")</td>
+                            <td>
+                                @if (!item.IsRead)
+                                {
+                                    <form asp-action="MarkRead" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">Mark read</button>
+                                    </form>
+                                }
+                            </td>
                         </tr>
                     }
                     </tbody>
