@@ -63,6 +63,28 @@ public sealed class DebtManagementServiceTests
         Assert.True(avalanche.TotalInterest <= snowball.TotalInterest);
     }
 
+
+    [Fact]
+    public void AccountPayoff_ProducesDecliningBalanceScheduleAndFinalZero()
+    {
+        var result = _service.CalculateAccountPayoff(1200m, 12m, 100m, 25m,
+            new DateTime(2026, 1, 1));
+
+        Assert.Equal(1200m, result.StartingBalance);
+        Assert.Equal(125m, result.MonthlyMinimum + result.ExtraMonthlyPayment);
+        Assert.True(result.TotalInterest > 0m);
+        Assert.Equal(0m, result.Payments[^1].RemainingBalance);
+        Assert.Equal(result.Payments[^1].PaymentDate, result.PayoffDate);
+        Assert.All(result.Payments, row => Assert.True(row.Principal > 0m));
+    }
+
+    [Fact]
+    public void AccountPayoff_RejectsPaymentThatDoesNotCoverInterest()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            _service.CalculateAccountPayoff(10000m, 24m, 10m, 0m));
+    }
+
     [Fact]
     public void Amortization_RejectsInvalidTerm()
     {
