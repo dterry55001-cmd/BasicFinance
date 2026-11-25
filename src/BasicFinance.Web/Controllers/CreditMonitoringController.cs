@@ -98,6 +98,84 @@ public sealed class CreditMonitoringController(ApplicationDbContext database, Ac
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> ImpactPlanner(CancellationToken cancellationToken)
+    {
+        await LoadImpactPlannerAccountsAsync(cancellationToken);
+        return View(new CreditScoreImpactInput());
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ImpactPlanner(CreditScoreImpactInput input, CancellationToken cancellationToken)
+    {
+        var accounts = await LoadImpactPlannerAccountsAsync(cancellationToken);
+        var selected = accounts.FirstOrDefault(a => a.Id == input.AccountId);
+        if (selected is null) ModelState.AddModelError(nameof(input.AccountId), "Choose an active revolving-credit account.");
+        if (selected is not null && selected.CreditLimit.GetValueOrDefault() + input.CreditLimitChange < 0)
+            ModelState.AddModelError(nameof(input.CreditLimitChange), "The projected credit limit cannot be negative.");
+        if (selected is not null)
+        {
+            var currentBalance = Math.Max(0m, await balances.GetBalanceAsync(selected.Id, cancellationToken));
+            if (input.BalanceReduction > currentBalance)
+                ModelState.AddModelError(nameof(input.BalanceReduction), "The hypothetical balance reduction cannot exceed the current balance.");
+        }
+
+        if (ModelState.IsValid)
+        {
+            var accountRows = new List<CreditScoreImpactAccount>();
+            foreach (var account in accounts)
+            {
+                var balance = Math.Max(0m, await balances.GetBalanceAsync(account.Id, cancellationToken));
+                var limit = Math.Max(0m, account.CreditLimit ?? 0m);
+                var projectedBalance = balance;
+                var projectedLimit = limit;
+                if (account.Id == input.AccountId)
+                {
+                    projectedBalance = Math.Max(0m, balance - input.BalanceReduction);
+                    projectedLimit = Math.Max(0m, limit + input.CreditLimitChange);
+                }
+                accountRows.Add(new CreditScoreImpactAccount(account.Id, account.Name, balance, limit,
+                    limit > 0 ? balance / limit * 100m : 0m, projectedBalance, projectedLimit,
+                    projectedLimit > 0 ? projectedBalance / projectedLimit * 100m : 0m));
+            }
+
+            var currentBalanceTotal = accountRows.Sum(x => x.Balance);
+            var currentLimitTotal = accountRows.Sum(x => x.CreditLimit);
+            var projectedBalanceTotal = accountRows.Sum(x => x.ProjectedBalance);
+            var projectedLimitTotal = accountRows.Sum(x => x.ProjectedLimit);
+            var today = DateTime.Today;
+            var inquiries = await database.CreditInquiries.AsNoTracking()
+                .Where(x => x.InquiryDate >= today.AddYears(-1) && x.InquiryDate <= today)
+                .ToListAsync(cancellationToken);
+            ViewBag.Result = new CreditScoreImpactResult
+            {
+                CurrentTotalBalance = currentBalanceTotal,
+                CurrentTotalLimit = currentLimitTotal,
+                CurrentUtilizationPercent = currentLimitTotal > 0 ? currentBalanceTotal / currentLimitTotal * 100m : 0m,
+                ProjectedTotalBalance = projectedBalanceTotal,
+                ProjectedTotalLimit = projectedLimitTotal,
+                ProjectedUtilizationPercent = projectedLimitTotal > 0 ? projectedBalanceTotal / projectedLimitTotal * 100m : 0m,
+                UtilizationChangePercentagePoints = (projectedLimitTotal > 0 ? projectedBalanceTotal / projectedLimitTotal * 100m : 0m) -
+                    (currentLimitTotal > 0 ? currentBalanceTotal / currentLimitTotal * 100m : 0m),
+                HardInquiriesLastTwelveMonths = inquiries.Count(x => x.Type == CreditInquiryType.Hard),
+                SoftInquiriesLastTwelveMonths = inquiries.Count(x => x.Type == CreditInquiryType.Soft),
+                Accounts = accountRows
+            };
+        }
+        return View(input);
+    }
+
+    private async Task<List<Account>> LoadImpactPlannerAccountsAsync(CancellationToken cancellationToken)
+    {
+        var accounts = await database.Accounts.AsNoTracking()
+            .Where(a => a.Status == AccountStatus.Active &&
+                (a.Type == AccountType.CreditCard || a.DebtType == DebtAccountType.CreditCard ||
+                 a.DebtType == DebtAccountType.LineOfCredit || a.DebtType == DebtAccountType.HomeEquityLineOfCredit))
+            .OrderBy(a => a.Name).ToListAsync(cancellationToken);
+        ViewBag.ImpactAccounts = accounts;
+        return accounts;
+    }
+
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
