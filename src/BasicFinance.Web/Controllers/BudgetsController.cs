@@ -1,5 +1,6 @@
 using BasicFinance.Web.Data;
 using BasicFinance.Web.Models;
+using BasicFinance.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -58,7 +59,8 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
             var thresholds = new[] { 50, 75, 90, 100 };
             foreach (var line in lines.Where(x => x.PlannedAmount > 0m))
             {
-                var utilization = line.ActualAmount / line.PlannedAmount * 100m;
+                var alertBudget = line.AdjustedBudget > 0m ? line.AdjustedBudget : line.PlannedAmount;
+                var utilization = line.ActualAmount / alertBudget * 100m;
                 foreach (var threshold in thresholds.Where(x => utilization >= x))
                 {
                     if (existingThresholds.Any(x => x.CategoryId == line.CategoryId && x.ThresholdPercent == threshold))
@@ -71,7 +73,7 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
                         ThresholdPercent = threshold,
                         ActualAmount = line.ActualAmount,
                         Level = level,
-                        Message = $"{line.CategoryName} has reached {utilization:0.#}% of its {line.PlannedAmount:C} budget.",
+                        Message = $"{line.CategoryName} has reached {utilization:0.#}% of its {alertBudget:C} adjusted budget.",
                         CreatedUtc = DateTime.UtcNow
                     });
                 }
@@ -144,9 +146,8 @@ public sealed class BudgetsController(ApplicationDbContext database) : Controlle
         foreach (var line in previous.Lines)
         {
             actuals.TryGetValue(line.CategoryId, out var previousActual);
-            var rollover = previous.RolloverEnabled
-                ? line.PlannedAmount + line.RolloverAmount - previousActual
-                : 0m;
+            var rollover = BudgetRolloverCalculator.CalculateNextMonth(
+                line.PlannedAmount, line.RolloverAmount, previousActual, previous.RolloverEnabled);
             target.Lines.Add(new BudgetLine
             {
                 CategoryId = line.CategoryId,
