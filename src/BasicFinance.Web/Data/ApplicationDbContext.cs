@@ -25,6 +25,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<MonthlyDebtReductionGoal> MonthlyDebtReductionGoals => Set<MonthlyDebtReductionGoal>();
     public DbSet<DebtFreeMilestone> DebtFreeMilestones => Set<DebtFreeMilestone>();
     public DbSet<DebtNotification> DebtNotifications => Set<DebtNotification>();
+    public DbSet<BudgetPeriod> BudgetPeriods => Set<BudgetPeriod>();
+    public DbSet<BudgetLine> BudgetLines => Set<BudgetLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -232,6 +234,22 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.Message).HasMaxLength(500).IsRequired();
             entity.HasIndex(x => x.NotificationKey).IsUnique();
             entity.HasIndex(x => new { x.IsRead, x.CreatedUtc });
+        });
+
+        modelBuilder.Entity<BudgetPeriod>(entity =>
+        {
+            entity.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.HasIndex(x => new { x.Year, x.Month, x.CurrencyCode }).IsUnique();
+            entity.HasMany(x => x.Lines).WithOne(x => x.BudgetPeriod).HasForeignKey(x => x.BudgetPeriodId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BudgetLine>(entity =>
+        {
+            entity.Property(x => x.PlannedAmount).HasColumnType("TEXT");
+            entity.Property(x => x.Notes).HasMaxLength(300);
+            entity.HasIndex(x => new { x.BudgetPeriodId, x.CategoryId }).IsUnique();
+            entity.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<InterestRecord>(entity =>
