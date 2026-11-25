@@ -142,14 +142,20 @@ public sealed class AccountManagementController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> BalanceHistory(int accountId, CancellationToken cancellationToken)
+    public async Task<IActionResult> BalanceHistory(int? accountId, CancellationToken cancellationToken)
     {
-        var account = await database.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId, cancellationToken);
+        if (!accountId.HasValue || accountId.Value <= 0)
+        {
+            TempData["ErrorMessage"] = "Select an account to view its balance history.";
+            return RedirectToAction(nameof(Index));
+        }
+        var selectedAccountId = accountId.Value;
+        var account = await database.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == selectedAccountId, cancellationToken);
         if (account is null) return NotFound();
         ViewBag.Account = account;
-        ViewBag.CurrentBalance = await balances.GetBalanceAsync(accountId, cancellationToken);
+        ViewBag.CurrentBalance = await balances.GetBalanceAsync(selectedAccountId, cancellationToken);
         ViewBag.Snapshots = await database.AccountBalanceSnapshots.AsNoTracking()
-            .Where(s => s.AccountId == accountId).OrderByDescending(s => s.SnapshotDate).ToListAsync(cancellationToken);
+            .Where(s => s.AccountId == selectedAccountId).OrderByDescending(s => s.SnapshotDate).ToListAsync(cancellationToken);
         return View();
     }
 
