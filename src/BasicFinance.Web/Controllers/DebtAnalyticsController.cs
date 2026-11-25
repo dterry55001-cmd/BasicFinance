@@ -70,9 +70,10 @@ public sealed class DebtAnalyticsController(ApplicationDbContext database) : Con
                  a.DebtType == DebtAccountType.CreditCard ||
                  a.DebtType == DebtAccountType.LineOfCredit ||
                  a.DebtType == DebtAccountType.HomeEquityLineOfCredit))
-            .Select(a => new { a.Id, a.CurrencyCode })
+            .Select(a => new { a.Id, a.CurrencyCode, a.CreditLimit })
             .ToListAsync(cancellationToken);
         var accountCurrencies = revolvingAccounts.ToDictionary(a => a.Id, a => a.CurrencyCode);
+        var accountLimits = revolvingAccounts.ToDictionary(a => a.Id, a => a.CreditLimit);
         var revolvingIds = accountCurrencies.Keys.ToList();
 
         if (revolvingIds.Count > 0)
@@ -90,7 +91,8 @@ public sealed class DebtAnalyticsController(ApplicationDbContext database) : Con
                         .Select(accountGroup => accountGroup.OrderByDescending(s => s.ReportedDate).ThenByDescending(s => s.Id).First())
                         .ToList();
                     var balance = latestByAccount.Sum(s => Math.Max(0m, s.ReportedBalance));
-                    var limit = latestByAccount.Sum(s => Math.Max(0m, s.ReportedCreditLimit ?? 0m));
+                    var limit = latestByAccount.Sum(s => Math.Max(0m,
+                        s.ReportedCreditLimit ?? accountLimits.GetValueOrDefault(s.AccountId) ?? 0m));
                     return limit > 0m
                         ? new CreditUtilizationTrendRow(g.Key.Currency, g.Key.Month, balance, limit,
                             decimal.Round(balance / limit * 100m, 1), latestByAccount.Count)
