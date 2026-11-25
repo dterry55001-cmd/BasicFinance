@@ -210,7 +210,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
         modelBuilder.Entity<DebtFreeMilestone>(entity =>
         {
-            entity.HasIndex(x => x.AccountId).IsUnique();
+            entity.HasIndex(x => new { x.AccountId, x.AchievedDate });
             entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
         });
 
