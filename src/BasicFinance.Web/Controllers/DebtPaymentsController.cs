@@ -84,7 +84,7 @@ public sealed class DebtPaymentsController(ApplicationDbContext database, Accoun
         ViewBag.Payment = payment;
 
         var allocation = input.PrincipalPaid + input.InterestPaid + input.FeesPaid;
-        if (source is null || source.Type is AccountType.Debt or AccountType.CreditCard)
+        if (source is null || source.Type is not (AccountType.Cash or AccountType.Checking or AccountType.Savings))
             ModelState.AddModelError(nameof(input.SourceAccountId), "Choose an active cash, checking, or savings funding account.");
         else if (!string.Equals(source.CurrencyCode, payment.Account.CurrencyCode, StringComparison.OrdinalIgnoreCase))
             ModelState.AddModelError(nameof(input.SourceAccountId), "Funding and debt accounts must use the same currency.");
@@ -157,8 +157,18 @@ public sealed class DebtPaymentsController(ApplicationDbContext database, Accoun
         foreach (var account in accounts)
         {
             var current = Math.Max(0m, await balances.GetBalanceAsync(account.Id, cancellationToken));
-            var original = Math.Max(0m, account.OriginalLoanAmount ?? account.OpeningBalance);
-            var reduced = Math.Max(0m, original - current);
+            var earliestSnapshot = await database.AccountBalanceSnapshots.AsNoTracking()
+                .Where(snapshot => snapshot.AccountId == account.Id)
+                .OrderBy(snapshot => snapshot.SnapshotDate)
+                .Select(snapshot => (decimal?)snapshot.Balance)
+                .FirstOrDefaultAsync(cancellationToken);
+            var configuredOriginal = account.OriginalLoanAmount.GetValueOrDefault();
+            var original = configuredOriginal > 0m
+                ? configuredOriginal
+                : Math.Max(0m, earliestSnapshot.GetValueOrDefault() > 0m
+                    ? earliestSnapshot.Value
+                    : Math.Max(account.OpeningBalance, current));
+            var reduced = Math.Clamp(original - current, 0m, original);
             var principal = await database.DebtPaymentRecords.AsNoTracking()
                 .Where(p => p.AccountId == account.Id && p.Status == DebtPaymentStatus.Paid)
                 .SumAsync(p => (decimal?)(p.PrincipalPaid ?? 0m), cancellationToken) ?? 0m;
