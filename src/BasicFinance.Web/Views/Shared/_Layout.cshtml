@@ -8,28 +8,57 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="site-header">
     <nav class="navigation" aria-label="Main navigation">
-        <a class="brand" asp-controller="Home" asp-action="Index">BasicFinance</a>
+        <a class="brand" asp-controller="Home" asp-action="Index" aria-label="BasicFinance home">
+            <span class="brand-mark" aria-hidden="true">B</span>
+            <span class="brand-copy"><strong>BasicFinance</strong><small>Personal finance workspace</small></span>
+        </a>
+
         <div class="navigation-links">
-            <a class="navigation-link" asp-controller="Home" asp-action="Index">Dashboard</a>
-            <a class="navigation-link" asp-controller="Accounts" asp-action="Index">Accounts</a>
-            <a class="navigation-link" asp-controller="AccountManagement" asp-action="Index">Debt management</a>
-            <a class="navigation-link" asp-controller="DebtDashboard" asp-action="Index">Debt dashboard</a>
-            <a class="navigation-link" asp-controller="DebtAnalytics" asp-action="Index">Debt analytics</a>
-            <a class="navigation-link" asp-controller="PaymentAllocation" asp-action="Index">Payment allocation</a>
-            <a class="navigation-link" asp-controller="CreditMonitoring" asp-action="Index">Credit monitoring</a>
-            <a class="navigation-link" asp-controller="DebtGoals" asp-action="Index">Debt-free goals</a>
-            <a class="navigation-link" asp-controller="DebtNotifications" asp-action="Index">Notifications</a>
-            <a class="navigation-link" asp-controller="Transactions" asp-action="Index">Transactions</a>
-            <a class="navigation-link" asp-controller="Categories" asp-action="Index">Categories</a>
-            <a class="navigation-link" asp-controller="Rules" asp-action="Index">Rules</a>
-            <a class="navigation-link" asp-controller="Imports" asp-action="Index">Imports</a>
+            <a class="navigation-link" asp-controller="Home" asp-action="Index">Overview</a>
+
+            <details class="nav-menu">
+                <summary>Accounts</summary>
+                <div class="nav-menu-panel">
+                    <a asp-controller="Accounts" asp-action="Index">All accounts</a>
+                    <a asp-controller="AccountManagement" asp-action="Index">Debt management</a>
+                </div>
+            </details>
+
+            <details class="nav-menu">
+                <summary>Debt center</summary>
+                <div class="nav-menu-panel">
+                    <a asp-controller="DebtDashboard" asp-action="Index">Debt dashboard</a>
+                    <a asp-controller="DebtAnalytics" asp-action="Index">Debt analytics</a>
+                    <a asp-controller="DebtGoals" asp-action="Index">Debt-free goals</a>
+                    <a asp-controller="PaymentAllocation" asp-action="Index">Payment allocation</a>
+                    <a asp-controller="CreditMonitoring" asp-action="Index">Credit monitoring</a>
+                    <a asp-controller="DebtNotifications" asp-action="Index">Debt notifications</a>
+                </div>
+            </details>
+
+            <details class="nav-menu">
+                <summary>Activity</summary>
+                <div class="nav-menu-panel">
+                    <a asp-controller="Transactions" asp-action="Index">Transactions</a>
+                    <a asp-controller="Categories" asp-action="Index">Categories</a>
+                </div>
+            </details>
+
+            <details class="nav-menu">
+                <summary>Tools</summary>
+                <div class="nav-menu-panel">
+                    <a asp-controller="Rules" asp-action="Index">Automation rules</a>
+                    <a asp-controller="Imports" asp-action="Index">Statement imports</a>
+                </div>
+            </details>
         </div>
-        <span class="navigation-caption">Personal finance workspace</span>
+        <span class="navigation-status"><span aria-hidden="true"></span> Private workspace</span>
     </nav>
 </header>
-<main class="page-content">@RenderBody()</main>
+<main id="main-content" class="page-content" tabindex="-1">@RenderBody()</main>
 <footer class="site-footer"><div>BasicFinance <span aria-hidden="true">·</span> Local-first finance workspace</div></footer>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
