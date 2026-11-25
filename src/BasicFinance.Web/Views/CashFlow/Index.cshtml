@@ -1,0 +1,89 @@
+@model BasicFinance.Web.Controllers.CashFlowIndexViewModel
+@using BasicFinance.Web.Models
+@{
+    ViewData["Title"] = "Cash Flow Forecast";
+    var totalIncome = Model.Forecast.Sum(x => x.ExpectedIncome);
+    var totalExpenses = Model.Forecast.Sum(x => x.ExpectedExpenses);
+    var endingBalance = Model.Forecast.LastOrDefault()?.ProjectedEndingBalance ?? Model.OpeningBalance;
+}
+<section class="page-heading">
+    <div><p class="eyebrow">FINANCIAL PLANNING</p><h1>Cash Flow Forecast</h1><p class="page-description">Project future cash balances from recurring income and expenses.</p></div>
+</section>
+@if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="notice notice-error" role="alert">@error</div> }
+<form method="get" asp-action="Index" class="filter-bar">
+    <label>Forecast period <select name="months">
+        @foreach (var count in new[] { 3, 6, 12, 18, 24 }) { <option value="@count" selected="@(count == Model.Months)">@count months</option> }
+    </select></label>
+    <button class="button button-secondary" type="submit">Update forecast</button>
+</form>
+<div class="summary-grid">
+    <article class="summary-card"><span>Current cash balance</span><strong>@Model.OpeningBalance.ToString("C")</strong><small>Active USD checking, savings, and cash accounts</small></article>
+    <article class="summary-card"><span>Forecast income</span><strong>@totalIncome.ToString("C")</strong><small>Recurring income in selected period</small></article>
+    <article class="summary-card"><span>Forecast expenses</span><strong>@totalExpenses.ToString("C")</strong><small>Recurring expenses in selected period</small></article>
+    <article class="summary-card"><span>Projected ending balance</span><strong class="@(endingBalance < 0 ? "text-danger" : "")">@endingBalance.ToString("C")</strong><small>At the end of the forecast</small></article>
+</div>
+<section class="table-card">
+    <h2>Monthly cash flow projection</h2>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Month</th><th>Starting balance</th><th>Expected income</th><th>Expected expenses</th><th>Net cash flow</th><th>Projected ending balance</th></tr></thead>
+        <tbody>
+        @{
+            var previousBalance = Model.OpeningBalance;
+        }
+        @foreach (var month in Model.Forecast)
+        {
+            <tr>
+                <td><strong>@month.Month.ToString("MMMM yyyy")</strong></td>
+                <td>@previousBalance.ToString("C")</td>
+                <td>@month.ExpectedIncome.ToString("C")</td>
+                <td>@month.ExpectedExpenses.ToString("C")</td>
+                <td class="@(month.NetCashFlow < 0 ? "text-danger" : "")">@month.NetCashFlow.ToString("C")</td>
+                <td class="@(month.ProjectedEndingBalance < 0 ? "text-danger" : "")">@month.ProjectedEndingBalance.ToString("C")</td>
+            </tr>
+            previousBalance = month.ProjectedEndingBalance;
+        }
+        </tbody>
+    </table></div>
+    @if (!Model.Schedules.Any()) { <p class="empty-state">Add recurring income and expense schedules to build your forecast.</p> }
+</section>
+<section class="table-card">
+    <h2>Add recurring cash flow</h2>
+    @if (!Model.Accounts.Any()) { <p class="empty-state">Create an active USD checking, savings, or cash account before adding schedules.</p> }
+    else
+    {
+        <form asp-action="CreateSchedule" method="post" class="form-grid">
+            @Html.AntiForgeryToken()
+            <label>Account <select name="ScheduleAccountId" asp-items="Model.Accounts" required><option value="">Select account</option></select></label>
+            <label>Type <select name="ScheduleType"><option value="@((int)TransactionType.Income)">Income</option><option value="@((int)TransactionType.Expense)" selected>Expense</option></select></label>
+            <label>Description <input name="ScheduleDescription" maxlength="160" required /></label>
+            <label>Amount <input name="ScheduleAmount" type="number" min="0.01" max="999999999999" step="0.01" required /></label>
+            <label>Frequency <select name="ScheduleFrequency">
+                @foreach (CashFlowFrequency frequency in Enum.GetValues<CashFlowFrequency>()) { <option value="@((int)frequency)">@frequency</option> }
+            </select></label>
+            <label>First due date <input name="ScheduleNextDueDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></label>
+            <label>End date (optional) <input name="ScheduleEndDate" type="date" /></label>
+            <div class="form-actions"><button class="button button-primary" type="submit">Add schedule</button></div>
+        </form>
+    }
+</section>
+<section class="table-card">
+    <h2>Recurring schedules</h2>
+    @if (!Model.Schedules.Any()) { <p class="empty-state">No active recurring schedules.</p> }
+    else
+    {
+        <div class="table-scroll"><table>
+            <thead><tr><th>Description</th><th>Account</th><th>Type</th><th>Amount</th><th>Frequency</th><th>Next due</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var schedule in Model.Schedules)
+            {
+                <tr>
+                    <td>@schedule.Description</td><td>@schedule.Account.Name</td><td>@schedule.Type</td>
+                    <td>@schedule.Amount.ToString("C")</td><td>@schedule.Frequency</td><td>@schedule.NextDueDate.ToString("d")</td>
+                    <td><form asp-action="DeactivateSchedule" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@schedule.Id" /><button class="button button-secondary" type="submit">Deactivate</button></form></td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    }
+</section>
