@@ -95,4 +95,41 @@ public sealed class DebtManagementServiceTests
             TermMonths = 0
         }));
     }
+    [Fact]
+    public void EarlyPayoffScenarios_CompareLumpMonthlyAndCombinedPayments()
+    {
+        var scenarios = _service.CalculateEarlyPayoffScenarios(5000m, 18m, 150m,
+            500m, 2, 50m, new DateTime(2026, 1, 1));
+
+        Assert.Equal(4, scenarios.Count);
+        Assert.Equal("Current payment", scenarios[0].Strategy);
+        Assert.True(scenarios[1].InterestSavings >= 0m);
+        Assert.True(scenarios[2].InterestSavings >= 0m);
+        Assert.True(scenarios[3].InterestSavings >= scenarios[1].InterestSavings);
+        Assert.True(scenarios[3].MonthsToPayoff <= scenarios[0].MonthsToPayoff);
+        Assert.Equal(0m, scenarios[3].Payments[^1].RemainingBalance);
+    }
+
+    [Fact]
+    public void EarlyPayoffScenarios_RejectPaymentBelowMonthlyInterest()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            _service.CalculateEarlyPayoffScenarios(10000m, 24m, 10m, 0m, 1, 0m));
+    }
+
+    [Fact]
+    public void DebtToIncomeRecord_CalculatesHousingAndTotalRatiosSeparately()
+    {
+        var record = new DebtToIncomeRecord
+        {
+            GrossMonthlyIncome = 6000m,
+            HousingMonthlyPayment = 1800m,
+            OtherMonthlyDebtPayment = 600m
+        };
+
+        Assert.Equal(30m, record.HousingRatioPercent);
+        Assert.Equal(40m, record.TotalDebtRatioPercent);
+        Assert.Equal(2400m, record.TotalMonthlyDebtObligations);
+    }
+
 }
