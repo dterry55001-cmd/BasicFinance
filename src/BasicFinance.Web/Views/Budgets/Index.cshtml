@@ -19,6 +19,7 @@
 </div>
 <section class="table-card" aria-labelledby="budget-alert-heading">
     <div class="section-heading"><div><h2 id="budget-alert-heading">Spending alerts</h2><p>Alerts are generated when actual spending reaches 50%, 75%, 90%, or 100% of a category budget.</p></div>
+        @if (Model.Alerts.Any(x => !x.IsRead)) { <form asp-action="MarkAllAlertsRead" method="post">@Html.AntiForgeryToken()<input type="hidden" name="year" value="@Model.Year" /><input type="hidden" name="month" value="@Model.Month" /><button class="button button-secondary" type="submit">Mark all read</button></form> }
         <form asp-action="UpdateAlertSettings" method="post" class="inline-form">
             @Html.AntiForgeryToken()
             <input type="hidden" name="year" value="@Model.Year" /><input type="hidden" name="month" value="@Model.Month" />
@@ -34,7 +35,7 @@
     else
     {
         <div class="table-scroll"><table>
-            <thead><tr><th>Alert</th><th>Threshold</th><th>Actual spending when reached</th><th>Date</th><th>Status</th></tr></thead>
+            <thead><tr><th>Alert</th><th>Threshold</th><th>Actual spending when reached</th><th>Date</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @foreach (var alert in Model.Alerts)
             {
@@ -44,6 +45,7 @@
                     <td>@alert.ActualAmount.ToString("C")</td>
                     <td>@alert.CreatedUtc.ToLocalTime().ToString("g")</td>
                     <td>@(alert.IsRead ? "Read" : "New")</td>
+                    <td>@if (!alert.IsRead) { <form asp-action="MarkAlertRead" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@alert.Id" /><input type="hidden" name="year" value="@Model.Year" /><input type="hidden" name="month" value="@Model.Month" /><button class="button button-secondary" type="submit">Mark read</button></form> }</td>
                 </tr>
             }
             </tbody>
