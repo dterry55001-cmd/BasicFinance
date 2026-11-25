@@ -29,6 +29,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<BudgetLine> BudgetLines => Set<BudgetLine>();
     public DbSet<BudgetAlertPreference> BudgetAlertPreferences => Set<BudgetAlertPreference>();
     public DbSet<BudgetAlert> BudgetAlerts => Set<BudgetAlert>();
+    public DbSet<RecurringCashFlow> RecurringCashFlows => Set<RecurringCashFlow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -262,6 +263,15 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasIndex(x => new { x.IsRead, x.CreatedUtc });
             entity.HasOne(x => x.BudgetPeriod).WithMany().HasForeignKey(x => x.BudgetPeriodId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RecurringCashFlow>(entity =>
+        {
+            entity.Property(x => x.Amount).HasColumnType("TEXT");
+            entity.Property(x => x.Description).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.HasIndex(x => new { x.IsActive, x.NextDueDate });
+            entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<BudgetLine>(entity =>
