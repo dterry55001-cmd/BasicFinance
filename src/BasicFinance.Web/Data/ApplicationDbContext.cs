@@ -15,6 +15,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<TransactionRule> TransactionRules => Set<TransactionRule>();
     public DbSet<AccountBalanceSnapshot> AccountBalanceSnapshots => Set<AccountBalanceSnapshot>();
     public DbSet<InterestRecord> InterestRecords => Set<InterestRecord>();
+    public DbSet<DebtToIncomeRecord> DebtToIncomeRecords => Set<DebtToIncomeRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -134,6 +135,15 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(snapshot => snapshot.Balance).HasColumnType("TEXT");
             entity.HasIndex(snapshot => new { snapshot.AccountId, snapshot.SnapshotDate }).IsUnique();
             entity.HasOne(snapshot => snapshot.Account).WithMany().HasForeignKey(snapshot => snapshot.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DebtToIncomeRecord>(entity =>
+        {
+            entity.Property(record => record.GrossMonthlyIncome).HasColumnType("TEXT");
+            entity.Property(record => record.HousingMonthlyPayment).HasColumnType("TEXT");
+            entity.Property(record => record.OtherMonthlyDebtPayment).HasColumnType("TEXT");
+            entity.Property(record => record.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.HasIndex(record => new { record.Month, record.CurrencyCode }).IsUnique();
         });
 
         modelBuilder.Entity<InterestRecord>(entity =>
