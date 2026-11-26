@@ -138,6 +138,17 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkAlertRead(int id, CancellationToken cancellationToken)
+    {
+        var alert = await database.CashFlowAlerts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (alert is null) return NotFound();
+        alert.IsRead = true;
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Cash-flow alert marked as read.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSchedule(CashFlowIndexViewModel input, CancellationToken cancellationToken)
     {
         if (input.ScheduleAmount <= 0m || input.ScheduleAmount > 999999999999m)
