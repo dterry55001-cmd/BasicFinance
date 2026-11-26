@@ -40,6 +40,8 @@ public sealed class SavingsGoal
 
     public SavingsGoalStatus Status { get; set; } = SavingsGoalStatus.Active;
     public bool IsEmergencyFund { get; set; }
+    public int? LinkedAccountId { get; set; }
+    public Account? LinkedAccount { get; set; }
     public int Priority { get; set; } = 3;
 
     public ICollection<SavingsContribution> Contributions { get; set; } = new List<SavingsContribution>();
