@@ -70,6 +70,10 @@ public sealed class SavingsContribution
     public int? TransactionId { get; set; }
     public FinancialTransaction? Transaction { get; set; }
 
+    public int? RecurringSavingsContributionId { get; set; }
+    public RecurringSavingsContribution? RecurringSavingsContribution { get; set; }
+    public DateTime? ScheduledDueDate { get; set; }
+
     [StringLength(300)]
     public string? Notes { get; set; }
 
@@ -150,6 +154,7 @@ public sealed class RecurringSavingsContribution
     public bool IsActive { get; set; } = true;
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+    public ICollection<SavingsContribution> Contributions { get; set; } = new List<SavingsContribution>();
 }
 
 public sealed class SavingsAllocationBudget
