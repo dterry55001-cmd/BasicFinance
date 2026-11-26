@@ -16,6 +16,8 @@ builder.Services.AddScoped<TransactionRuleService>();
 builder.Services.AddScoped<DebtManagementService>();
 builder.Services.AddScoped<CashFlowForecastService>();
 builder.Services.AddScoped<SavingsGoalService>();
+builder.Services.AddScoped<SavingsNotificationService>();
+builder.Services.AddHostedService<SavingsNotificationBackgroundService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
