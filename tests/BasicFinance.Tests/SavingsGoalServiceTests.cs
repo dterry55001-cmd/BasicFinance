@@ -86,6 +86,59 @@ public sealed class SavingsGoalServiceTests
             new DateTime(2026, 11, 20), "USD"));
     }
 
+
+    [Fact]
+    public void IsCompatibleTransaction_ValidatesTransferDirectionAgainstLinkedAccount()
+    {
+        var incomingTransfer = new FinancialTransaction
+        {
+            Type = TransactionType.Transfer,
+            AccountId = 10,
+            RelatedAccountId = 20,
+            Amount = 125m,
+            CurrencyCode = "USD",
+            TransactionDate = new DateTime(2026, 11, 20)
+        };
+        var outgoingTransfer = new FinancialTransaction
+        {
+            Type = TransactionType.Transfer,
+            AccountId = 20,
+            RelatedAccountId = 10,
+            Amount = 125m,
+            CurrencyCode = "USD",
+            TransactionDate = new DateTime(2026, 11, 20)
+        };
+
+        Assert.True(_service.IsCompatibleTransaction(incomingTransfer, SavingsContributionType.Contribution,
+            125m, new DateTime(2026, 11, 20), "USD", 20));
+        Assert.False(_service.IsCompatibleTransaction(incomingTransfer, SavingsContributionType.Contribution,
+            125m, new DateTime(2026, 11, 20), "USD", 10));
+        Assert.True(_service.IsCompatibleTransaction(outgoingTransfer, SavingsContributionType.Withdrawal,
+            125m, new DateTime(2026, 11, 20), "USD", 20));
+        Assert.False(_service.IsCompatibleTransaction(outgoingTransfer, SavingsContributionType.Withdrawal,
+            125m, new DateTime(2026, 11, 20), "USD", 10));
+        Assert.False(_service.IsCompatibleTransaction(incomingTransfer, SavingsContributionType.Contribution,
+            125m, new DateTime(2026, 11, 20), "USD"));
+    }
+
+    [Fact]
+    public void IsCompatibleTransaction_RequiresNonTransferActivityToAffectLinkedAccount()
+    {
+        var income = new FinancialTransaction
+        {
+            Type = TransactionType.Income,
+            AccountId = 20,
+            Amount = 125m,
+            CurrencyCode = "USD",
+            TransactionDate = new DateTime(2026, 11, 20)
+        };
+
+        Assert.True(_service.IsCompatibleTransaction(income, SavingsContributionType.Contribution,
+            125m, new DateTime(2026, 11, 20), "USD", 20));
+        Assert.False(_service.IsCompatibleTransaction(income, SavingsContributionType.Contribution,
+            125m, new DateTime(2026, 11, 20), "USD", 10));
+    }
+
     [Theory]
     [InlineData(SavingsScheduleFrequency.Weekly, 7)]
     [InlineData(SavingsScheduleFrequency.Biweekly, 14)]
