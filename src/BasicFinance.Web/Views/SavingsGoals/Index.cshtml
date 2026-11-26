@@ -86,6 +86,31 @@
     }
 </section>
 
+@if (Model.FundingRecommendations.Any())
+{
+    <section class="table-card savings-recommendations">
+        <h2>Goal funding recommendations</h2>
+        <p class="page-description">Suggested monthly contributions are based on each active goal's remaining balance and target date. Planned allocations are compared with the required amount.</p>
+        <div class="table-scroll"><table>
+            <thead><tr><th>Goal</th><th>Priority</th><th>Target date</th><th>Remaining</th><th>Suggested monthly</th><th>Planned allocation</th><th>Additional needed</th></tr></thead>
+            <tbody>
+            @foreach (var recommendation in Model.FundingRecommendations)
+            {
+                <tr>
+                    <td><strong>@recommendation.GoalName</strong></td>
+                    <td>@recommendation.Priority</td>
+                    <td>@recommendation.TargetDate.ToString("d")</td>
+                    <td>@recommendation.RemainingAmount.ToString("C")</td>
+                    <td>@recommendation.RequiredMonthlyContribution.ToString("C")</td>
+                    <td>@recommendation.PlannedMonthlyAllocation.ToString("C")</td>
+                    <td class="@(recommendation.AdditionalMonthlyAmountNeeded > 0m ? "amount-out" : "amount-in")">@recommendation.AdditionalMonthlyAmountNeeded.ToString("C")</td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    </section>
+}
+
 <section class="table-card">
     <h2>Create a savings goal</h2>
     <form asp-action="CreateGoal" method="post" class="form-grid">
