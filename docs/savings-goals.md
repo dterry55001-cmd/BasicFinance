@@ -109,3 +109,16 @@ Reports include active, paused, and completed goals, while archived goals are ex
 CSV export is intended for spreadsheet use and contains the selected month's goal-level rows. Text fields are quoted, embedded quotes are escaped, and formula-like text prefixes are neutralized to reduce spreadsheet formula-injection risk. It does not include account balances or create accounting transactions.
 
 The reports view also includes a comparative monthly bar chart for planned targets and actual contributions, plus a trailing emergency-fund balance chart. Accessible tabular values remain available alongside the charts so the information is not conveyed by color or bar length alone.
+
+
+## Savings account reconciliation
+
+Each active USD savings goal can be linked to one active USD checking, savings, or cash account. An active account can be linked to only one non-archived savings goal. This avoids treating one bank balance as the balance of multiple goals.
+
+A reconciliation session records a date range, the statement closing balance supplied by the user, and the calculated account balance. The calculated balance uses the account opening balance plus all recorded financial transactions through the period end, following the application's account-balance rules for deposits, withdrawals, income, expenses, and transfers. The displayed difference is statement balance minus calculated balance.
+
+The session compares goal contribution and withdrawal entries with transactions that affect the linked account. Incoming transfers are treated as contributions to the destination account; outgoing transfers are treated as withdrawals from the source account. Exact existing transaction links are recognized. Unlinked entries with matching amount, date, and direction are presented for explicit user confirmation. Ambiguous same-day/same-amount matches are flagged as potential duplicates rather than silently linked.
+
+Confirming a match links the existing transaction to the savings entry, preserving the one-transaction-per-contribution database constraint. It does not create, edit, or delete a financial transaction, contribution, or transfer. Entries already linked elsewhere cannot be reused. Reconciliation sessions preserve their results as history, and users can review the balance difference and all matched or unresolved items later.
+
+The balance comparison is account-level; it is not a separate cash sub-ledger for an individual goal. If an account holds funds for several purposes, the one-goal-per-account link rule means those purposes should use distinct accounts or remain unlinked until an appropriate allocation design is added. A zero account balance difference does not imply every savings ledger item is matched. Reconciliation is a review aid and does not replace a bank statement or accounting review.
