@@ -34,6 +34,25 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             };
         }).ToList();
 
+        var performanceStart = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
+        var activity = goals.SelectMany(x => x.Contributions)
+            .Where(x => x.ContributionDate.Date >= performanceStart && x.ContributionDate.Date <= today)
+            .ToList();
+        var monthlyPerformance = Enumerable.Range(0, 6).Select(offset =>
+        {
+            var month = performanceStart.AddMonths(offset);
+            var monthEntries = activity.Where(x => x.ContributionDate.Year == month.Year && x.ContributionDate.Month == month.Month).ToList();
+            var contributions = monthEntries.Where(x => x.Type == SavingsContributionType.Contribution).Sum(x => x.Amount);
+            var withdrawals = monthEntries.Where(x => x.Type == SavingsContributionType.Withdrawal).Sum(x => x.Amount);
+            return new SavingsMonthlyPerformanceViewModel
+            {
+                Month = month,
+                Contributions = contributions,
+                Withdrawals = withdrawals,
+                NetSavings = contributions - withdrawals
+            };
+        }).ToList();
+
         var emergencyGoal = goals.FirstOrDefault(x => x.IsEmergencyFund);
         var emergencyProgress = emergencyGoal is null ? null : savingsService.CalculateProgress(emergencyGoal, today);
         var monthlyExpenses = plan?.MonthlyEssentialExpenses ?? 0m;
@@ -50,7 +69,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             EmergencyFundCoverageMonths = coverage,
             TotalSaved = cards.Sum(x => x.Progress.CurrentAmount),
             TotalTargets = cards.Sum(x => x.Goal.TargetAmount),
-            TotalMonthlyTargets = cards.Sum(x => x.MonthlyTarget)
+            TotalMonthlyTargets = cards.Sum(x => x.MonthlyTarget),
+            MonthlyPerformance = monthlyPerformance
         });
     }
 
@@ -282,6 +302,15 @@ public sealed class SavingsGoalsIndexViewModel
     public decimal TotalSaved { get; set; }
     public decimal TotalTargets { get; set; }
     public decimal TotalMonthlyTargets { get; set; }
+    public List<SavingsMonthlyPerformanceViewModel> MonthlyPerformance { get; set; } = [];
+}
+
+public sealed class SavingsMonthlyPerformanceViewModel
+{
+    public DateTime Month { get; set; }
+    public decimal Contributions { get; set; }
+    public decimal Withdrawals { get; set; }
+    public decimal NetSavings { get; set; }
 }
 
 public sealed class SavingsGoalCardViewModel
