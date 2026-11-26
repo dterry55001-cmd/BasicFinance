@@ -30,6 +30,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<BudgetAlertPreference> BudgetAlertPreferences => Set<BudgetAlertPreference>();
     public DbSet<BudgetAlert> BudgetAlerts => Set<BudgetAlert>();
     public DbSet<RecurringCashFlow> RecurringCashFlows => Set<RecurringCashFlow>();
+    public DbSet<CashFlowAlertPreference> CashFlowAlertPreferences => Set<CashFlowAlertPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -263,6 +264,13 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasIndex(x => new { x.IsRead, x.CreatedUtc });
             entity.HasOne(x => x.BudgetPeriod).WithMany().HasForeignKey(x => x.BudgetPeriodId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CashFlowAlertPreference>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.LowBalanceThreshold).HasColumnType("TEXT");
+            entity.Property(x => x.UpdatedUtc).IsRequired();
         });
 
         modelBuilder.Entity<RecurringCashFlow>(entity =>
