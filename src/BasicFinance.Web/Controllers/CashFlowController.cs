@@ -56,7 +56,40 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
         var projectedBalances = dailyForecast.Select(x => x.ProjectedEndingBalance)
             .Concat(weeklyForecast.Select(x => x.ProjectedEndingBalance))
             .Concat(forecast.Select(x => x.ProjectedEndingBalance)).ToList();
-        var lowestProjectedBalance = projectedBalances.DefaultIfEmpty(openingCash).Min();
+        var projectedPoints = dailyForecast.Select(x => (Date: x.EndDate, Balance: x.ProjectedEndingBalance))
+            .Concat(weeklyForecast.Select(x => (Date: x.EndDate, Balance: x.ProjectedEndingBalance)))
+            .Concat(forecast.Select(x => (Date: x.Month.AddMonths(1).AddDays(-1), Balance: x.ProjectedEndingBalance)))
+            .OrderBy(x => x.Date).ToList();
+        var lowestPoint = projectedPoints.OrderBy(x => x.Balance).FirstOrDefault();
+        var lowestProjectedBalance = projectedPoints.Count == 0 ? openingCash : lowestPoint.Balance;
+        if ((preference?.AlertsEnabled ?? true) && projectedPoints.Count > 0)
+        {
+            var alertType = lowestProjectedBalance < 0m ? CashFlowAlertType.ProjectedShortage
+                : lowestProjectedBalance < lowBalanceThreshold ? CashFlowAlertType.LowBalance : (CashFlowAlertType?)null;
+            if (alertType.HasValue)
+            {
+                var key = $"{alertType.Value}:{lowestPoint.Date:yyyyMMdd}:{lowBalanceThreshold:0.00}";
+                var existingAlert = await database.CashFlowAlerts.FirstOrDefaultAsync(x => x.AlertKey == key, cancellationToken);
+                if (existingAlert is null)
+                {
+                    database.CashFlowAlerts.Add(new CashFlowAlert
+                    {
+                        Type = alertType.Value,
+                        ForecastDate = lowestPoint.Date,
+                        ProjectedBalance = lowestProjectedBalance,
+                        ThresholdAmount = lowBalanceThreshold,
+                        AlertKey = key,
+                        Message = alertType == CashFlowAlertType.ProjectedShortage
+                            ? $"Projected cash balance falls below zero on {lowestPoint.Date:d}."
+                            : $"Projected cash balance falls below {lowBalanceThreshold:C} on {lowestPoint.Date:d}.",
+                        CreatedUtc = DateTime.UtcNow
+                    });
+                    await database.SaveChangesAsync(cancellationToken);
+                }
+            }
+        }
+        var alertHistory = await database.CashFlowAlerts.AsNoTracking()
+            .OrderByDescending(x => x.CreatedUtc).Take(25).ToListAsync(cancellationToken);
         var model = new CashFlowIndexViewModel
         {
             Months = months,
@@ -69,6 +102,7 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
             HasLowBalanceWarning = lowestProjectedBalance >= 0m && lowestProjectedBalance < lowBalanceThreshold,
             HasProjectedShortage = lowestProjectedBalance < 0m,
             AlertsEnabled = preference?.AlertsEnabled ?? true,
+            AlertHistory = alertHistory,
             Forecast = forecast,
             DailyForecast = dailyForecast,
             WeeklyForecast = weeklyForecast,
@@ -166,6 +200,7 @@ public sealed class CashFlowIndexViewModel
     public bool HasLowBalanceWarning { get; set; }
     public bool HasProjectedShortage { get; set; }
     public bool AlertsEnabled { get; set; } = true;
+    public List<CashFlowAlert> AlertHistory { get; set; } = [];
     public IReadOnlyList<CashFlowForecastMonth> Forecast { get; set; } = [];
     public IReadOnlyList<CashFlowForecastPeriod> DailyForecast { get; set; } = [];
     public IReadOnlyList<CashFlowForecastPeriod> WeeklyForecast { get; set; } = [];
