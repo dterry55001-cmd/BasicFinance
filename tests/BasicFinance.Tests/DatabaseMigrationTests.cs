@@ -42,6 +42,46 @@ public sealed class DatabaseMigrationTests
     }
 
     [Fact]
+    public async Task Migrate_EnforcesOneRecurringSavingsEntryPerDueDate()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var database = new ApplicationDbContext(options);
+        await database.Database.MigrateAsync();
+
+        var hasScheduleLink = false;
+        await using (var columnCommand = connection.CreateCommand())
+        {
+            columnCommand.CommandText = "PRAGMA table_info('SavingsContributions')";
+            await using var reader = await columnCommand.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                if (reader.GetString(1) == "RecurringSavingsContributionId")
+                    hasScheduleLink = true;
+            }
+        }
+
+        var uniqueOccurrenceIndex = false;
+        await using (var indexCommand = connection.CreateCommand())
+        {
+            indexCommand.CommandText = "PRAGMA index_list('SavingsContributions')";
+            await using var reader = await indexCommand.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                if (reader.GetString(1) == "IX_SavingsContributions_RecurringSavingsContributionId_ScheduledDueDate")
+                    uniqueOccurrenceIndex = reader.GetInt32(2) == 1;
+            }
+        }
+
+        Assert.True(hasScheduleLink);
+        Assert.True(uniqueOccurrenceIndex);
+    }
+
+    [Fact]
     public async Task Migrate_CreatesDebtNotificationUniquenessAndAprHistoryRelationship()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
