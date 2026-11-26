@@ -50,6 +50,26 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             };
         }).ToList();
 
+        var fundingRecommendations = cards
+            .Where(x => x.Goal.Status == SavingsGoalStatus.Active && x.Goal.TargetDate.HasValue
+                && x.Progress.RemainingAmount > 0m)
+            .Select(x =>
+            {
+                var required = savingsService.CalculateRequiredMonthlyContribution(
+                    x.Progress.RemainingAmount, x.Goal.TargetDate, today) ?? 0m;
+                return new SavingsFundingRecommendationViewModel
+                {
+                    GoalName = x.Goal.Name,
+                    Priority = x.Goal.Priority,
+                    TargetDate = x.Goal.TargetDate!.Value,
+                    RemainingAmount = x.Progress.RemainingAmount,
+                    RequiredMonthlyContribution = required,
+                    PlannedMonthlyAllocation = x.PlannedAllocation,
+                    AdditionalMonthlyAmountNeeded = Math.Max(0m, required - x.PlannedAllocation)
+                };
+            })
+            .OrderBy(x => x.Priority).ThenBy(x => x.TargetDate).ToList();
+
         var performanceStart = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
         var activity = goals.SelectMany(x => x.Contributions)
             .Where(x => x.ContributionDate.Date >= performanceStart && x.ContributionDate.Date <= today)
@@ -90,7 +110,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             AvailableTransactions = availableTransactions,
             AllocationBudget = allocationBudget,
             TotalAllocationPercent = cards.Sum(x => x.AllocationPercent),
-            TotalPlannedAllocation = cards.Sum(x => x.PlannedAllocation)
+            TotalPlannedAllocation = cards.Sum(x => x.PlannedAllocation),
+            FundingRecommendations = fundingRecommendations
         });
     }
 
@@ -572,6 +593,7 @@ public sealed class SavingsGoalsIndexViewModel
     public SavingsAllocationBudget? AllocationBudget { get; set; }
     public decimal TotalAllocationPercent { get; set; }
     public decimal TotalPlannedAllocation { get; set; }
+    public List<SavingsFundingRecommendationViewModel> FundingRecommendations { get; set; } = [];
 }
 
 public sealed class SavingsMonthlyPerformanceViewModel
@@ -591,4 +613,15 @@ public sealed class SavingsGoalCardViewModel
     public decimal MonthlyRemaining { get; set; }
     public decimal AllocationPercent { get; set; }
     public decimal PlannedAllocation { get; set; }
+}
+
+public sealed class SavingsFundingRecommendationViewModel
+{
+    public string GoalName { get; set; } = string.Empty;
+    public int Priority { get; set; }
+    public DateTime TargetDate { get; set; }
+    public decimal RemainingAmount { get; set; }
+    public decimal RequiredMonthlyContribution { get; set; }
+    public decimal PlannedMonthlyAllocation { get; set; }
+    public decimal AdditionalMonthlyAmountNeeded { get; set; }
 }
