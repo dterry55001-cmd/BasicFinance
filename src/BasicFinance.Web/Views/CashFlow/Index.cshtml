@@ -124,10 +124,10 @@ else if (Model.AlertsEnabled && Model.HasLowBalanceWarning)
                 <td><strong>@item.Month.ToString("MMM yyyy")</strong></td>
                 <td>@item.ForecastIncome.ToString("C")</td>
                 <td>@item.ActualIncome.ToString("C")</td>
-                <td class="@(item.IncomeVariance < 0 ? "text-danger" : "text-success")">@item.IncomeVariance.ToString("+C;-C;C0")</td>
+                <td class="@(item.IncomeVariance < 0 ? "amount-out" : "amount-in")">@(item.IncomeVariance > 0 ? "+" : "")@item.IncomeVariance.ToString("C")</td>
                 <td>@item.ForecastExpenses.ToString("C")</td>
                 <td>@item.ActualExpenses.ToString("C")</td>
-                <td class="@(item.ExpenseVariance > 0 ? "text-danger" : "text-success")">@item.ExpenseVariance.ToString("+C;-C;C0")</td>
+                <td class="@(item.ExpenseVariance > 0 ? "amount-out" : "amount-in")">@(item.ExpenseVariance > 0 ? "+" : "")@item.ExpenseVariance.ToString("C")</td>
             </tr>
         }
         </tbody>
