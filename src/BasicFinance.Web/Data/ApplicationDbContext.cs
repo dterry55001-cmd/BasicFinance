@@ -40,6 +40,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<RecurringSavingsContribution> RecurringSavingsContributions => Set<RecurringSavingsContribution>();
     public DbSet<SavingsAllocationBudget> SavingsAllocationBudgets => Set<SavingsAllocationBudget>();
     public DbSet<SavingsAllocationSetting> SavingsAllocationSettings => Set<SavingsAllocationSetting>();
+    public DbSet<SavingsNotificationPreference> SavingsNotificationPreferences => Set<SavingsNotificationPreference>();
+    public DbSet<SavingsNotification> SavingsNotifications => Set<SavingsNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -363,6 +365,22 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasIndex(x => x.SavingsGoalId).IsUnique();
             entity.HasOne(x => x.SavingsGoal).WithMany(x => x.AllocationSettings)
                 .HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SavingsNotificationPreference>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EmergencyFundWarningMonths).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<SavingsNotification>(entity =>
+        {
+            entity.Property(x => x.NotificationKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Level).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Category).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.Message).HasMaxLength(500).IsRequired();
+            entity.HasIndex(x => x.NotificationKey).IsUnique();
+            entity.HasIndex(x => new { x.IsRead, x.CreatedUtc });
         });
 
         modelBuilder.Entity<BudgetLine>(entity =>
