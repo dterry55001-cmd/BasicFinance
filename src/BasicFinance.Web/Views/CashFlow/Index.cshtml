@@ -2,9 +2,24 @@
 @using BasicFinance.Web.Models
 @{
     ViewData["Title"] = "Cash Flow Forecast";
-    var totalIncome = Model.Forecast.Sum(x => x.ExpectedIncome);
-    var totalExpenses = Model.Forecast.Sum(x => x.ExpectedExpenses);
-    var endingBalance = Model.Forecast.LastOrDefault()?.ProjectedEndingBalance ?? Model.OpeningBalance;
+    var totalIncome = Model.Period switch
+    {
+        "day" => Model.DailyForecast.Sum(x => x.ExpectedIncome),
+        "week" => Model.WeeklyForecast.Sum(x => x.ExpectedIncome),
+        _ => Model.Forecast.Sum(x => x.ExpectedIncome)
+    };
+    var totalExpenses = Model.Period switch
+    {
+        "day" => Model.DailyForecast.Sum(x => x.ExpectedExpenses),
+        "week" => Model.WeeklyForecast.Sum(x => x.ExpectedExpenses),
+        _ => Model.Forecast.Sum(x => x.ExpectedExpenses)
+    };
+    var endingBalance = Model.Period switch
+    {
+        "day" => Model.DailyForecast.LastOrDefault()?.ProjectedEndingBalance ?? Model.OpeningBalance,
+        "week" => Model.WeeklyForecast.LastOrDefault()?.ProjectedEndingBalance ?? Model.OpeningBalance,
+        _ => Model.Forecast.LastOrDefault()?.ProjectedEndingBalance ?? Model.OpeningBalance
+    };
 }
 <section class="page-heading">
     <div><p class="eyebrow">FINANCIAL PLANNING</p><h1>Cash Flow Forecast</h1><p class="page-description">Project future cash balances from recurring income and expenses.</p></div>
