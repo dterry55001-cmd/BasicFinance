@@ -315,7 +315,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasIndex(x => x.IsEmergencyFund).IsUnique().HasFilter("\"IsEmergencyFund\" = 1");
             entity.HasIndex(x => x.LinkedAccountId).IsUnique()
                 .HasFilter("\"LinkedAccountId\" IS NOT NULL AND \"Status\" <> 3");
-            entity.HasOne(x => x.LinkedAccount).WithMany().HasForeignKey(x => x.LinkedAccountId).OnDelete(DeleteBehavior.Restrict);
+            entity.Ignore(x => x.LinkedAccount);
             entity.HasMany(x => x.Contributions).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.MonthlyTargets).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.Milestones).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
