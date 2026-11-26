@@ -15,24 +15,68 @@ public sealed class CashFlowForecastService
         {
             var monthStart = firstMonth.AddMonths(offset);
             var monthEnd = monthStart.AddMonths(1);
-            decimal income = 0m, expenses = 0m;
-            foreach (var schedule in schedules.Where(x => x.IsActive && x.CurrencyCode == "USD"))
-            {
-                var due = schedule.NextDueDate.Date;
-                while (due < monthStart && due <= monthEnd)
-                    due = NextDate(due, schedule.Frequency);
-                while (due >= monthStart && due < monthEnd && (!schedule.EndDate.HasValue || due <= schedule.EndDate.Value.Date))
-                {
-                    if (schedule.Type == TransactionType.Income) income += schedule.Amount;
-                    else if (schedule.Type == TransactionType.Expense) expenses += schedule.Amount;
-                    due = NextDate(due, schedule.Frequency);
-                }
-            }
-            var net = income - expenses;
+            var totals = SumOccurrences(schedules, monthStart, monthEnd);
+            var net = totals.Income - totals.Expenses;
             balance += net;
-            results.Add(new CashFlowForecastMonth(monthStart, income, expenses, net, balance));
+            results.Add(new CashFlowForecastMonth(monthStart, totals.Income, totals.Expenses, net, balance));
         }
         return results;
+    }
+
+    public IReadOnlyList<CashFlowForecastPeriod> BuildDailyForecast(
+        IEnumerable<RecurringCashFlow> schedules, decimal openingCashBalance, DateTime startDate, int days = 30)
+    {
+        if (days is < 1 or > 90) throw new ArgumentOutOfRangeException(nameof(days));
+        return BuildPeriods(schedules, openingCashBalance, startDate.Date, days, 1);
+    }
+
+    public IReadOnlyList<CashFlowForecastPeriod> BuildWeeklyForecast(
+        IEnumerable<RecurringCashFlow> schedules, decimal openingCashBalance, DateTime startDate, int weeks = 12)
+    {
+        if (weeks is < 1 or > 52) throw new ArgumentOutOfRangeException(nameof(weeks));
+        return BuildPeriods(schedules, openingCashBalance, startDate.Date, weeks, 7);
+    }
+
+    private static IReadOnlyList<CashFlowForecastPeriod> BuildPeriods(
+        IEnumerable<RecurringCashFlow> schedules, decimal openingCashBalance, DateTime startDate, int count, int daysPerPeriod)
+    {
+        var periods = new List<CashFlowForecastPeriod>(count);
+        var balance = openingCashBalance;
+        for (var index = 0; index < count; index++)
+        {
+            var periodStart = startDate.AddDays((long)index * daysPerPeriod);
+            var periodEnd = periodStart.AddDays(daysPerPeriod);
+            var totals = SumOccurrences(schedules, periodStart, periodEnd);
+            var net = totals.Income - totals.Expenses;
+            balance += net;
+            periods.Add(new CashFlowForecastPeriod(periodStart, periodEnd.AddDays(-1), totals.Income, totals.Expenses, net, balance));
+        }
+        return periods;
+    }
+
+    private static (decimal Income, decimal Expenses) SumOccurrences(
+        IEnumerable<RecurringCashFlow> schedules, DateTime periodStart, DateTime periodEndExclusive)
+    {
+        decimal income = 0m, expenses = 0m;
+        foreach (var schedule in schedules)
+        {
+            if (!schedule.IsActive || schedule.CurrencyCode != "USD"
+                || schedule.Type is not (TransactionType.Income or TransactionType.Expense))
+                continue;
+
+            var due = schedule.NextDueDate.Date;
+            while (due < periodStart && due < periodEndExclusive)
+                due = NextDate(due, schedule.Frequency);
+
+            while (due >= periodStart && due < periodEndExclusive
+                && (!schedule.EndDate.HasValue || due <= schedule.EndDate.Value.Date))
+            {
+                if (schedule.Type == TransactionType.Income) income += schedule.Amount;
+                else expenses += schedule.Amount;
+                due = NextDate(due, schedule.Frequency);
+            }
+        }
+        return (income, expenses);
     }
 
     private static DateTime NextDate(DateTime date, CashFlowFrequency frequency) => frequency switch
@@ -47,3 +91,4 @@ public sealed class CashFlowForecastService
 }
 
 public sealed record CashFlowForecastMonth(DateTime Month, decimal ExpectedIncome, decimal ExpectedExpenses, decimal NetCashFlow, decimal ProjectedEndingBalance);
+public sealed record CashFlowForecastPeriod(DateTime StartDate, DateTime EndDate, decimal ExpectedIncome, decimal ExpectedExpenses, decimal NetCashFlow, decimal ProjectedEndingBalance);
