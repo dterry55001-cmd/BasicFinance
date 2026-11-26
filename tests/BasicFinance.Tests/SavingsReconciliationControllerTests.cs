@@ -79,7 +79,7 @@ public sealed class SavingsReconciliationControllerTests
 
         var controller = new SavingsReconciliationController(
             database, new AccountBalanceService(database), new SavingsGoalService());
-        controller.TempData = new TempDataDictionary(new DefaultHttpContext(), new SessionStateTempDataProvider());
+        controller.TempData = new TempDataDictionary(new DefaultHttpContext(), new InMemoryTempDataProvider());
 
         var runResult = await controller.Run(goal.Id, new DateTime(2026, 11, 1), DateTime.Today,
             1125m, CancellationToken.None);
@@ -90,7 +90,7 @@ public sealed class SavingsReconciliationControllerTests
             .Include(x => x.Items).SingleAsync();
         Assert.Equal(1125m, session.CalculatedAccountBalance);
         Assert.Equal(0m, session.Difference);
-        var transactionItem = Assert.Single(session.Items.Where(x => x.TransactionId == transaction.Id));
+        var transactionItem = Assert.Single(session.Items, x => x.TransactionId == transaction.Id);
         Assert.Equal(SavingsReconciliationItemStatus.UnmatchedTransaction, transactionItem.Status);
 
         var matchResult = await controller.Match(session.Id, transaction.Id, contribution.Id, CancellationToken.None);
@@ -135,4 +135,11 @@ public sealed class SavingsReconciliationControllerTests
         Assert.IsType<RedirectToActionResult>(result);
         Assert.Empty(await database.SavingsReconciliationSessions.ToListAsync());
     }
+}
+
+
+internal sealed class InMemoryTempDataProvider : ITempDataProvider
+{
+    public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
+    public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
 }
