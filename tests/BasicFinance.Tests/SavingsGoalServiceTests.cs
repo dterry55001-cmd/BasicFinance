@@ -86,6 +86,34 @@ public sealed class SavingsGoalServiceTests
             new DateTime(2026, 11, 20), "USD"));
     }
 
+    [Theory]
+    [InlineData(SavingsScheduleFrequency.Weekly, 7)]
+    [InlineData(SavingsScheduleFrequency.Biweekly, 14)]
+    [InlineData(SavingsScheduleFrequency.Monthly, 31)]
+    [InlineData(SavingsScheduleFrequency.Quarterly, 92)]
+    [InlineData(SavingsScheduleFrequency.Yearly, 365)]
+    public void GetNextSavingsDueDate_AdvancesByConfiguredFrequency(SavingsScheduleFrequency frequency, int expectedDays)
+    {
+        var dueDate = new DateTime(2026, 1, 1);
+        var result = _service.GetNextSavingsDueDate(dueDate, frequency);
+
+        Assert.Equal(dueDate.AddDays(expectedDays), result);
+    }
+
+    [Fact]
+    public void CalculateAllocationAmount_RoundsToCents()
+    {
+        Assert.Equal(333.33m, _service.CalculateAllocationAmount(1000m, 33.333m));
+    }
+
+    [Fact]
+    public void IsAllocationTotalValid_PreventsAllocationsAboveOneHundredPercent()
+    {
+        Assert.True(_service.IsAllocationTotalValid(new[] { 30m, 20m }, 50m));
+        Assert.False(_service.IsAllocationTotalValid(new[] { 30m, 20m }, 50.01m));
+        Assert.False(_service.IsAllocationTotalValid(new[] { 30m }, 100.01m));
+    }
+
     [Fact]
     public void CalculateEmergencyFundCoverageMonths_UsesMonthlyEssentialExpenses()
     {
