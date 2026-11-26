@@ -201,4 +201,46 @@ public sealed class SavingsGoalServiceTests
 
         Assert.Equal(250m, result);
     }
+    [Theory]
+    [InlineData(2025, 1, 31, 2025, 2, 28)]
+    [InlineData(2024, 1, 31, 2024, 2, 29)]
+    [InlineData(2024, 2, 29, 2025, 2, 28)]
+    [InlineData(2024, 8, 31, 2024, 9, 30)]
+    public void GetNextSavingsDueDate_MonthlyAndYearlySchedulesClampToValidCalendarDay(
+        int year, int month, int day, int expectedYear, int expectedMonth, int expectedDay)
+    {
+        var frequency = month == 2 && day == 29 ? SavingsScheduleFrequency.Yearly : SavingsScheduleFrequency.Monthly;
+        var result = _service.GetNextSavingsDueDate(new DateTime(year, month, day), frequency);
+
+        Assert.Equal(new DateTime(expectedYear, expectedMonth, expectedDay), result);
+    }
+
+    [Fact]
+    public void GetNextSavingsDueDate_RejectsUndefinedFrequency()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            _service.GetNextSavingsDueDate(new DateTime(2026, 11, 26), (SavingsScheduleFrequency)999));
+    }
+
+    [Theory]
+    [InlineData(0, 1500, 0)]
+    [InlineData(-500, 1500, 0)]
+    [InlineData(4500, 1500, 3)]
+    [InlineData(10000, 2500, 4)]
+    public void CalculateEmergencyFundCoverageMonths_HandlesZeroAndNegativeBalances(
+        decimal currentAmount, decimal monthlyExpenses, decimal expectedMonths)
+    {
+        Assert.Equal(expectedMonths,
+            _service.CalculateEmergencyFundCoverageMonths(currentAmount, monthlyExpenses));
+    }
+
+    [Fact]
+    public void CalculateRequiredMonthlyContribution_RoundsUpToNearestCent()
+    {
+        var result = _service.CalculateRequiredMonthlyContribution(
+            100m, new DateTime(2027, 2, 1), new DateTime(2026, 11, 1));
+
+        Assert.Equal(33.34m, result);
+    }
+
 }
