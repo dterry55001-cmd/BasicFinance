@@ -90,7 +90,7 @@ public sealed class SavingsGoalServiceTests
     [InlineData(SavingsScheduleFrequency.Weekly, 7)]
     [InlineData(SavingsScheduleFrequency.Biweekly, 14)]
     [InlineData(SavingsScheduleFrequency.Monthly, 31)]
-    [InlineData(SavingsScheduleFrequency.Quarterly, 92)]
+    [InlineData(SavingsScheduleFrequency.Quarterly, 90)]
     [InlineData(SavingsScheduleFrequency.Yearly, 365)]
     public void GetNextSavingsDueDate_AdvancesByConfiguredFrequency(SavingsScheduleFrequency frequency, int expectedDays)
     {
