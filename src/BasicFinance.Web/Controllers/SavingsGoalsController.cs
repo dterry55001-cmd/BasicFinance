@@ -60,6 +60,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
     {
         if (string.IsNullOrWhiteSpace(name) || name.Length > 100)
             ModelState.AddModelError(nameof(name), "Enter a goal name of 100 characters or fewer.");
+        if (description?.Length > 500)
+            ModelState.AddModelError(nameof(description), "Description must be 500 characters or fewer.");
         if (targetAmount <= 0m || targetAmount > 999999999999m)
             ModelState.AddModelError(nameof(targetAmount), "Target amount must be greater than zero.");
         if (priority is < 1 or > 5)
@@ -104,9 +106,10 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             TempData["ErrorMessage"] = "Contributions can only be added to active goals.";
             return RedirectToAction(nameof(Index));
         }
-        if (amount <= 0m || amount > 999999999999m || !Enum.IsDefined(type))
+        if (amount <= 0m || amount > 999999999999m || !Enum.IsDefined(type)
+            || contributionDate.Date > DateTime.Today || notes?.Length > 300)
         {
-            TempData["ErrorMessage"] = "Enter a valid contribution amount and type.";
+            TempData["ErrorMessage"] = "Enter a valid amount, type, date, and notes (300 characters or fewer).";
             return RedirectToAction(nameof(Index));
         }
 
@@ -191,7 +194,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         CancellationToken cancellationToken)
     {
         if (monthlyEssentialExpenses <= 0m || monthlyEssentialExpenses > 999999999999m
-            || targetCoverageMonths is < 1 or > 24)
+            || targetCoverageMonths is < 1 or > 24
+            || monthlyEssentialExpenses * targetCoverageMonths > 999999999999m)
         {
             TempData["ErrorMessage"] = "Enter valid essential monthly expenses and a coverage target from 1 to 24 months.";
             return RedirectToAction(nameof(Index));
