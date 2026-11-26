@@ -37,6 +37,35 @@ public sealed class CashFlowForecastService
         return BuildPeriods(schedules, openingCashBalance, startDate.Date, weeks, 7);
     }
 
+    public IReadOnlyList<CashFlowActualVsForecastMonth> BuildActualVsForecast(
+        IEnumerable<RecurringCashFlow> schedules,
+        IEnumerable<FinancialTransaction> transactions,
+        DateTime startDate,
+        int months = 6)
+    {
+        if (months is < 1 or > 24) throw new ArgumentOutOfRangeException(nameof(months));
+        var firstMonth = new DateTime(startDate.Year, startDate.Month, 1);
+        var results = new List<CashFlowActualVsForecastMonth>(months);
+        for (var offset = 0; offset < months; offset++)
+        {
+            var monthStart = firstMonth.AddMonths(offset);
+            var monthEnd = monthStart.AddMonths(1);
+            var expected = SumOccurrences(schedules, monthStart, monthEnd);
+            var actualIncome = transactions
+                .Where(x => x.CurrencyCode == "USD" && x.TransactionDate >= monthStart && x.TransactionDate < monthEnd
+                    && x.Type is TransactionType.Income or TransactionType.Deposit)
+                .Sum(x => x.Amount);
+            var actualExpenses = transactions
+                .Where(x => x.CurrencyCode == "USD" && x.TransactionDate >= monthStart && x.TransactionDate < monthEnd
+                    && x.Type is TransactionType.Expense or TransactionType.Withdrawal)
+                .Sum(x => x.Amount);
+            results.Add(new CashFlowActualVsForecastMonth(
+                monthStart, expected.Income, actualIncome, actualIncome - expected.Income,
+                expected.Expenses, actualExpenses, actualExpenses - expected.Expenses));
+        }
+        return results;
+    }
+
     private static IReadOnlyList<CashFlowForecastPeriod> BuildPeriods(
         IEnumerable<RecurringCashFlow> schedules, decimal openingCashBalance, DateTime startDate, int count, int daysPerPeriod)
     {
@@ -92,3 +121,4 @@ public sealed class CashFlowForecastService
 
 public sealed record CashFlowForecastMonth(DateTime Month, decimal ExpectedIncome, decimal ExpectedExpenses, decimal NetCashFlow, decimal ProjectedEndingBalance);
 public sealed record CashFlowForecastPeriod(DateTime StartDate, DateTime EndDate, decimal ExpectedIncome, decimal ExpectedExpenses, decimal NetCashFlow, decimal ProjectedEndingBalance);
+\npublic sealed record CashFlowActualVsForecastMonth(DateTime Month, decimal ForecastIncome, decimal ActualIncome, decimal IncomeVariance, decimal ForecastExpenses, decimal ActualExpenses, decimal ExpenseVariance);\n
