@@ -34,10 +34,11 @@ public sealed class SavingsGoalService
     {
         if (transaction is null || amount <= 0m) return false;
 
-        var compatibleType = contributionType == SavingsContributionType.Contribution
-            ? transaction.Type is TransactionType.Income or TransactionType.Deposit
-            : contributionType == SavingsContributionType.Withdrawal
-                && transaction.Type is TransactionType.Expense or TransactionType.Withdrawal;
+        var compatibleType = transaction.Type == TransactionType.Transfer
+            || (contributionType == SavingsContributionType.Contribution
+                ? transaction.Type is TransactionType.Income or TransactionType.Deposit
+                : contributionType == SavingsContributionType.Withdrawal
+                    && transaction.Type is TransactionType.Expense or TransactionType.Withdrawal);
 
         return compatibleType
             && string.Equals(transaction.CurrencyCode, currencyCode, StringComparison.OrdinalIgnoreCase)
