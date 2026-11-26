@@ -9,8 +9,8 @@ The Savings module tracks personal savings goals independently from budget alloc
 - Contributions increase a goal's saved amount.
 - Withdrawals reduce the saved amount and cannot exceed the current saved balance.
 - Activity is recorded with a date and optional notes.
-- Archived and paused goals cannot receive new activity.
-- Completed goals can still record withdrawals; their status returns to Active if the saved balance falls below the target.
+- Goals can be edited, paused, resumed, or archived. Paused and archived goals cannot receive new activity.
+- Completed goals can still record contributions or withdrawals; their status returns to Active if the saved balance falls below the target.
 
 The contribution ledger is the source of truth for goal progress. The optional transaction relationship is reserved for transaction-linked tracking; manual contributions do not create or modify bank transactions.
 
@@ -19,6 +19,10 @@ The contribution ledger is the source of truth for goal progress. The optional t
 Progress is calculated as net contributions divided by the goal target, capped at 100%. The remaining amount cannot fall below zero.
 
 Estimated completion uses the average net contribution across the latest three calendar months. An estimate is not displayed until there is a positive average contribution rate.
+
+## Performance reporting
+
+The dashboard summarizes total saved amounts and target allocations, and reports monthly contributions, withdrawals, and net savings for the latest six calendar months.
 
 ## Monthly allocation targets
 
