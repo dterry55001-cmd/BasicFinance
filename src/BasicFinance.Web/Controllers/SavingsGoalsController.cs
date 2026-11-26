@@ -279,7 +279,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         DateTime startDate, DateTime? targetDate, int priority, CancellationToken cancellationToken)
     {
         var goal = await database.SavingsGoals.Include(x => x.Contributions)
-            .FirstOrDefaultAsync(x => x.Id == id && !x.IsEmergencyFund, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsEmergencyFund && x.Status != SavingsGoalStatus.Archived, cancellationToken);
         if (goal is null) return NotFound();
         if (string.IsNullOrWhiteSpace(name) || name.Length > 100 || description?.Length > 500
             || targetAmount <= 0m || targetAmount > 999999999999m || priority is < 1 or > 5
