@@ -226,7 +226,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             && x.CurrencyCode == "USD" && x.Status == SavingsGoalStatus.Active, cancellationToken);
         if (goal is null) return NotFound();
         if (amount <= 0m || amount > 999999999999m || !Enum.IsDefined(frequency)
-            || nextDueDate.Date < DateTime.Today
+            || nextDueDate.Date < DateTime.Today || nextDueDate.Date < goal.StartDate.Date
             || (endDate.HasValue && endDate.Value.Date < nextDueDate.Date))
         {
             TempData["ErrorMessage"] = "Enter a valid recurring amount, frequency, and due-date range.";
@@ -266,12 +266,22 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         }
 
         var goal = schedule.SavingsGoal;
+        if (await database.SavingsContributions.AnyAsync(x =>
+            x.RecurringSavingsContributionId == schedule.Id && x.ScheduledDueDate == schedule.NextDueDate.Date,
+            cancellationToken))
+        {
+            TempData["ErrorMessage"] = "This scheduled occurrence has already been recorded.";
+            return RedirectToAction(nameof(Index));
+        }
         var contribution = new SavingsContribution
         {
             SavingsGoalId = goal.Id,
             Amount = schedule.Amount,
             Type = SavingsContributionType.Contribution,
             ContributionDate = schedule.NextDueDate.Date,
+            RecurringSavingsContributionId = schedule.Id,
+            RecurringSavingsContribution = schedule,
+            ScheduledDueDate = schedule.NextDueDate.Date,
             Notes = $"Recurring schedule #{schedule.Id}",
             CreatedUtc = DateTime.UtcNow
         };
