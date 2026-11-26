@@ -1,0 +1,70 @@
+@model BasicFinance.Web.Controllers.SavingsNotificationsViewModel
+@{
+    ViewData["Title"] = "Savings notifications";
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">SAVINGS</p>
+        <h1>Notifications</h1>
+        <p class="page-description">Upcoming and missed contribution reminders, goal milestones, emergency fund coverage warnings, and monthly allocation reviews.</p>
+    </div>
+</section>
+@if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="notice notice-error" role="alert">@error</div> }
+<div class="alert alert-info" role="note">
+    Alerts are generated and saved when this page is opened. Repeated alerts are deduplicated. These are in-app notifications, not email, SMS, or push messages. Reminders never create contributions or transfer funds.
+    Generated: @(((DateTime)ViewBag.GeneratedAt).ToString("MMM d, yyyy h:mm tt"))
+</div>
+
+<section class="table-card">
+    <div class="section-heading"><div><h2>Notification preferences</h2><p>Choose which savings events appear in your notification history.</p></div></div>
+    <form asp-action="SavePreferences" method="post" class="form-grid">
+        @Html.AntiForgeryToken()
+        <label class="checkbox-label"><input type="checkbox" name="upcomingContributionRemindersEnabled" value="true" checked="@Model.Preferences.UpcomingContributionRemindersEnabled" /> Upcoming contribution reminders</label>
+        <label class="checkbox-label"><input type="checkbox" name="missedContributionAlertsEnabled" value="true" checked="@Model.Preferences.MissedContributionAlertsEnabled" /> Missed contribution alerts</label>
+        <label class="checkbox-label"><input type="checkbox" name="milestoneNotificationsEnabled" value="true" checked="@Model.Preferences.MilestoneNotificationsEnabled" /> Savings milestone notifications</label>
+        <label class="checkbox-label"><input type="checkbox" name="emergencyFundWarningsEnabled" value="true" checked="@Model.Preferences.EmergencyFundWarningsEnabled" /> Emergency fund coverage warnings</label>
+        <label class="checkbox-label"><input type="checkbox" name="monthlyAllocationReviewsEnabled" value="true" checked="@Model.Preferences.MonthlyAllocationReviewsEnabled" /> Monthly allocation reviews</label>
+        <label>Upcoming reminder window (days) <input type="number" name="upcomingReminderDays" min="0" max="30" value="@Model.Preferences.UpcomingReminderDays" required /></label>
+        <label>Emergency fund warning threshold (months) <input type="number" name="emergencyFundWarningMonths" min="0.5" max="24" step="0.5" value="@Model.Preferences.EmergencyFundWarningMonths.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)" required /></label>
+        <div class="form-actions"><button class="button button-primary" type="submit">Save preferences</button></div>
+    </form>
+</section>
+
+<section class="section-block">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Notification history (@ViewBag.UnreadCount unread)</h2>
+        @if (ViewBag.UnreadCount > 0)
+        {
+            <form asp-action="MarkAllRead" method="post">@Html.AntiForgeryToken()<button class="button button-secondary" type="submit">Mark all read</button></form>
+        }
+    </div>
+    @if (!Model.Notifications.Any())
+    {
+        <div class="form-card"><p>No savings notifications currently require attention.</p></div>
+    }
+    else
+    {
+        <div class="table-card"><div class="table-scroll"><table>
+            <thead><tr><th>Status</th><th>Level</th><th>Category</th><th>Notification</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var item in Model.Notifications)
+            {
+                <tr>
+                    <td>@(item.IsRead ? "Read" : "Unread")</td>
+                    <td><strong>@item.Level</strong></td>
+                    <td>@item.Category</td>
+                    <td>@item.Message</td>
+                    <td>@item.EventDate.ToString("MMM d, yyyy")</td>
+                    <td>
+                        @if (!item.IsRead)
+                        {
+                            <form asp-action="MarkRead" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.Id" /><button class="button button-secondary" type="submit">Mark read</button></form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table></div></div>
+    }
+</section>
