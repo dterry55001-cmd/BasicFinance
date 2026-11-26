@@ -12,7 +12,7 @@ The Savings module tracks personal savings goals independently from budget alloc
 - Goals can be edited, paused, resumed, or archived. Paused and archived goals cannot receive new activity.
 - Completed goals can still record contributions or withdrawals; their status returns to Active if the saved balance falls below the target.
 
-The contribution ledger is the source of truth for goal progress. The optional transaction relationship is reserved for transaction-linked tracking; manual contributions do not create or modify bank transactions.
+The contribution ledger is the source of truth for goal progress. Each entry may optionally link to one existing financial transaction. Linked transactions must be unlinked, use the same currency, match the amount and date, and have a compatible type (income/deposit for contributions; expense/withdrawal for withdrawals). A transaction can be linked to only one savings entry. Manual entries do not create or modify bank transactions or account balances.
 
 ## Progress and estimates
 
@@ -48,4 +48,4 @@ Milestones are recorded once at 25%, 50%, 75%, and 100% of the goal target. Reac
 - `SavingsGoalMilestones`: achieved milestone history.
 - `EmergencyFundPlans`: essential expense and coverage assumptions.
 
-All amounts are currently USD. Savings activity is not automatically synchronized to account balances; transaction-linked contribution workflows can be added without changing the ledger's source-of-truth design.
+All amounts are currently USD. Transaction links provide traceability only; they do not automatically synchronize savings ledger entries with account balances. Users remain responsible for recording the underlying financial transaction separately.
