@@ -27,10 +27,33 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             .Where(x => x.CurrencyCode == "USD"
                 && x.TransactionDate <= today
                 && (x.Type == TransactionType.Income || x.Type == TransactionType.Deposit
-                    || x.Type == TransactionType.Expense || x.Type == TransactionType.Withdrawal)
+                    || x.Type == TransactionType.Expense || x.Type == TransactionType.Withdrawal
+                    || x.Type == TransactionType.Transfer)
                 && !database.SavingsContributions.Any(contribution => contribution.TransactionId == x.Id))
             .OrderByDescending(x => x.TransactionDate).ThenByDescending(x => x.Id)
             .Take(100).ToListAsync(cancellationToken);
+        var matchingSuggestions = goals
+            .SelectMany(goal => goal.Contributions.Where(contribution => !contribution.TransactionId.HasValue)
+                .SelectMany(contribution => availableTransactions
+                    .Where(transaction => savingsService.IsCompatibleTransaction(
+                        transaction, contribution.Type, contribution.Amount, contribution.ContributionDate,
+                        goal.CurrencyCode, goal.LinkedAccountId))
+                    .Select(transaction => new SavingsTransactionMatchSuggestionViewModel
+                    {
+                        GoalId = goal.Id,
+                        GoalName = goal.Name,
+                        ContributionId = contribution.Id,
+                        ContributionType = contribution.Type,
+                        ContributionAmount = contribution.Amount,
+                        ContributionDate = contribution.ContributionDate,
+                        TransactionId = transaction.Id,
+                        TransactionDescription = transaction.Description,
+                        TransactionType = transaction.Type,
+                        TransactionAmount = transaction.Amount,
+                        TransactionDate = transaction.TransactionDate
+                    })))
+            .OrderByDescending(x => x.TransactionDate).ThenBy(x => x.GoalName)
+            .Take(100).ToList();
         var cards = goals.Select(goal =>
         {
             var progress = savingsService.CalculateProgress(goal, today);
@@ -108,6 +131,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             TotalMonthlyTargets = cards.Sum(x => x.MonthlyTarget),
             MonthlyPerformance = monthlyPerformance,
             AvailableTransactions = availableTransactions,
+            MatchingSuggestions = matchingSuggestions,
             AllocationBudget = allocationBudget,
             TotalAllocationPercent = cards.Sum(x => x.AllocationPercent),
             TotalPlannedAllocation = cards.Sum(x => x.PlannedAllocation),
@@ -179,7 +203,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         if (transactionId.HasValue)
         {
             linkedTransaction = await database.Transactions.FirstOrDefaultAsync(x => x.Id == transactionId.Value, cancellationToken);
-            if (!savingsService.IsCompatibleTransaction(linkedTransaction, type, amount, contributionDate, goal.CurrencyCode)
+            if (!savingsService.IsCompatibleTransaction(linkedTransaction, type, amount, contributionDate, goal.CurrencyCode, goal.LinkedAccountId)
                 || await database.SavingsContributions.AnyAsync(x => x.TransactionId == transactionId.Value, cancellationToken))
             {
                 TempData["ErrorMessage"] = "The selected transaction must be unlinked, match the contribution type, amount, date, and currency.";
@@ -235,6 +259,33 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         TempData["SuccessMessage"] = reachedMilestones.Count > 0
             ? $"{activityMessage} Milestones achieved: {string.Join(", ", reachedMilestones)}%."
             : activityMessage;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> LinkExistingTransaction(
+        int contributionId, int transactionId, CancellationToken cancellationToken)
+    {
+        var contribution = await database.SavingsContributions
+            .Include(x => x.SavingsGoal)
+            .FirstOrDefaultAsync(x => x.Id == contributionId, cancellationToken);
+        if (contribution is null) return NotFound();
+
+        var transaction = await database.Transactions
+            .FirstOrDefaultAsync(x => x.Id == transactionId, cancellationToken);
+        if (contribution.TransactionId.HasValue || transaction is null
+            || !savingsService.IsCompatibleTransaction(transaction, contribution.Type,
+                contribution.Amount, contribution.ContributionDate, contribution.SavingsGoal.CurrencyCode,
+                contribution.SavingsGoal.LinkedAccountId)
+            || await database.SavingsContributions.AnyAsync(x => x.TransactionId == transactionId, cancellationToken))
+        {
+            TempData["ErrorMessage"] = "The suggested transaction is no longer available or does not match the savings entry's account, direction, amount, date, and currency.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        contribution.TransactionId = transaction.Id;
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Existing transaction linked to the savings entry. No financial transaction was created or changed.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -590,6 +641,7 @@ public sealed class SavingsGoalsIndexViewModel
     public decimal TotalMonthlyTargets { get; set; }
     public List<SavingsMonthlyPerformanceViewModel> MonthlyPerformance { get; set; } = [];
     public List<FinancialTransaction> AvailableTransactions { get; set; } = [];
+    public List<SavingsTransactionMatchSuggestionViewModel> MatchingSuggestions { get; set; } = [];
     public SavingsAllocationBudget? AllocationBudget { get; set; }
     public decimal TotalAllocationPercent { get; set; }
     public decimal TotalPlannedAllocation { get; set; }
@@ -624,4 +676,20 @@ public sealed class SavingsFundingRecommendationViewModel
     public decimal RequiredMonthlyContribution { get; set; }
     public decimal PlannedMonthlyAllocation { get; set; }
     public decimal AdditionalMonthlyAmountNeeded { get; set; }
+}
+
+
+public sealed class SavingsTransactionMatchSuggestionViewModel
+{
+    public int GoalId { get; set; }
+    public string GoalName { get; set; } = string.Empty;
+    public int ContributionId { get; set; }
+    public SavingsContributionType ContributionType { get; set; }
+    public decimal ContributionAmount { get; set; }
+    public DateTime ContributionDate { get; set; }
+    public int TransactionId { get; set; }
+    public string TransactionDescription { get; set; } = string.Empty;
+    public TransactionType TransactionType { get; set; }
+    public decimal TransactionAmount { get; set; }
+    public DateTime TransactionDate { get; set; }
 }
