@@ -107,7 +107,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             return RedirectToAction(nameof(Index));
         }
         if (amount <= 0m || amount > 999999999999m || !Enum.IsDefined(type)
-            || contributionDate.Date > DateTime.Today || notes?.Length > 300)
+            || contributionDate.Date > DateTime.Today || contributionDate.Date < goal.StartDate.Date
+            || notes?.Length > 300)
         {
             TempData["ErrorMessage"] = "Enter a valid amount, type, date, and notes (300 characters or fewer).";
             return RedirectToAction(nameof(Index));
@@ -134,6 +135,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         goal.UpdatedUtc = DateTime.UtcNow;
 
         var updatedProgress = savingsService.CalculateProgress(goal, DateTime.Today);
+        var reachedMilestones = new List<int>();
         foreach (var milestone in new[] { 25, 50, 75, 100 })
         {
             if (updatedProgress.CurrentAmount >= goal.TargetAmount * milestone / 100m
@@ -145,15 +147,19 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                     MilestonePercent = milestone,
                     AchievedUtc = DateTime.UtcNow
                 });
+                reachedMilestones.Add(milestone);
             }
         }
         if (updatedProgress.CurrentAmount >= goal.TargetAmount)
             goal.Status = SavingsGoalStatus.Completed;
 
         await database.SaveChangesAsync(cancellationToken);
-        TempData["SuccessMessage"] = type == SavingsContributionType.Withdrawal
+        var activityMessage = type == SavingsContributionType.Withdrawal
             ? "Savings withdrawal recorded."
             : "Savings contribution recorded.";
+        TempData["SuccessMessage"] = reachedMilestones.Count > 0
+            ? $"{activityMessage} Milestones achieved: {string.Join(", ", reachedMilestones)}%."
+            : activityMessage;
         return RedirectToAction(nameof(Index));
     }
 
@@ -211,7 +217,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         plan.TargetCoverageMonths = targetCoverageMonths;
         plan.UpdatedUtc = DateTime.UtcNow;
 
-        var emergencyGoal = await database.SavingsGoals.FirstOrDefaultAsync(x => x.IsEmergencyFund, cancellationToken);
+        var emergencyGoal = await database.SavingsGoals.Include(x => x.Contributions)
+            .FirstOrDefaultAsync(x => x.IsEmergencyFund, cancellationToken);
         var targetAmount = monthlyEssentialExpenses * targetCoverageMonths;
         if (emergencyGoal is null)
         {
@@ -236,6 +243,11 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             emergencyGoal.Status = SavingsGoalStatus.Active;
             emergencyGoal.UpdatedUtc = DateTime.UtcNow;
         }
+
+        var emergencyProgress = savingsService.CalculateProgress(emergencyGoal, DateTime.Today);
+        emergencyGoal.Status = emergencyProgress.CurrentAmount >= targetAmount
+            ? SavingsGoalStatus.Completed : SavingsGoalStatus.Active;
+        emergencyGoal.UpdatedUtc = DateTime.UtcNow;
 
         await database.SaveChangesAsync(cancellationToken);
         TempData["SuccessMessage"] = "Emergency fund plan updated.";
