@@ -9,7 +9,8 @@ namespace BasicFinance.Web.Controllers;
 public sealed class SavingsReconciliationController(
     ApplicationDbContext database,
     AccountBalanceService accountBalances,
-    SavingsGoalService savingsService) : Controller
+    SavingsGoalService savingsService,
+    SavingsNotificationService notificationService) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -199,6 +200,10 @@ public sealed class SavingsReconciliationController(
         session.PotentialDuplicateCount = session.Items.Count(x => x.Status == SavingsReconciliationItemStatus.PotentialDuplicate);
         database.SavingsReconciliationSessions.Add(session);
         await database.SaveChangesAsync(cancellationToken);
+        await notificationService.CreateReconciliationExceptionAlertAsync(
+            session.Id, goal.Name, session.PeriodEnd,
+            session.UnmatchedTransactionCount, session.UnmatchedContributionCount,
+            session.PotentialDuplicateCount, cancellationToken);
 
         TempData["SuccessMessage"] = $"Reconciliation completed. {session.MatchedCount} matched, {session.UnmatchedTransactionCount} unmatched transactions, {session.UnmatchedContributionCount} unmatched savings entries, and {session.PotentialDuplicateCount} potential duplicates.";
         return RedirectToAction(nameof(Details), new { id = session.Id });
