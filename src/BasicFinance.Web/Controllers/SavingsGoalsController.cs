@@ -101,9 +101,9 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             .Include(x => x.Milestones)
             .FirstOrDefaultAsync(x => x.Id == goalId && x.CurrencyCode == "USD", cancellationToken);
         if (goal is null) return NotFound();
-        if (goal.Status != SavingsGoalStatus.Active)
+        if (goal.Status is SavingsGoalStatus.Paused or SavingsGoalStatus.Archived)
         {
-            TempData["ErrorMessage"] = "Contributions can only be added to active goals.";
+            TempData["ErrorMessage"] = "Savings activity cannot be recorded for paused or archived goals.";
             return RedirectToAction(nameof(Index));
         }
         if (amount <= 0m || amount > 999999999999m || !Enum.IsDefined(type)
@@ -150,8 +150,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                 reachedMilestones.Add(milestone);
             }
         }
-        if (updatedProgress.CurrentAmount >= goal.TargetAmount)
-            goal.Status = SavingsGoalStatus.Completed;
+        goal.Status = updatedProgress.CurrentAmount >= goal.TargetAmount
+            ? SavingsGoalStatus.Completed : SavingsGoalStatus.Active;
 
         await database.SaveChangesAsync(cancellationToken);
         var activityMessage = type == SavingsContributionType.Withdrawal
