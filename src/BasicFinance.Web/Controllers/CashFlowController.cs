@@ -51,6 +51,8 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
         var forecast = forecastService.BuildForecast(schedules, openingCash, DateTime.Today, months);
         var dailyForecast = forecastService.BuildDailyForecast(schedules, openingCash, DateTime.Today, days);
         var weeklyForecast = forecastService.BuildWeeklyForecast(schedules, openingCash, DateTime.Today, weeks);
+        var actualVsForecast = forecastService.BuildActualVsForecast(
+            schedules, transactions, DateTime.Today.AddMonths(-6), 6);
         var preference = await database.CashFlowAlertPreferences.FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
         var lowBalanceThreshold = preference?.LowBalanceThreshold ?? 250m;
         var projectedBalances = dailyForecast.Select(x => x.ProjectedEndingBalance)
@@ -106,6 +108,7 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
             Forecast = forecast,
             DailyForecast = dailyForecast,
             WeeklyForecast = weeklyForecast,
+            ActualVsForecast = actualVsForecast,
             Schedules = schedules,
             Accounts = accounts.Select(x => new SelectListItem(x.Name, x.Id.ToString())).ToList()
         };
@@ -204,6 +207,7 @@ public sealed class CashFlowIndexViewModel
     public IReadOnlyList<CashFlowForecastMonth> Forecast { get; set; } = [];
     public IReadOnlyList<CashFlowForecastPeriod> DailyForecast { get; set; } = [];
     public IReadOnlyList<CashFlowForecastPeriod> WeeklyForecast { get; set; } = [];
+    public IReadOnlyList<CashFlowActualVsForecastMonth> ActualVsForecast { get; set; } = [];
     public List<RecurringCashFlow> Schedules { get; set; } = [];
     public List<SelectListItem> Accounts { get; set; } = [];
     public int ScheduleAccountId { get; set; }
