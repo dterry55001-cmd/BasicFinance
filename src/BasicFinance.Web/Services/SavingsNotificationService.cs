@@ -45,7 +45,7 @@ public sealed class SavingsNotificationService(
             NotificationKey = key,
             Level = "Warning",
             Category = "Reconciliation exceptions",
-            Message = $"{goalName}: reconciliation found {unmatchedTransactions} unmatched transaction(s), {unmatchedContributions} unmatched savings entry/entries, and {potentialDuplicates} potential duplicate(s). Review the saved reconciliation session.",
+            Message = $"Reconciliation session #{sessionId} for {goalName}: {unmatchedTransactions} unmatched transaction(s), {unmatchedContributions} unmatched savings entry/entries, and {potentialDuplicates} potential duplicate(s). Review this session in reconciliation history.",
             EventDate = periodEnd.Date,
             CreatedUtc = DateTime.UtcNow
         });
