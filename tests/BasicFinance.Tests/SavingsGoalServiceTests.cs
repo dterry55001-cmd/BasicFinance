@@ -243,4 +243,27 @@ public sealed class SavingsGoalServiceTests
         Assert.Equal(33.34m, result);
     }
 
+    [Fact]
+    public void BuildEmergencyFundReadiness_CalculatesOneThreeSixAndTwelveMonthGaps()
+    {
+        var result = _service.BuildEmergencyFundReadiness(3000m, 1500m);
+
+        Assert.Equal(new[] { 1, 3, 6, 12 }, result.Select(x => x.CoverageMonths));
+        Assert.Equal(new[] { 1500m, 4500m, 9000m, 18000m }, result.Select(x => x.TargetAmount));
+        Assert.Equal(new[] { 0m, 1500m, 6000m, 15000m }, result.Select(x => x.FundingGap));
+        Assert.Equal(new[] { 0m, 125m, 500m, 1250m }, result.Select(x => x.SuggestedMonthlyContribution));
+        Assert.Equal(new[] { true, false, false, false }, result.Select(x => x.IsFunded));
+    }
+
+    [Fact]
+    public void BuildEmergencyFundReadiness_HandlesNoExpensesAndNegativeBalance()
+    {
+        var noExpenses = _service.BuildEmergencyFundReadiness(500m, 0m);
+        Assert.All(noExpenses, tier => Assert.True(tier.IsFunded));
+        Assert.All(noExpenses, tier => Assert.Equal(0m, tier.TargetAmount));
+
+        var negativeBalance = _service.BuildEmergencyFundReadiness(-100m, 1000m);
+        Assert.All(negativeBalance, tier => Assert.Equal(tier.TargetAmount, tier.FundingGap));
+    }
+
 }
