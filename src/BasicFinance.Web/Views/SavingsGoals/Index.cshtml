@@ -103,7 +103,7 @@
                         <input type="hidden" name="goalId" value="@goal.Id" />
                         <input type="hidden" name="year" value="@today.Year" />
                         <input type="hidden" name="month" value="@today.Month" />
-                        <label>This month's target <input name="targetAmount" type="number" min="0.01" max="999999999999" step="0.01" value="@(card.MonthlyTarget > 0m ? card.MonthlyTarget : "")" required /></label>
+                        <label>This month's target <input name="targetAmount" type="number" min="0.01" max="999999999999" step="0.01" value="@(card.MonthlyTarget > 0m ? card.MonthlyTarget.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "")" required /></label>
                         <div class="form-actions"><button class="button button-secondary" type="submit">Save monthly target</button></div>
                     </form>
                     <div class="savings-monthly-progress"><span>This month: @card.MonthlyContributed.ToString("C") contributed</span><strong>@card.MonthlyRemaining.ToString("C") remaining to target</strong></div>
