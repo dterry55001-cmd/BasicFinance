@@ -137,6 +137,30 @@
                         </tbody></table></div>
                     </details>
                 }
+                @if (!goal.IsEmergencyFund)
+                {
+                    <details class="savings-history"><summary>Edit goal details</summary>
+                        <form asp-action="UpdateGoal" method="post" class="form-grid savings-edit-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@goal.Id" />
+                            <label>Goal name <input name="name" maxlength="100" value="@goal.Name" required /></label>
+                            <label>Target amount <input name="targetAmount" type="number" min="0.01" max="999999999999" step="0.01" value="@goal.TargetAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" required /></label>
+                            <label>Start date <input name="startDate" type="date" value="@goal.StartDate.ToString("yyyy-MM-dd")" required /></label>
+                            <label>Target date <input name="targetDate" type="date" value="@(goal.TargetDate?.ToString("yyyy-MM-dd") ?? "")" /></label>
+                            <label>Priority <select name="priority">@for (var priority = 1; priority <= 5; priority++) { <option value="@priority" selected="@(priority == goal.Priority)">@priority</option> }</select></label>
+                            <label>Description <input name="description" maxlength="500" value="@goal.Description" /></label>
+                            <div class="form-actions"><button class="button button-secondary" type="submit">Update goal</button></div>
+                        </form>
+                    </details>
+                    @if (goal.Status == SavingsGoalStatus.Active)
+                    {
+                        <form asp-action="PauseGoal" method="post" class="savings-archive-form">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@goal.Id" /><button class="button button-secondary" type="submit">Pause goal</button></form>
+                    }
+                    else if (goal.Status == SavingsGoalStatus.Paused)
+                    {
+                        <form asp-action="ResumeGoal" method="post" class="savings-archive-form">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@goal.Id" /><button class="button button-secondary" type="submit">Resume goal</button></form>
+                    }
+                }
                 @if (!goal.IsEmergencyFund && goal.Status != SavingsGoalStatus.Archived)
                 {
                     <form asp-action="ArchiveGoal" method="post" class="savings-archive-form">
