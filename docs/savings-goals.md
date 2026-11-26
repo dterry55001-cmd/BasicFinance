@@ -131,3 +131,10 @@ The Savings dashboard proposes one-to-one exact matches between unlinked savings
 Suggestions are displayed only when each transaction has exactly one candidate savings entry and each savings entry has exactly one candidate transaction. Ambiguous candidates are withheld from the quick-link list and can be investigated through account reconciliation. Users explicitly confirm a suggested link. The application does not automatically link, create, or change transactions.
 
 When a reconciliation session contains unmatched transactions, unmatched savings entries, or potential duplicates, the application creates a persistent in-app reconciliation exception alert. The alert message includes the reconciliation session number so the user can find it in reconciliation history. Alerts are deduplicated by session identity. A reconciliation with no exceptions does not create an exception alert.
+
+
+### Recurring contribution transaction detection
+
+For due recurring schedules, the dashboard checks the latest 100 unlinked USD transactions for an exact match on amount, scheduled due date, currency, and contribution direction. When a goal has a linked account, an incoming transfer to that account or an income/deposit on that account can be suggested. A suggestion is shown only when one transaction maps to one due schedule and that schedule maps to one transaction. Transactions already proposed for an existing savings ledger entry are excluded from schedule suggestions to avoid duplicate use.
+
+The user confirms the scheduled contribution. If a suggested transaction is included, the contribution is linked to that existing transaction and the schedule occurrence is recorded using its scheduled due date as the idempotency key. No new bank transaction is created and no transfer is initiated. If no exact unambiguous transaction is found, the user can still confirm the scheduled savings ledger entry manually. This check currently uses an exact date match; transactions posted on a different date require manual review or account reconciliation.
