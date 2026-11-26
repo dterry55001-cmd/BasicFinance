@@ -207,7 +207,12 @@
                             <label>Link existing transaction (optional)
                                 <select name="transactionId">
                                     <option value="">No transaction link</option>
-                                    @foreach (var transaction in Model.AvailableTransactions)
+                                    @foreach (var transaction in Model.AvailableTransactions.Where(transaction =>
+                                        goal.LinkedAccountId.HasValue
+                                            ? transaction.Type == TransactionType.Transfer
+                                                ? transaction.AccountId == goal.LinkedAccountId.Value || transaction.RelatedAccountId == goal.LinkedAccountId.Value
+                                                : transaction.AccountId == goal.LinkedAccountId.Value
+                                            : transaction.Type != TransactionType.Transfer))
                                     {
                                         <option value="@transaction.Id">@transaction.TransactionDate.ToString("d") · @transaction.Type · @transaction.Description · @transaction.Amount.ToString("C")</option>
                                     }
