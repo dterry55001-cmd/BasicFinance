@@ -9,7 +9,10 @@
         <p class="eyebrow">FINANCIAL PLANNING</p>
         <h1>Savings Goals</h1>
         <p class="page-description">Build savings habits, track goal progress, and plan your emergency reserve.</p>
-        <p><a class="button button-secondary" asp-controller="SavingsReports" asp-action="Index">Open savings reports</a></p>
+        <p>
+            <a class="button button-secondary" asp-controller="SavingsReports" asp-action="Index">Open savings reports</a>
+            <a class="button button-secondary" asp-controller="SavingsReconciliation" asp-action="Index">Reconcile accounts</a>
+        </p>
     </div>
 </section>
 @if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
