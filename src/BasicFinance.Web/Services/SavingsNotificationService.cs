@@ -22,6 +22,46 @@ public sealed class SavingsNotificationService(
         return preferences;
     }
 
+
+    public async Task CreateReconciliationExceptionAlertAsync(
+        int sessionId,
+        string goalName,
+        DateTime periodEnd,
+        int unmatchedTransactions,
+        int unmatchedContributions,
+        int potentialDuplicates,
+        CancellationToken cancellationToken = default)
+    {
+        var exceptionCount = unmatchedTransactions + unmatchedContributions + potentialDuplicates;
+        if (exceptionCount == 0) return;
+
+        var rawKey = $"reconciliation-exceptions:{sessionId}";
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawKey)));
+        if (await database.SavingsNotifications.AnyAsync(x => x.NotificationKey == key, cancellationToken))
+            return;
+
+        database.SavingsNotifications.Add(new SavingsNotification
+        {
+            NotificationKey = key,
+            Level = "Warning",
+            Category = "Reconciliation exceptions",
+            Message = $"{goalName}: reconciliation found {unmatchedTransactions} unmatched transaction(s), {unmatchedContributions} unmatched savings entry/entries, and {potentialDuplicates} potential duplicate(s). Review the saved reconciliation session.",
+            EventDate = periodEnd.Date,
+            CreatedUtc = DateTime.UtcNow
+        });
+
+        try
+        {
+            await database.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            foreach (var entry in database.ChangeTracker.Entries<SavingsNotification>()
+                .Where(x => x.State == EntityState.Added).ToList())
+                entry.State = EntityState.Detached;
+        }
+    }
+
     public async Task<int> GenerateAsync(DateTime referenceDate, CancellationToken cancellationToken = default)
     {
         var preferences = await GetPreferencesAsync(cancellationToken);
