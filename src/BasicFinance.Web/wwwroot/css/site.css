@@ -240,3 +240,35 @@ body:has(.debt-notifications-page) .table-scroll td {
 .filter-bar select { min-height: 2.55rem; min-width: 7rem; padding: .45rem .65rem; border: 1px solid #cbd5e1; border-radius: .45rem; background: #fff; color: var(--ink); font: inherit; }
 .filter-bar select:focus { outline: 3px solid #dbeafe; border-color: var(--accent); }
 @media (max-width: 560px) { .filter-bar { align-items: stretch; flex-direction: column; } .filter-bar label, .filter-bar select, .filter-bar button { width: 100%; } }
+
+
+/* Savings goals and emergency fund planning */
+.savings-emergency-card, .savings-goal-card { padding: 1.35rem; margin-bottom: 1rem; }
+.savings-goal-card h2, .savings-emergency-card h2 { margin: 0; font-size: 1.2rem; }
+.savings-goal-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.savings-goal-heading .page-description { margin-top: .35rem; }
+.savings-goal-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin: 1.2rem 0 .85rem; }
+.savings-goal-stats span { display: block; color: var(--muted); font-size: .78rem; }
+.savings-goal-stats strong { display: block; margin-top: .25rem; font-size: 1.1rem; }
+.savings-progress-track { height: .7rem; overflow: hidden; border-radius: 99px; background: #e9eef5; }
+.savings-progress-fill { height: 100%; border-radius: inherit; background: #347b58; transition: width .2s ease; }
+.savings-goal-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; margin: .75rem 0 1.25rem; color: var(--muted); font-size: .82rem; }
+.savings-goal-actions { display: grid; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.savings-goal-actions form { margin: 0; }
+.savings-goal-actions .form-grid, .savings-plan-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.savings-monthly-progress { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .7rem .85rem; border-radius: .5rem; background: #f6f8fb; color: var(--muted); font-size: .84rem; }
+.savings-monthly-progress strong { color: var(--ink); }
+.savings-milestones { margin-top: 1rem; color: #315c91; font-size: .85rem; }
+.savings-history { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+.savings-history summary { color: var(--accent); font-size: .88rem; font-weight: 650; cursor: pointer; }
+.savings-archive-form { margin-top: 1rem; text-align: right; }
+.savings-emergency-card .summary-grid { margin: 1rem 0; }
+.savings-emergency-card .summary-card strong { font-size: 1.25rem; }
+@media (max-width: 720px) {
+    .savings-goal-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .savings-goal-actions .form-grid, .savings-plan-form { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+    .savings-goal-heading { flex-direction: column; }
+    .savings-monthly-progress { flex-direction: column; }
+}
