@@ -44,6 +44,48 @@ public sealed class SavingsGoalServiceTests
         Assert.Null(result.EstimatedCompletionDate);
     }
 
+    [Theory]
+    [InlineData(TransactionType.Income, SavingsContributionType.Contribution)]
+    [InlineData(TransactionType.Deposit, SavingsContributionType.Contribution)]
+    [InlineData(TransactionType.Expense, SavingsContributionType.Withdrawal)]
+    [InlineData(TransactionType.Withdrawal, SavingsContributionType.Withdrawal)]
+    public void IsCompatibleTransaction_AcceptsMatchingTransactionTypes(TransactionType transactionType, SavingsContributionType contributionType)
+    {
+        var transaction = new FinancialTransaction
+        {
+            Type = transactionType,
+            Amount = 125m,
+            CurrencyCode = "USD",
+            TransactionDate = new DateTime(2026, 11, 20)
+        };
+
+        Assert.True(_service.IsCompatibleTransaction(transaction, contributionType, 125m,
+            new DateTime(2026, 11, 20), "USD"));
+    }
+
+    [Fact]
+    public void IsCompatibleTransaction_RejectsMismatchedAmountDateCurrencyAndType()
+    {
+        var transaction = new FinancialTransaction
+        {
+            Type = TransactionType.Expense,
+            Amount = 125m,
+            CurrencyCode = "USD",
+            TransactionDate = new DateTime(2026, 11, 20)
+        };
+
+        Assert.False(_service.IsCompatibleTransaction(transaction, SavingsContributionType.Contribution, 125m,
+            new DateTime(2026, 11, 20), "USD"));
+        Assert.False(_service.IsCompatibleTransaction(transaction, SavingsContributionType.Withdrawal, 124m,
+            new DateTime(2026, 11, 20), "USD"));
+        Assert.False(_service.IsCompatibleTransaction(transaction, SavingsContributionType.Withdrawal, 125m,
+            new DateTime(2026, 11, 21), "USD"));
+        Assert.False(_service.IsCompatibleTransaction(transaction, SavingsContributionType.Withdrawal, 125m,
+            new DateTime(2026, 11, 20), "EUR"));
+        Assert.False(_service.IsCompatibleTransaction(null, SavingsContributionType.Withdrawal, 125m,
+            new DateTime(2026, 11, 20), "USD"));
+    }
+
     [Fact]
     public void CalculateEmergencyFundCoverageMonths_UsesMonthlyEssentialExpenses()
     {
