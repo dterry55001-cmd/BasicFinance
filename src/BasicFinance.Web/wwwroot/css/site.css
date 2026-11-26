@@ -272,3 +272,14 @@ body:has(.debt-notifications-page) .table-scroll td {
     .savings-goal-heading { flex-direction: column; }
     .savings-monthly-progress { flex-direction: column; }
 }
+
+
+/* Savings analytics charts */
+.savings-planned-key { background: #8b9bb0; }
+.savings-planned-bar { background: #8b9bb0; }
+.savings-report-chart { margin-top: 1.25rem; }
+.savings-report-chart .forecast-chart-row { grid-template-columns: 4.5rem minmax(8rem, 1fr) minmax(9rem, .55fr); }
+@media (max-width: 640px) {
+    .savings-report-chart .forecast-chart-row { grid-template-columns: 3.5rem minmax(5rem, 1fr); }
+    .savings-report-chart .forecast-chart-balance { grid-column: 2; }
+}
