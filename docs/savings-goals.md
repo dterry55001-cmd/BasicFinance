@@ -72,3 +72,21 @@ The planner displays allocated percentages, planned amounts, and unallocated bud
 ### Funding recommendations
 
 For active goals with a target date and a remaining balance, the dashboard estimates the monthly contribution needed to reach the goal by its deadline. Recommendations are ordered by goal priority and target date. The planner compares the required monthly contribution with the goal's planned allocation and displays any additional monthly amount needed. Goals without a target date are excluded because there is no deadline from which to calculate a required monthly amount.
+
+
+## Savings notifications and financial integration
+
+The Savings alerts page stores in-app notifications for:
+- upcoming recurring contributions within the configured 0–30 day reminder window
+- overdue recurring contributions that remain unconfirmed
+- recently achieved savings goal milestones
+- emergency fund coverage below the configured 0.5–24 month threshold
+- a monthly allocation review during the first seven days of each month
+
+Notification preferences are stored in a single global settings row, consistent with the current single-user/local-first application design. Each notification is deduplicated with a deterministic key and a unique database index. Users can mark alerts individually or mark all alerts as read.
+
+Notifications are generated when the Savings alerts page is opened. This implementation does not run a background scheduler and does not send email, SMS, browser push, or mobile push notifications. Opening the page is therefore required to generate and persist newly eligible alerts.
+
+### Financial integration safeguards
+
+Savings reminders and recommendations do not create transactions, move money, or change account balances. A recurring contribution remains a user-confirmed savings ledger entry. Where an actual financial transaction exists, users can link it through the existing transaction-linking workflow. The transaction compatibility checks continue to validate type, amount, date, and currency, and each transaction can be linked to only one savings contribution.
