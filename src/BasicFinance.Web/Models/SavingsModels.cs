@@ -45,6 +45,8 @@ public sealed class SavingsGoal
     public ICollection<SavingsContribution> Contributions { get; set; } = new List<SavingsContribution>();
     public ICollection<SavingsMonthlyTarget> MonthlyTargets { get; set; } = new List<SavingsMonthlyTarget>();
     public ICollection<SavingsGoalMilestone> Milestones { get; set; } = new List<SavingsGoalMilestone>();
+    public ICollection<RecurringSavingsContribution> RecurringContributions { get; set; } = new List<RecurringSavingsContribution>();
+    public ICollection<SavingsAllocationSetting> AllocationSettings { get; set; } = new List<SavingsAllocationSetting>();
 
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
