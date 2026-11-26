@@ -61,6 +61,55 @@ public sealed class SavingsTransactionMatchControllerTests
         Assert.Equal(125m, suggestion.TransactionAmount);
     }
 
+
+    [Fact]
+    public async Task Index_SuggestsUniqueBankTransactionForDueRecurringSchedule()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var database = new ApplicationDbContext(options);
+        await database.Database.MigrateAsync();
+
+        var checking = NewAccount("Checking", AccountType.Checking);
+        var savings = NewAccount("Savings", AccountType.Savings);
+        database.Accounts.AddRange(checking, savings);
+        await database.SaveChangesAsync();
+        var goal = NewGoal(savings.Id);
+        database.SavingsGoals.Add(goal);
+        await database.SaveChangesAsync();
+
+        var dueDate = new DateTime(2026, 11, 20);
+        var schedule = new RecurringSavingsContribution
+        {
+            SavingsGoalId = goal.Id,
+            Amount = 90m,
+            Frequency = SavingsScheduleFrequency.Monthly,
+            NextDueDate = dueDate,
+            IsActive = true
+        };
+        database.RecurringSavingsContributions.Add(schedule);
+        database.Transactions.Add(new FinancialTransaction
+        {
+            AccountId = checking.Id,
+            RelatedAccountId = savings.Id,
+            Type = TransactionType.Transfer,
+            Description = "Monthly reserve transfer",
+            Amount = 90m,
+            CurrencyCode = "USD",
+            TransactionDate = dueDate
+        });
+        await database.SaveChangesAsync();
+
+        var controller = new SavingsGoalsController(database, new SavingsGoalService());
+        var result = Assert.IsType<ViewResult>(await controller.Index(CancellationToken.None));
+        var model = Assert.IsType<SavingsGoalsIndexViewModel>(result.Model);
+
+        var suggestion = Assert.Single(model.ScheduleMatchSuggestions);
+        Assert.Equal(schedule.Id, suggestion.ScheduleId);
+        Assert.Equal("Monthly reserve transfer", suggestion.TransactionDescription);
+    }
+
     [Fact]
     public async Task Index_DoesNotSuggestAmbiguousMatches()
     {
