@@ -56,6 +56,36 @@
     </form>
 </section>
 
+<section class="table-card savings-allocation-card">
+    <div class="section-heading"><div><h2>Monthly savings allocation plan</h2><p>Set a monthly amount available to save, then divide it across goals. Recommendations do not move money or create transactions.</p></div></div>
+    <div class="summary-grid">
+        <article class="summary-card"><span>Monthly savings budget</span><strong>@((Model.AllocationBudget?.MonthlyBudget ?? 0m).ToString("C"))</strong></article>
+        <article class="summary-card"><span>Allocated</span><strong>@Model.TotalAllocationPercent.ToString("0.##")%</strong></article>
+        <article class="summary-card"><span>Planned monthly amount</span><strong>@Model.TotalPlannedAllocation.ToString("C")</strong></article>
+        <article class="summary-card"><span>Unallocated budget</span><strong>@Math.Max(0m, (Model.AllocationBudget?.MonthlyBudget ?? 0m) - Model.TotalPlannedAllocation).ToString("C")</strong></article>
+    </div>
+    <form asp-action="SaveAllocationPlan" method="post" class="form-grid">
+        @Html.AntiForgeryToken()
+        <label>Monthly amount available for savings <input name="monthlyBudget" type="number" min="0" max="999999999999" step="0.01" value="@((Model.AllocationBudget?.MonthlyBudget ?? 0m).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" required /></label>
+        <div class="form-actions"><button class="button button-primary" type="submit">Save allocation budget</button></div>
+    </form>
+    @if (Model.Goals.Any())
+    {
+        <div class="table-scroll"><table><thead><tr><th>Goal</th><th>Allocation</th><th>Planned amount</th><th>Update</th></tr></thead><tbody>
+        @foreach (var card in Model.Goals)
+        {
+            <tr><td>@card.Goal.Name</td><td>@card.AllocationPercent.ToString("0.##")%</td><td>@card.PlannedAllocation.ToString("C")</td><td>
+                <form asp-action="SaveGoalAllocation" method="post" class="inline-form">
+                    @Html.AntiForgeryToken()<input type="hidden" name="goalId" value="@card.Goal.Id" />
+                    <input name="allocationPercent" type="number" min="0" max="100" step="0.01" value="@card.AllocationPercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" required />
+                    <button class="button button-secondary" type="submit">Save %</button>
+                </form>
+            </td></tr>
+        }
+        </tbody></table></div>
+    }
+</section>
+
 <section class="table-card">
     <h2>Create a savings goal</h2>
     <form asp-action="CreateGoal" method="post" class="form-grid">
@@ -120,6 +150,48 @@
                             </label>
                             <div class="form-actions"><button class="button button-primary" type="submit">Record savings activity</button></div>
                         </form>
+                    }
+                    @if (goal.Status == SavingsGoalStatus.Active)
+                    {
+                        <details class="savings-history"><summary>Recurring savings schedule</summary>
+                            <form asp-action="CreateRecurringSchedule" method="post" class="form-grid">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="goalId" value="@goal.Id" />
+                                <label>Contribution amount <input name="amount" type="number" min="0.01" max="999999999999" step="0.01" required /></label>
+                                <label>Frequency <select name="frequency">
+                                    <option value="@((int)SavingsScheduleFrequency.Weekly)">Weekly</option>
+                                    <option value="@((int)SavingsScheduleFrequency.Biweekly)">Every two weeks</option>
+                                    <option value="@((int)SavingsScheduleFrequency.Monthly)" selected>Monthly</option>
+                                    <option value="@((int)SavingsScheduleFrequency.Quarterly)">Quarterly</option>
+                                    <option value="@((int)SavingsScheduleFrequency.Yearly)">Yearly</option>
+                                </select></label>
+                                <label>First due date <input name="nextDueDate" type="date" value="@today.ToString("yyyy-MM-dd")" required /></label>
+                                <label>End date (optional) <input name="endDate" type="date" /></label>
+                                <div class="form-actions"><button class="button button-secondary" type="submit">Create recurring schedule</button></div>
+                            </form>
+                        </details>
+                    }
+                    @if (goal.RecurringContributions.Any())
+                    {
+                        <div class="table-scroll"><table><thead><tr><th>Recurring amount</th><th>Frequency</th><th>Next due</th><th>Status</th><th>Action</th></tr></thead><tbody>
+                        @foreach (var schedule in goal.RecurringContributions.OrderBy(x => x.NextDueDate))
+                        {
+                            <tr>
+                                <td>@schedule.Amount.ToString("C")</td><td>@schedule.Frequency</td><td>@schedule.NextDueDate.ToString("d")</td>
+                                <td>@(schedule.IsActive ? (schedule.NextDueDate.Date <= today ? "Due — confirmation needed" : "Scheduled") : "Inactive")</td>
+                                <td>
+                                    @if (schedule.IsActive && schedule.NextDueDate.Date <= today && goal.Status == SavingsGoalStatus.Active)
+                                    {
+                                        <form asp-action="RecordScheduledContribution" method="post">@Html.AntiForgeryToken()<input type="hidden" name="scheduleId" value="@schedule.Id" /><button class="button button-primary" type="submit">Confirm contribution</button></form>
+                                    }
+                                    @if (schedule.IsActive)
+                                    {
+                                        <form asp-action="DeactivateRecurringSchedule" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@schedule.Id" /><button class="text-button" type="submit">Deactivate</button></form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody></table></div>
                     }
                     <form asp-action="SaveMonthlyTarget" method="post" class="form-grid">
                         @Html.AntiForgeryToken()
