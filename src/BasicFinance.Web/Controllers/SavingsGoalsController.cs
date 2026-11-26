@@ -58,6 +58,30 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                 && candidatePairs.Count(other => other.ContributionId == pair.ContributionId) == 1)
             .OrderByDescending(x => x.TransactionDate).ThenBy(x => x.GoalName)
             .Take(100).ToList();
+        var scheduleCandidatePairs = goals
+            .SelectMany(goal => goal.RecurringContributions
+                .Where(schedule => schedule.IsActive && schedule.NextDueDate.Date <= today
+                    && (!schedule.EndDate.HasValue || schedule.NextDueDate.Date <= schedule.EndDate.Value.Date))
+                .SelectMany(schedule => availableTransactions
+                    .Where(transaction => savingsService.IsCompatibleTransaction(
+                        transaction, SavingsContributionType.Contribution, schedule.Amount,
+                        schedule.NextDueDate, goal.CurrencyCode, goal.LinkedAccountId))
+                    .Select(transaction => new SavingsScheduleMatchSuggestionViewModel
+                    {
+                        ScheduleId = schedule.Id,
+                        GoalName = goal.Name,
+                        Amount = schedule.Amount,
+                        DueDate = schedule.NextDueDate,
+                        TransactionId = transaction.Id,
+                        TransactionDescription = transaction.Description,
+                        TransactionDate = transaction.TransactionDate
+                    })))
+            .ToList();
+        var scheduleMatchSuggestions = scheduleCandidatePairs
+            .Where(pair => scheduleCandidatePairs.Count(other => other.ScheduleId == pair.ScheduleId) == 1
+                && scheduleCandidatePairs.Count(other => other.TransactionId == pair.TransactionId) == 1)
+            .ToList();
+
         var cards = goals.Select(goal =>
         {
             var progress = savingsService.CalculateProgress(goal, today);
@@ -136,6 +160,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             MonthlyPerformance = monthlyPerformance,
             AvailableTransactions = availableTransactions,
             MatchingSuggestions = matchingSuggestions,
+            ScheduleMatchSuggestions = scheduleMatchSuggestions,
             AllocationBudget = allocationBudget,
             TotalAllocationPercent = cards.Sum(x => x.AllocationPercent),
             TotalPlannedAllocation = cards.Sum(x => x.PlannedAllocation),
@@ -326,7 +351,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> RecordScheduledContribution(int scheduleId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RecordScheduledContribution(int scheduleId, int? transactionId, CancellationToken cancellationToken)
     {
         var schedule = await database.RecurringSavingsContributions
             .Include(x => x.SavingsGoal).ThenInclude(x => x.Contributions)
@@ -349,12 +374,27 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             TempData["ErrorMessage"] = "This scheduled occurrence has already been recorded.";
             return RedirectToAction(nameof(Index));
         }
+        FinancialTransaction? linkedTransaction = null;
+        if (transactionId.HasValue)
+        {
+            linkedTransaction = await database.Transactions.FirstOrDefaultAsync(x => x.Id == transactionId.Value, cancellationToken);
+            if (!savingsService.IsCompatibleTransaction(linkedTransaction, SavingsContributionType.Contribution,
+                    schedule.Amount, schedule.NextDueDate, goal.CurrencyCode, goal.LinkedAccountId)
+                || await database.SavingsContributions.AnyAsync(x => x.TransactionId == transactionId.Value, cancellationToken))
+            {
+                TempData["ErrorMessage"] = "The suggested transaction is no longer available or does not match this scheduled contribution.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
         var contribution = new SavingsContribution
         {
             SavingsGoalId = goal.Id,
             Amount = schedule.Amount,
             Type = SavingsContributionType.Contribution,
-            ContributionDate = schedule.NextDueDate.Date,
+            ContributionDate = linkedTransaction?.TransactionDate.Date ?? schedule.NextDueDate.Date,
+            TransactionId = linkedTransaction?.Id,
+            Transaction = linkedTransaction,
             RecurringSavingsContributionId = schedule.Id,
             ScheduledDueDate = schedule.NextDueDate.Date,
             Notes = $"Recurring schedule #{schedule.Id}",
@@ -646,6 +686,7 @@ public sealed class SavingsGoalsIndexViewModel
     public List<SavingsMonthlyPerformanceViewModel> MonthlyPerformance { get; set; } = [];
     public List<FinancialTransaction> AvailableTransactions { get; set; } = [];
     public List<SavingsTransactionMatchSuggestionViewModel> MatchingSuggestions { get; set; } = [];
+    public List<SavingsScheduleMatchSuggestionViewModel> ScheduleMatchSuggestions { get; set; } = [];
     public SavingsAllocationBudget? AllocationBudget { get; set; }
     public decimal TotalAllocationPercent { get; set; }
     public decimal TotalPlannedAllocation { get; set; }
@@ -695,5 +736,17 @@ public sealed class SavingsTransactionMatchSuggestionViewModel
     public string TransactionDescription { get; set; } = string.Empty;
     public TransactionType TransactionType { get; set; }
     public decimal TransactionAmount { get; set; }
+    public DateTime TransactionDate { get; set; }
+}
+
+
+public sealed class SavingsScheduleMatchSuggestionViewModel
+{
+    public int ScheduleId { get; set; }
+    public string GoalName { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime DueDate { get; set; }
+    public int TransactionId { get; set; }
+    public string TransactionDescription { get; set; } = string.Empty;
     public DateTime TransactionDate { get; set; }
 }
