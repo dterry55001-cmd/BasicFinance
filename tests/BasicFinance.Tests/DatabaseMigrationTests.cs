@@ -28,7 +28,8 @@ public sealed class DatabaseMigrationTests
             "DebtFreeTargets", "MonthlyDebtReductionGoals", "DebtFreeMilestones",
             "DebtNotifications", "DebtInterestRateHistory", "RecurringCashFlows",
             "CashFlowAlertPreferences", "CashFlowAlerts", "SavingsGoals", "SavingsContributions",
-            "EmergencyFundPlans", "SavingsMonthlyTargets", "SavingsGoalMilestones"
+            "EmergencyFundPlans", "SavingsMonthlyTargets", "SavingsGoalMilestones",
+            "RecurringSavingsContributions", "SavingsAllocationBudgets", "SavingsAllocationSettings"
         };
 
         foreach (var table in expectedTables)
