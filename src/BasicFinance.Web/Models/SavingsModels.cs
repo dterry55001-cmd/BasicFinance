@@ -42,7 +42,6 @@ public sealed class SavingsGoal
     public bool IsEmergencyFund { get; set; }
     public int Priority { get; set; } = 3;
 
-    public ICollection<SavingsContribution> Contributions { get; set; } = new List<SavingsContribution>();
     public ICollection<SavingsMonthlyTarget> MonthlyTargets { get; set; } = new List<SavingsMonthlyTarget>();
     public ICollection<SavingsGoalMilestone> Milestones { get; set; } = new List<SavingsGoalMilestone>();
     public ICollection<RecurringSavingsContribution> RecurringContributions { get; set; } = new List<RecurringSavingsContribution>();
@@ -71,7 +70,6 @@ public sealed class SavingsContribution
     public FinancialTransaction? Transaction { get; set; }
 
     public int? RecurringSavingsContributionId { get; set; }
-    public RecurringSavingsContribution? RecurringSavingsContribution { get; set; }
     public DateTime? ScheduledDueDate { get; set; }
 
     [StringLength(300)]
