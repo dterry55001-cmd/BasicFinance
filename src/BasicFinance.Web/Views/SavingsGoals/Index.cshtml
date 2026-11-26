@@ -241,13 +241,23 @@
                         <div class="table-scroll"><table><thead><tr><th>Recurring amount</th><th>Frequency</th><th>Next due</th><th>Status</th><th>Action</th></tr></thead><tbody>
                         @foreach (var schedule in goal.RecurringContributions.OrderBy(x => x.NextDueDate))
                         {
+                            var scheduleMatch = Model.ScheduleMatchSuggestions.FirstOrDefault(x => x.ScheduleId == schedule.Id);
                             <tr>
                                 <td>@schedule.Amount.ToString("C")</td><td>@schedule.Frequency</td><td>@schedule.NextDueDate.ToString("d")</td>
                                 <td>@(schedule.IsActive ? (schedule.NextDueDate.Date < today ? "Overdue — missed contribution" : schedule.NextDueDate.Date == today ? "Due — confirmation needed" : "Scheduled") : "Inactive")</td>
                                 <td>
                                     @if (schedule.IsActive && schedule.NextDueDate.Date <= today && goal.Status == SavingsGoalStatus.Active)
                                     {
-                                        <form asp-action="RecordScheduledContribution" method="post">@Html.AntiForgeryToken()<input type="hidden" name="scheduleId" value="@schedule.Id" /><button class="button button-primary" type="submit">Confirm contribution</button></form>
+                                        <form asp-action="RecordScheduledContribution" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="scheduleId" value="@schedule.Id" />
+                                            @if (scheduleMatch is not null)
+                                            {
+                                                <input type="hidden" name="transactionId" value="@scheduleMatch.TransactionId" />
+                                                <small>Matching bank activity found: @scheduleMatch.TransactionDescription (@scheduleMatch.TransactionDate.ToString("d"))</small>
+                                            }
+                                            <button class="button button-primary" type="submit">@(scheduleMatch is null ? "Confirm contribution" : "Confirm and link transaction")</button>
+                                        </form>
                                     }
                                     @if (schedule.IsActive)
                                     {
