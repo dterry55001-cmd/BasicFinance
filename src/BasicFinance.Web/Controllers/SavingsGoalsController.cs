@@ -78,7 +78,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                     })))
             .ToList();
         var scheduleMatchSuggestions = scheduleCandidatePairs
-            .Where(pair => scheduleCandidatePairs.Count(other => other.ScheduleId == pair.ScheduleId) == 1
+            .Where(pair => !candidatePairs.Any(existingEntryMatch => existingEntryMatch.TransactionId == pair.TransactionId)
+                && scheduleCandidatePairs.Count(other => other.ScheduleId == pair.ScheduleId) == 1
                 && scheduleCandidatePairs.Count(other => other.TransactionId == pair.TransactionId) == 1)
             .ToList();
 
