@@ -51,6 +51,12 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
         var forecast = forecastService.BuildForecast(schedules, openingCash, DateTime.Today, months);
         var dailyForecast = forecastService.BuildDailyForecast(schedules, openingCash, DateTime.Today, days);
         var weeklyForecast = forecastService.BuildWeeklyForecast(schedules, openingCash, DateTime.Today, weeks);
+        var preference = await database.CashFlowAlertPreferences.FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
+        var lowBalanceThreshold = preference?.LowBalanceThreshold ?? 250m;
+        var projectedBalances = dailyForecast.Select(x => x.ProjectedEndingBalance)
+            .Concat(weeklyForecast.Select(x => x.ProjectedEndingBalance))
+            .Concat(forecast.Select(x => x.ProjectedEndingBalance)).ToList();
+        var lowestProjectedBalance = projectedBalances.DefaultIfEmpty(openingCash).Min();
         var model = new CashFlowIndexViewModel
         {
             Months = months,
@@ -58,6 +64,11 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
             Weeks = weeks,
             Period = period,
             OpeningBalance = openingCash,
+            LowBalanceThreshold = lowBalanceThreshold,
+            LowestProjectedBalance = lowestProjectedBalance,
+            HasLowBalanceWarning = lowestProjectedBalance >= 0m && lowestProjectedBalance < lowBalanceThreshold,
+            HasProjectedShortage = lowestProjectedBalance < 0m,
+            AlertsEnabled = preference?.AlertsEnabled ?? true,
             Forecast = forecast,
             DailyForecast = dailyForecast,
             WeeklyForecast = weeklyForecast,
@@ -65,6 +76,28 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
             Accounts = accounts.Select(x => new SelectListItem(x.Name, x.Id.ToString())).ToList()
         };
         return View(model);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateAlertPreference(decimal lowBalanceThreshold, bool alertsEnabled, CancellationToken cancellationToken)
+    {
+        if (lowBalanceThreshold < 0m || lowBalanceThreshold > 999999999999m)
+        {
+            TempData["ErrorMessage"] = "Enter a valid non-negative low-balance threshold.";
+            return RedirectToAction(nameof(Index));
+        }
+        var preference = await database.CashFlowAlertPreferences.FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
+        if (preference is null)
+        {
+            preference = new CashFlowAlertPreference { Id = 1 };
+            database.CashFlowAlertPreferences.Add(preference);
+        }
+        preference.LowBalanceThreshold = lowBalanceThreshold;
+        preference.AlertsEnabled = alertsEnabled;
+        preference.UpdatedUtc = DateTime.UtcNow;
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Cash-flow alert settings updated.";
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -128,6 +161,11 @@ public sealed class CashFlowIndexViewModel
     public int Weeks { get; set; } = 12;
     public string Period { get; set; } = "month";
     public decimal OpeningBalance { get; set; }
+    public decimal LowBalanceThreshold { get; set; } = 250m;
+    public decimal LowestProjectedBalance { get; set; }
+    public bool HasLowBalanceWarning { get; set; }
+    public bool HasProjectedShortage { get; set; }
+    public bool AlertsEnabled { get; set; } = true;
     public IReadOnlyList<CashFlowForecastMonth> Forecast { get; set; } = [];
     public IReadOnlyList<CashFlowForecastPeriod> DailyForecast { get; set; } = [];
     public IReadOnlyList<CashFlowForecastPeriod> WeeklyForecast { get; set; } = [];
