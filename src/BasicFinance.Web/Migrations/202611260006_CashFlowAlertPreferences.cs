@@ -22,10 +22,6 @@ public sealed class CashFlowAlertPreferences : Migration
                 UpdatedUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
             },
             constraints: table => table.PrimaryKey("PK_CashFlowAlertPreferences", x => x.Id));
-        migrationBuilder.InsertData(
-            table: "CashFlowAlertPreferences",
-            columns: new[] { "Id", "LowBalanceThreshold", "AlertsEnabled", "UpdatedUtc" },
-            values: new object[] { 1, 250m, true, DateTime.UtcNow });
     }
 
     protected override void Down(MigrationBuilder migrationBuilder) => migrationBuilder.DropTable("CashFlowAlertPreferences");
