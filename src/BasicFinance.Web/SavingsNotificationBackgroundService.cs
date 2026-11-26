@@ -1,6 +1,6 @@
 using BasicFinance.Web.Services;
 
-namespace BasicFinance.Web;
+namespace BasicFinance.Web.Services;
 
 public sealed class SavingsNotificationBackgroundService(
     IServiceScopeFactory scopeFactory,
