@@ -1,0 +1,118 @@
+@model BasicFinance.Web.Controllers.SavingsReportsViewModel
+@{
+    ViewData["Title"] = "Savings reports";
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">SAVINGS ANALYTICS</p>
+        <h1>Savings reports</h1>
+        <p class="page-description">Review planned versus actual savings, goal balances, emergency-fund growth, and estimated completion dates.</p>
+    </div>
+</section>
+
+<section class="table-card">
+    <form method="get" asp-action="Index" class="form-grid">
+        <label>Report year
+            <input type="number" name="year" min="2000" max="2200" value="@Model.Year" />
+        </label>
+        <label>Report month
+            <select name="month">
+                @for (var month = 1; month <= 12; month++)
+                {
+                    <option value="@month" selected="@(Model.Month == month)">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
+                }
+            </select>
+        </label>
+        <div class="form-actions">
+            <button class="button button-primary" type="submit">Run report</button>
+            <a class="button button-secondary" asp-action="Export" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Export CSV</a>
+        </div>
+    </form>
+</section>
+
+<div class="summary-grid">
+    <article class="summary-card"><span>Planned monthly target</span><strong>@Model.TotalPlannedTarget.ToString("C")</strong><small>@Model.PeriodLabel</small></article>
+    <article class="summary-card"><span>Actual contributions</span><strong>@Model.TotalContributions.ToString("C")</strong><small>Recorded deposits into savings goals</small></article>
+    <article class="summary-card"><span>Withdrawals</span><strong>@Model.TotalWithdrawals.ToString("C")</strong><small>Recorded savings withdrawals</small></article>
+    <article class="summary-card"><span>Net savings</span><strong>@Model.TotalNetSavings.ToString("C")</strong><small>Contributions less withdrawals</small></article>
+</div>
+
+<section class="table-card">
+    <h2>Planned versus actual by goal</h2>
+    <p class="page-description">
+        @if (Model.IsCurrentMonth)
+        {
+            <span>Actual activity is month-to-date; planned targets represent the full monthly target. Variance is therefore preliminary.</span>
+        }
+        else
+        {
+            <span>Variance equals actual contributions minus the monthly target. Withdrawals are reported separately and do not reduce the contribution target variance.</span>
+        }
+    </p>
+    @if (!Model.GoalRows.Any())
+    {
+        <p>No goal activity or monthly targets were recorded for this period.</p>
+    }
+    else
+    {
+        <div class="table-scroll"><table>
+            <thead><tr><th>Goal</th><th>Planned target</th><th>Contributions</th><th>Withdrawals</th><th>Net savings</th><th>Variance</th><th>Closing balance</th><th>Progress</th><th>Estimated completion</th></tr></thead>
+            <tbody>
+            @foreach (var row in Model.GoalRows)
+            {
+                <tr>
+                    <td><strong>@row.GoalName</strong>@if (row.IsEmergencyFund) { <small> · Emergency fund</small> }</td>
+                    <td>@row.PlannedTarget.ToString("C")</td>
+                    <td class="amount-in">@row.Contributions.ToString("C")</td>
+                    <td class="amount-out">@row.Withdrawals.ToString("C")</td>
+                    <td>@row.NetSavings.ToString("C")</td>
+                    <td class="@(row.Variance >= 0m ? "amount-in" : "amount-out")">@row.Variance.ToString("C")</td>
+                    <td>@row.ClosingBalance.ToString("C")</td>
+                    <td>@row.ProgressPercent.ToString("0.0")%</td>
+                    <td>@(row.EstimatedCompletionDate?.ToString("MMM d, yyyy") ?? "Not enough recent activity")</td>
+                </tr>
+            }
+            </tbody>
+            <tfoot><tr><th>Total</th><th>@Model.TotalPlannedTarget.ToString("C")</th><th>@Model.TotalContributions.ToString("C")</th><th>@Model.TotalWithdrawals.ToString("C")</th><th>@Model.TotalNetSavings.ToString("C")</th><th>@Model.TotalVariance.ToString("C")</th><th colspan="3"></th></tr></tfoot>
+        </table></div>
+    }
+</section>
+
+<section class="table-card">
+    <h2>Annual savings summary — @Model.Year</h2>
+    <p class="page-description">Monthly actual contributions and withdrawals compared with the sum of monthly goal targets.</p>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Month</th><th>Planned targets</th><th>Contributions</th><th>Withdrawals</th><th>Net savings</th><th>Variance</th></tr></thead>
+        <tbody>
+        @foreach (var row in Model.AnnualMonths)
+        {
+            <tr>
+                <td><strong>@row.Month.ToString("MMMM")</strong></td>
+                <td>@row.PlannedTarget.ToString("C")</td>
+                <td class="amount-in">@row.Contributions.ToString("C")</td>
+                <td class="amount-out">@row.Withdrawals.ToString("C")</td>
+                <td>@row.NetSavings.ToString("C")</td>
+                <td class="@(row.Variance >= 0m ? "amount-in" : "amount-out")">@row.Variance.ToString("C")</td>
+            </tr>
+        }
+        </tbody>
+        <tfoot><tr><th>Year total</th><th>@Model.AnnualMonths.Sum(x => x.PlannedTarget).ToString("C")</th><th>@Model.AnnualMonths.Sum(x => x.Contributions).ToString("C")</th><th>@Model.AnnualMonths.Sum(x => x.Withdrawals).ToString("C")</th><th>@Model.AnnualMonths.Sum(x => x.NetSavings).ToString("C")</th><th>@Model.AnnualMonths.Sum(x => x.Variance).ToString("C")</th></tr></tfoot>
+    </table></div>
+</section>
+
+@if (Model.EmergencyTrend.Any())
+{
+    <section class="table-card">
+        <h2>Emergency fund growth — trailing 12 months</h2>
+        <p class="page-description">Month-end balance calculated from recorded emergency-fund contributions less withdrawals.</p>
+        <div class="table-scroll"><table>
+            <thead><tr><th>Month</th><th>Closing balance</th></tr></thead>
+            <tbody>
+            @foreach (var point in Model.EmergencyTrend)
+            {
+                <tr><td><strong>@point.Month.ToString("MMMM yyyy")</strong></td><td>@point.ClosingBalance.ToString("C")</td></tr>
+            }
+            </tbody>
+        </table></div>
+    </section>
+}
