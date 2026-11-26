@@ -29,7 +29,8 @@ public sealed class DatabaseMigrationTests
             "DebtNotifications", "DebtInterestRateHistory", "RecurringCashFlows",
             "CashFlowAlertPreferences", "CashFlowAlerts", "SavingsGoals", "SavingsContributions",
             "EmergencyFundPlans", "SavingsMonthlyTargets", "SavingsGoalMilestones",
-            "RecurringSavingsContributions", "SavingsAllocationBudgets", "SavingsAllocationSettings"
+            "RecurringSavingsContributions", "SavingsAllocationBudgets", "SavingsAllocationSettings",
+            "SavingsNotificationPreferences", "SavingsNotifications"
         };
 
         foreach (var table in expectedTables)
@@ -39,6 +40,31 @@ public sealed class DatabaseMigrationTests
                 .SingleAsync();
             Assert.Equal(1, exists);
         }
+    }
+
+    [Fact]
+    public async Task Migrate_EnforcesUniqueSavingsNotificationKeys()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var database = new ApplicationDbContext(options);
+        await database.Database.MigrateAsync();
+
+        var uniqueNotificationKeyIndex = false;
+        await using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA index_list('SavingsNotifications')";
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            if (reader.GetString(1) == "IX_SavingsNotifications_NotificationKey")
+                uniqueNotificationKeyIndex = reader.GetInt32(2) == 1;
+        }
+
+        Assert.True(uniqueNotificationKeyIndex);
     }
 
     [Fact]
