@@ -131,7 +131,7 @@ public sealed class SavingsReconciliationController(
             {
                 var valid = savingsService.IsCompatibleTransaction(transaction,
                     direction == SavingsContributionType.Contribution ? SavingsContributionType.Contribution : SavingsContributionType.Withdrawal,
-                    linked.Amount, linked.ContributionDate, goal.CurrencyCode)
+                    linked.Amount, linked.ContributionDate, goal.CurrencyCode, accountId)
                     && linked.Type == direction;
                 session.Items.Add(new SavingsReconciliationItem
                 {
@@ -244,7 +244,7 @@ public sealed class SavingsReconciliationController(
             || await database.SavingsContributions.AnyAsync(x => x.TransactionId == transactionId, cancellationToken)
             || GetDirection(transaction, session.AccountId) != contribution.Type
             || !savingsService.IsCompatibleTransaction(transaction, contribution.Type, contribution.Amount,
-                contribution.ContributionDate, session.SavingsGoal.CurrencyCode)
+                contribution.ContributionDate, session.SavingsGoal.CurrencyCode, session.AccountId)
             || transaction.AccountId != session.AccountId && transaction.RelatedAccountId != session.AccountId)
         {
             TempData["ErrorMessage"] = "The transaction and savings entry must be unlinked and match the account, direction, amount, date, and currency.";
