@@ -1,0 +1,95 @@
+@model BasicFinance.Web.Controllers.SavingsReconciliationIndexViewModel
+@{
+    ViewData["Title"] = "Savings reconciliation";
+    var today = DateTime.Today;
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">SAVINGS CONTROL</p>
+        <h1>Account reconciliation</h1>
+        <p class="page-description">Compare goal contributions and withdrawals with activity in the linked financial account. Reconciliation identifies matches and differences; it does not create transactions or move money.</p>
+    </div>
+</section>
+@if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="notice notice-error" role="alert">@error</div> }
+
+<div class="alert alert-info" role="note">
+    Account balances are calculated from the account opening balance and recorded transactions. The statement closing balance you enter is compared with that calculated balance. Matching a savings entry links it to an existing transaction; no new financial transaction is created.
+</div>
+
+@if (!Model.Goals.Any())
+{
+    <div class="form-card"><p>Create a USD savings goal before starting reconciliation.</p></div>
+}
+else
+{
+    @foreach (var goal in Model.Goals)
+    {
+        <section class="table-card savings-reconciliation-card">
+            <div class="section-heading">
+                <div>
+                    <h2>@goal.Name</h2>
+                    <p>@(goal.LinkedAccount is null ? "No financial account linked" : $"Linked account: {goal.LinkedAccount.Name}")</p>
+                </div>
+                @if (goal.LinkedAccount is not null) { <span class="badge badge-success">Linked</span> }
+            </div>
+            <form asp-action="LinkAccount" method="post" class="form-grid">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="goalId" value="@goal.Id" />
+                <label>Financial account
+                    <select name="accountId">
+                        <option value="">Not linked</option>
+                        @foreach (var account in Model.Accounts)
+                        {
+                            <option value="@account.Id" selected="@(goal.LinkedAccountId == account.Id)">@account.Name (@account.Type)</option>
+                        }
+                    </select>
+                </label>
+                <div class="form-actions"><button class="button button-secondary" type="submit">Save account link</button></div>
+            </form>
+
+            @if (goal.LinkedAccountId.HasValue)
+            {
+                <form asp-action="Run" method="post" class="form-grid savings-reconciliation-run">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="goalId" value="@goal.Id" />
+                    <label>Period start <input type="date" name="periodStart" value="@new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd")" required /></label>
+                    <label>Period end <input type="date" name="periodEnd" value="@today.ToString("yyyy-MM-dd")" max="@today.ToString("yyyy-MM-dd")" required /></label>
+                    <label>Statement closing balance <input type="number" name="statementClosingBalance" step="0.01" value="0.00" required /></label>
+                    <div class="form-actions"><button class="button button-primary" type="submit">Run reconciliation</button></div>
+                </form>
+            }
+        </section>
+    }
+}
+
+<section class="section-block">
+    <h2>Reconciliation history</h2>
+    @if (!Model.Sessions.Any())
+    {
+        <div class="form-card"><p>No reconciliation sessions have been run yet.</p></div>
+    }
+    else
+    {
+        <div class="table-card"><div class="table-scroll"><table>
+            <thead><tr><th>Created</th><th>Goal</th><th>Account</th><th>Period</th><th>Statement balance</th><th>Calculated balance</th><th>Difference</th><th>Matched</th><th>Exceptions</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var session in Model.Sessions)
+            {
+                <tr>
+                    <td>@session.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</td>
+                    <td>@session.SavingsGoal.Name</td>
+                    <td>@session.Account.Name</td>
+                    <td>@session.PeriodStart.ToString("d") – @session.PeriodEnd.ToString("d")</td>
+                    <td>@session.StatementClosingBalance.ToString("C")</td>
+                    <td>@session.CalculatedAccountBalance.ToString("C")</td>
+                    <td class="@(session.Difference == 0m ? "amount-in" : "amount-out")">@session.Difference.ToString("C")</td>
+                    <td>@session.MatchedCount</td>
+                    <td>@(session.UnmatchedTransactionCount + session.UnmatchedContributionCount + session.PotentialDuplicateCount)</td>
+                    <td><a asp-action="Details" asp-route-id="@session.Id">Review</a></td>
+                </tr>
+            }
+            </tbody>
+        </table></div></div>
+    }
+</section>
