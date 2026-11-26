@@ -46,13 +46,25 @@
                     && x.ContributionDate.Date == transaction.TransactionDate.Date).ToList();
             <tr>
                 <td>
-                    @switch (item.Status)
+                    @if (item.Status == SavingsReconciliationItemStatus.Matched)
                     {
-                        case SavingsReconciliationItemStatus.Matched: <span class="badge badge-success">Matched</span>; break;
-                        case SavingsReconciliationItemStatus.PotentialDuplicate: <span class="badge badge-warning">Potential duplicate</span>; break;
-                        case SavingsReconciliationItemStatus.AlreadyLinked: <span class="badge badge-secondary">Already linked</span>; break;
-                        case SavingsReconciliationItemStatus.UnmatchedTransaction: <span class="badge badge-warning">Unmatched transaction</span>; break;
-                        default: <span class="badge badge-warning">Unmatched savings entry</span>; break;
+                        <span class="badge badge-success">Matched</span>
+                    }
+                    else if (item.Status == SavingsReconciliationItemStatus.PotentialDuplicate)
+                    {
+                        <span class="badge badge-warning">Potential duplicate</span>
+                    }
+                    else if (item.Status == SavingsReconciliationItemStatus.AlreadyLinked)
+                    {
+                        <span class="badge badge-secondary">Already linked</span>
+                    }
+                    else if (item.Status == SavingsReconciliationItemStatus.UnmatchedTransaction)
+                    {
+                        <span class="badge badge-warning">Unmatched transaction</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-warning">Unmatched savings entry</span>
                     }
                 </td>
                 <td>@item.EventDate.ToString("MMM d, yyyy")</td>
