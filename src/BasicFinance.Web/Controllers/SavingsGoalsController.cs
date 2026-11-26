@@ -32,7 +32,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                 && !database.SavingsContributions.Any(contribution => contribution.TransactionId == x.Id))
             .OrderByDescending(x => x.TransactionDate).ThenByDescending(x => x.Id)
             .Take(100).ToListAsync(cancellationToken);
-        var matchingSuggestions = goals
+        var candidatePairs = goals
             .SelectMany(goal => goal.Contributions.Where(contribution => !contribution.TransactionId.HasValue)
                 .SelectMany(contribution => availableTransactions
                     .Where(transaction => savingsService.IsCompatibleTransaction(
@@ -52,6 +52,10 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                         TransactionAmount = transaction.Amount,
                         TransactionDate = transaction.TransactionDate
                     })))
+            .ToList();
+        var matchingSuggestions = candidatePairs
+            .Where(pair => candidatePairs.Count(other => other.TransactionId == pair.TransactionId) == 1
+                && candidatePairs.Count(other => other.ContributionId == pair.ContributionId) == 1)
             .OrderByDescending(x => x.TransactionDate).ThenBy(x => x.GoalName)
             .Take(100).ToList();
         var cards = goals.Select(goal =>
