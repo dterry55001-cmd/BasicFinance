@@ -134,4 +134,50 @@ public sealed class CashFlowForecastServiceTests
         Assert.Throws<ArgumentOutOfRangeException>(() => _service.BuildWeeklyForecast([], 0m, DateTime.Today, 53));
     }
 
+    [Theory]
+    [InlineData(CashFlowFrequency.Weekly, 5)]
+    [InlineData(CashFlowFrequency.Biweekly, 3)]
+    [InlineData(CashFlowFrequency.Monthly, 1)]
+    [InlineData(CashFlowFrequency.Quarterly, 1)]
+    [InlineData(CashFlowFrequency.Yearly, 1)]
+    public void BuildForecast_SupportsEveryRecurringFrequency(CashFlowFrequency frequency, int expectedOccurrences)
+    {
+        var schedule = new RecurringCashFlow
+        {
+            Type = TransactionType.Income, Amount = 10m, CurrencyCode = "USD",
+            Frequency = frequency, NextDueDate = new DateTime(2026, 12, 1), IsActive = true
+        };
+
+        var result = _service.BuildForecast([schedule], 0m, new DateTime(2026, 12, 1), 1);
+
+        Assert.Equal(expectedOccurrences * 10m, result[0].ExpectedIncome);
+    }
+
+    [Fact]
+    public void BuildActualVsForecast_ComparesScheduledAndPostedCashFlows()
+    {
+        var schedules = new[]
+        {
+            new RecurringCashFlow { Type = TransactionType.Income, Amount = 1000m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 1), IsActive = true },
+            new RecurringCashFlow { Type = TransactionType.Expense, Amount = 400m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 5), IsActive = true }
+        };
+        var transactions = new[]
+        {
+            new FinancialTransaction { Type = TransactionType.Income, Amount = 900m, CurrencyCode = "USD", TransactionDate = new DateTime(2026, 12, 2) },
+            new FinancialTransaction { Type = TransactionType.Expense, Amount = 450m, CurrencyCode = "USD", TransactionDate = new DateTime(2026, 12, 6) },
+            new FinancialTransaction { Type = TransactionType.Transfer, Amount = 300m, CurrencyCode = "USD", TransactionDate = new DateTime(2026, 12, 7) },
+            new FinancialTransaction { Type = TransactionType.Income, Amount = 500m, CurrencyCode = "EUR", TransactionDate = new DateTime(2026, 12, 8) }
+        };
+
+        var result = _service.BuildActualVsForecast(schedules, transactions, new DateTime(2026, 12, 1), 1);
+
+        Assert.Single(result);
+        Assert.Equal(1000m, result[0].ForecastIncome);
+        Assert.Equal(900m, result[0].ActualIncome);
+        Assert.Equal(-100m, result[0].IncomeVariance);
+        Assert.Equal(400m, result[0].ForecastExpenses);
+        Assert.Equal(450m, result[0].ActualExpenses);
+        Assert.Equal(50m, result[0].ExpenseVariance);
+    }
+
 }
