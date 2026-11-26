@@ -9,9 +9,10 @@ namespace BasicFinance.Web.Controllers;
 
 public sealed class CashFlowController(ApplicationDbContext database, CashFlowForecastService forecastService) : Controller
 {
-    public async Task<IActionResult> Index(int months = 6, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Index(string period = "month", int months = 6, int days = 30, int weeks = 12, CancellationToken cancellationToken = default)
     {
-        if (months is < 1 or > 24) return BadRequest();
+        if (months is < 1 or > 24 || days is < 1 or > 90 || weeks is < 1 or > 52
+            || period is not ("day" or "week" or "month")) return BadRequest();
         var accounts = await database.Accounts.AsNoTracking()
             .Where(x => x.Status == AccountStatus.Active && x.CurrencyCode == "USD"
                 && (x.Type == AccountType.Checking || x.Type == AccountType.Savings || x.Type == AccountType.Cash))
@@ -48,11 +49,18 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
             .Where(x => x.IsActive && accountIds.Contains(x.AccountId))
             .OrderBy(x => x.NextDueDate).ToListAsync(cancellationToken);
         var forecast = forecastService.BuildForecast(schedules, openingCash, DateTime.Today, months);
+        var dailyForecast = forecastService.BuildDailyForecast(schedules, openingCash, DateTime.Today, days);
+        var weeklyForecast = forecastService.BuildWeeklyForecast(schedules, openingCash, DateTime.Today, weeks);
         var model = new CashFlowIndexViewModel
         {
             Months = months,
+            Days = days,
+            Weeks = weeks,
+            Period = period,
             OpeningBalance = openingCash,
             Forecast = forecast,
+            DailyForecast = dailyForecast,
+            WeeklyForecast = weeklyForecast,
             Schedules = schedules,
             Accounts = accounts.Select(x => new SelectListItem(x.Name, x.Id.ToString())).ToList()
         };
@@ -116,8 +124,13 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
 public sealed class CashFlowIndexViewModel
 {
     public int Months { get; set; } = 6;
+    public int Days { get; set; } = 30;
+    public int Weeks { get; set; } = 12;
+    public string Period { get; set; } = "month";
     public decimal OpeningBalance { get; set; }
     public IReadOnlyList<CashFlowForecastMonth> Forecast { get; set; } = [];
+    public IReadOnlyList<CashFlowForecastPeriod> DailyForecast { get; set; } = [];
+    public IReadOnlyList<CashFlowForecastPeriod> WeeklyForecast { get; set; } = [];
     public List<RecurringCashFlow> Schedules { get; set; } = [];
     public List<SelectListItem> Accounts { get; set; } = [];
     public int ScheduleAccountId { get; set; }
