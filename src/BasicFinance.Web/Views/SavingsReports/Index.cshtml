@@ -1,6 +1,8 @@
 @model BasicFinance.Web.Controllers.SavingsReportsViewModel
 @{
     ViewData["Title"] = "Savings reports";
+    var annualMax = Math.Max(1m, Model.AnnualMonths.SelectMany(x => new[] { x.PlannedTarget, x.Contributions }).DefaultIfEmpty(1m).Max());
+    var emergencyMax = Math.Max(1m, Model.EmergencyTrend.Select(x => x.ClosingBalance).DefaultIfEmpty(1m).Max());
 }
 <section class="page-heading">
     <div>
@@ -78,6 +80,28 @@
     }
 </section>
 
+<section class="table-card forecast-report savings-report-chart">
+    <h2>Annual planned versus actual contributions</h2>
+    <p class="page-description">Each month compares the planned savings target with recorded contributions. Bar lengths use the largest monthly value in this report.</p>
+    <div class="forecast-chart-legend">
+        <span><i class="savings-planned-key"></i> Planned target</span>
+        <span><i class="forecast-income-key"></i> Actual contributions</span>
+    </div>
+    @foreach (var row in Model.AnnualMonths)
+    {
+        var plannedWidth = Math.Clamp(row.PlannedTarget / annualMax * 100m, 0m, 100m);
+        var actualWidth = Math.Clamp(row.Contributions / annualMax * 100m, 0m, 100m);
+        <div class="forecast-chart-row">
+            <div class="forecast-chart-month">@row.Month.ToString("MMM")</div>
+            <div class="forecast-chart-bars">
+                <div class="forecast-bar-track" title="Planned target: @row.PlannedTarget.ToString("C")"><div class="forecast-bar savings-planned-bar" style="width: @plannedWidth.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div></div>
+                <div class="forecast-bar-track" title="Actual contributions: @row.Contributions.ToString("C")"><div class="forecast-bar forecast-income-bar" style="width: @actualWidth.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div></div>
+            </div>
+            <div class="forecast-chart-balance">Actual <strong>@row.Contributions.ToString("C")</strong></div>
+        </div>
+    }
+</section>
+
 <section class="table-card">
     <h2>Annual savings summary — @Model.Year</h2>
     <p class="page-description">Monthly actual contributions and withdrawals compared with the sum of monthly goal targets.</p>
@@ -102,6 +126,21 @@
 
 @if (Model.EmergencyTrend.Any())
 {
+    <section class="table-card forecast-report savings-report-chart">
+        <h2>Emergency fund balance trend</h2>
+        <p class="page-description">Recorded closing balance by month. The chart scales to the highest balance shown.</p>
+        @foreach (var point in Model.EmergencyTrend)
+        {
+            var width = Math.Clamp(point.ClosingBalance / emergencyMax * 100m, 0m, 100m);
+            <div class="forecast-chart-row">
+                <div class="forecast-chart-month">@point.Month.ToString("MMM yy")</div>
+                <div class="forecast-chart-bars">
+                    <div class="forecast-bar-track" title="Closing balance: @point.ClosingBalance.ToString("C")"><div class="forecast-bar forecast-income-bar" style="width: @width.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div></div>
+                </div>
+                <div class="forecast-chart-balance"><strong>@point.ClosingBalance.ToString("C")</strong></div>
+            </div>
+        }
+    </section>
     <section class="table-card">
         <h2>Emergency fund growth — trailing 12 months</h2>
         <p class="page-description">Month-end balance calculated from recorded emergency-fund contributions less withdrawals.</p>
