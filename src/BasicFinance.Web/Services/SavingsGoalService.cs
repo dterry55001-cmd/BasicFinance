@@ -45,6 +45,32 @@ public sealed class SavingsGoalService
             && transaction.TransactionDate.Date == contributionDate.Date;
     }
 
+    public DateTime GetNextSavingsDueDate(DateTime currentDueDate, SavingsScheduleFrequency frequency)
+    {
+        return frequency switch
+        {
+            SavingsScheduleFrequency.Weekly => currentDueDate.Date.AddDays(7),
+            SavingsScheduleFrequency.Biweekly => currentDueDate.Date.AddDays(14),
+            SavingsScheduleFrequency.Monthly => currentDueDate.Date.AddMonths(1),
+            SavingsScheduleFrequency.Quarterly => currentDueDate.Date.AddMonths(3),
+            SavingsScheduleFrequency.Yearly => currentDueDate.Date.AddYears(1),
+            _ => throw new ArgumentOutOfRangeException(nameof(frequency))
+        };
+    }
+
+    public decimal CalculateAllocationAmount(decimal monthlyBudget, decimal allocationPercent)
+    {
+        if (monthlyBudget < 0m || allocationPercent is < 0m or > 100m)
+            throw new ArgumentOutOfRangeException(nameof(allocationPercent));
+        return decimal.Round(monthlyBudget * allocationPercent / 100m, 2, MidpointRounding.AwayFromZero);
+    }
+
+    public bool IsAllocationTotalValid(IEnumerable<decimal> percentages, decimal proposedPercent)
+    {
+        if (proposedPercent is < 0m or > 100m) return false;
+        return percentages.Sum() + proposedPercent <= 100m;
+    }
+
     public decimal CalculateEmergencyFundCoverageMonths(decimal currentAmount, decimal monthlyEssentialExpenses)
     {
         if (monthlyEssentialExpenses <= 0m) return 0m;
