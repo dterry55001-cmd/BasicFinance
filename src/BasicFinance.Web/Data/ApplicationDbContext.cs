@@ -37,6 +37,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<EmergencyFundPlan> EmergencyFundPlans => Set<EmergencyFundPlan>();
     public DbSet<SavingsMonthlyTarget> SavingsMonthlyTargets => Set<SavingsMonthlyTarget>();
     public DbSet<SavingsGoalMilestone> SavingsGoalMilestones => Set<SavingsGoalMilestone>();
+    public DbSet<RecurringSavingsContribution> RecurringSavingsContributions => Set<RecurringSavingsContribution>();
+    public DbSet<SavingsAllocationBudget> SavingsAllocationBudgets => Set<SavingsAllocationBudget>();
+    public DbSet<SavingsAllocationSetting> SavingsAllocationSettings => Set<SavingsAllocationSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -336,6 +339,28 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         modelBuilder.Entity<SavingsGoalMilestone>(entity =>
         {
             entity.HasIndex(x => new { x.SavingsGoalId, x.MilestonePercent }).IsUnique();
+        });
+
+        modelBuilder.Entity<RecurringSavingsContribution>(entity =>
+        {
+            entity.Property(x => x.Amount).HasColumnType("TEXT");
+            entity.HasIndex(x => new { x.IsActive, x.NextDueDate });
+            entity.HasOne(x => x.SavingsGoal).WithMany(x => x.RecurringContributions)
+                .HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SavingsAllocationBudget>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.MonthlyBudget).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<SavingsAllocationSetting>(entity =>
+        {
+            entity.Property(x => x.AllocationPercent).HasColumnType("TEXT");
+            entity.HasIndex(x => x.SavingsGoalId).IsUnique();
+            entity.HasOne(x => x.SavingsGoal).WithMany(x => x.AllocationSettings)
+                .HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BudgetLine>(entity =>
