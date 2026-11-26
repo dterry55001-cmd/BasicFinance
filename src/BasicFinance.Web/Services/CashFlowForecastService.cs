@@ -121,4 +121,5 @@ public sealed class CashFlowForecastService
 
 public sealed record CashFlowForecastMonth(DateTime Month, decimal ExpectedIncome, decimal ExpectedExpenses, decimal NetCashFlow, decimal ProjectedEndingBalance);
 public sealed record CashFlowForecastPeriod(DateTime StartDate, DateTime EndDate, decimal ExpectedIncome, decimal ExpectedExpenses, decimal NetCashFlow, decimal ProjectedEndingBalance);
-\npublic sealed record CashFlowActualVsForecastMonth(DateTime Month, decimal ForecastIncome, decimal ActualIncome, decimal IncomeVariance, decimal ForecastExpenses, decimal ActualExpenses, decimal ExpenseVariance);\n
+
+public sealed record CashFlowActualVsForecastMonth(DateTime Month, decimal ForecastIncome, decimal ActualIncome, decimal IncomeVariance, decimal ForecastExpenses, decimal ActualExpenses, decimal ExpenseVariance);
