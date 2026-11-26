@@ -12,9 +12,14 @@
 @if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
 @if (TempData["ErrorMessage"] is string error) { <div class="notice notice-error" role="alert">@error</div> }
 <form method="get" asp-action="Index" class="filter-bar">
-    <label>Forecast period <select name="months">
-        @foreach (var count in new[] { 3, 6, 12, 18, 24 }) { <option value="@count" selected="@(count == Model.Months)">@count months</option> }
+    <label>Forecast view <select name="period">
+        <option value="day" selected="@(Model.Period == "day")">Daily</option>
+        <option value="week" selected="@(Model.Period == "week")">Weekly</option>
+        <option value="month" selected="@(Model.Period == "month")">Monthly</option>
     </select></label>
+    <label>Days <select name="days">@foreach (var count in new[] { 7, 14, 30, 60, 90 }) { <option value="@count" selected="@(count == Model.Days)">@count days</option> }</select></label>
+    <label>Weeks <select name="weeks">@foreach (var count in new[] { 4, 8, 12, 26, 52 }) { <option value="@count" selected="@(count == Model.Weeks)">@count weeks</option> }</select></label>
+    <label>Months <select name="months">@foreach (var count in new[] { 3, 6, 12, 18, 24 }) { <option value="@count" selected="@(count == Model.Months)">@count months</option> }</select></label>
     <button class="button button-secondary" type="submit">Update forecast</button>
 </form>
 <div class="summary-grid">
@@ -54,27 +59,42 @@ else if (Model.AlertsEnabled && Model.HasLowBalanceWarning)
     }
 </section>
 <section class="table-card">
-    <h2>Monthly cash flow projection</h2>
-    <div class="table-scroll"><table>
-        <thead><tr><th>Month</th><th>Starting balance</th><th>Expected income</th><th>Expected expenses</th><th>Net cash flow</th><th>Projected ending balance</th></tr></thead>
-        <tbody>
-        @{
-            var previousBalance = Model.OpeningBalance;
+    @if (Model.Period == "day")
+    {
+        <h2>Daily cash flow projection</h2>
+        <div class="table-scroll"><table><thead><tr><th>Date</th><th>Starting balance</th><th>Expected income</th><th>Expected expenses</th><th>Net cash flow</th><th>Projected ending balance</th></tr></thead><tbody>
+        @{ var previousBalance = Model.OpeningBalance; }
+        @foreach (var item in Model.DailyForecast)
+        {
+            <tr><td><strong>@item.StartDate.ToString("ddd, MMM d, yyyy")</strong></td><td>@previousBalance.ToString("C")</td><td>@item.ExpectedIncome.ToString("C")</td><td>@item.ExpectedExpenses.ToString("C")</td><td class="@(item.NetCashFlow < 0 ? "text-danger" : "")">@item.NetCashFlow.ToString("C")</td><td class="@(item.ProjectedEndingBalance < 0 ? "text-danger" : "")">@item.ProjectedEndingBalance.ToString("C")</td></tr>
+            previousBalance = item.ProjectedEndingBalance;
         }
+        </tbody></table></div>
+    }
+    else if (Model.Period == "week")
+    {
+        <h2>Weekly cash flow projection</h2>
+        <div class="table-scroll"><table><thead><tr><th>Week</th><th>Starting balance</th><th>Expected income</th><th>Expected expenses</th><th>Net cash flow</th><th>Projected ending balance</th></tr></thead><tbody>
+        @{ var previousBalance = Model.OpeningBalance; }
+        @foreach (var item in Model.WeeklyForecast)
+        {
+            <tr><td><strong>@item.StartDate.ToString("MMM d") – @item.EndDate.ToString("MMM d, yyyy")</strong></td><td>@previousBalance.ToString("C")</td><td>@item.ExpectedIncome.ToString("C")</td><td>@item.ExpectedExpenses.ToString("C")</td><td class="@(item.NetCashFlow < 0 ? "text-danger" : "")">@item.NetCashFlow.ToString("C")</td><td class="@(item.ProjectedEndingBalance < 0 ? "text-danger" : "")">@item.ProjectedEndingBalance.ToString("C")</td></tr>
+            previousBalance = item.ProjectedEndingBalance;
+        }
+        </tbody></table></div>
+    }
+    else
+    {
+        <h2>Monthly cash flow projection</h2>
+        <div class="table-scroll"><table><thead><tr><th>Month</th><th>Starting balance</th><th>Expected income</th><th>Expected expenses</th><th>Net cash flow</th><th>Projected ending balance</th></tr></thead><tbody>
+        @{ var previousBalance = Model.OpeningBalance; }
         @foreach (var month in Model.Forecast)
         {
-            <tr>
-                <td><strong>@month.Month.ToString("MMMM yyyy")</strong></td>
-                <td>@previousBalance.ToString("C")</td>
-                <td>@month.ExpectedIncome.ToString("C")</td>
-                <td>@month.ExpectedExpenses.ToString("C")</td>
-                <td class="@(month.NetCashFlow < 0 ? "text-danger" : "")">@month.NetCashFlow.ToString("C")</td>
-                <td class="@(month.ProjectedEndingBalance < 0 ? "text-danger" : "")">@month.ProjectedEndingBalance.ToString("C")</td>
-            </tr>
+            <tr><td><strong>@month.Month.ToString("MMMM yyyy")</strong></td><td>@previousBalance.ToString("C")</td><td>@month.ExpectedIncome.ToString("C")</td><td>@month.ExpectedExpenses.ToString("C")</td><td class="@(month.NetCashFlow < 0 ? "text-danger" : "")">@month.NetCashFlow.ToString("C")</td><td class="@(month.ProjectedEndingBalance < 0 ? "text-danger" : "")">@month.ProjectedEndingBalance.ToString("C")</td></tr>
             previousBalance = month.ProjectedEndingBalance;
         }
-        </tbody>
-    </table></div>
+        </tbody></table></div>
+    }
     @if (!Model.Schedules.Any()) { <p class="empty-state">Add recurring income and expense schedules to build your forecast.</p> }
 </section>
 <section class="table-card">
