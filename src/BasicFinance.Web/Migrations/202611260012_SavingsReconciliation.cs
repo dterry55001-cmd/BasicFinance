@@ -21,7 +21,9 @@ public sealed class SavingsReconciliation : Migration
         migrationBuilder.CreateIndex(
             name: "IX_SavingsGoals_LinkedAccountId",
             table: "SavingsGoals",
-            column: "LinkedAccountId");
+            column: "LinkedAccountId",
+            unique: true,
+            filter: "\"LinkedAccountId\" IS NOT NULL AND \"Status\" <> 3");
 
         migrationBuilder.AddForeignKey(
             name: "FK_SavingsGoals_Accounts_LinkedAccountId",
