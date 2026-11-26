@@ -101,6 +101,18 @@ public sealed class SavingsGoalServiceTests
     }
 
     [Fact]
+    public void CalculateRequiredMonthlyContribution_UsesMonthsUntilTargetAndRoundsUp()
+    {
+        var today = new DateTime(2026, 11, 25);
+
+        Assert.Equal(150m, _service.CalculateRequiredMonthlyContribution(300m, new DateTime(2027, 1, 25), today));
+        Assert.Equal(300m, _service.CalculateRequiredMonthlyContribution(300m, new DateTime(2026, 12, 1), today));
+        Assert.Equal(300m, _service.CalculateRequiredMonthlyContribution(300m, new DateTime(2026, 10, 1), today));
+        Assert.Null(_service.CalculateRequiredMonthlyContribution(300m, null, today));
+        Assert.Equal(0m, _service.CalculateRequiredMonthlyContribution(0m, new DateTime(2027, 1, 1), today));
+    }
+
+    [Fact]
     public void CalculateAllocationAmount_RoundsToCents()
     {
         Assert.Equal(333.33m, _service.CalculateAllocationAmount(1000m, 33.333m));
