@@ -68,3 +68,7 @@ The allocation planner stores a monthly savings budget and a percentage allocati
 `Monthly savings budget × goal allocation percentage`
 
 The planner displays allocated percentages, planned amounts, and unallocated budget. These are recommendations only; they do not automatically fund goals or create ledger entries. Existing monthly savings targets remain separate progress targets.
+
+### Funding recommendations
+
+For active goals with a target date and a remaining balance, the dashboard estimates the monthly contribution needed to reach the goal by its deadline. Recommendations are ordered by goal priority and target date. The planner compares the required monthly contribution with the goal's planned allocation and displays any additional monthly amount needed. Goals without a target date are excluded because there is no deadline from which to calculate a required monthly amount.
