@@ -14,10 +14,14 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             .Include(x => x.Contributions).ThenInclude(x => x.Transaction)
             .Include(x => x.MonthlyTargets)
             .Include(x => x.Milestones)
+            .Include(x => x.RecurringContributions)
+            .Include(x => x.AllocationSettings)
             .Where(x => x.Status != SavingsGoalStatus.Archived && x.CurrencyCode == "USD")
             .OrderBy(x => x.Priority).ThenBy(x => x.TargetDate).ThenBy(x => x.Name)
             .ToListAsync(cancellationToken);
         var plan = await database.EmergencyFundPlans.AsNoTracking().FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
+        var allocationBudget = await database.SavingsAllocationBudgets.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
         var today = DateTime.Today;
         var availableTransactions = await database.Transactions.AsNoTracking()
             .Where(x => x.CurrencyCode == "USD"
@@ -38,7 +42,11 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                 Progress = progress,
                 MonthlyTarget = monthlyTarget?.TargetAmount ?? 0m,
                 MonthlyContributed = monthlyContributed,
-                MonthlyRemaining = Math.Max(0m, (monthlyTarget?.TargetAmount ?? 0m) - monthlyContributed)
+                MonthlyRemaining = Math.Max(0m, (monthlyTarget?.TargetAmount ?? 0m) - monthlyContributed),
+                AllocationPercent = goal.AllocationSettings.FirstOrDefault()?.AllocationPercent ?? 0m,
+                PlannedAllocation = savingsService.CalculateAllocationAmount(
+                    allocationBudget?.MonthlyBudget ?? 0m,
+                    goal.AllocationSettings.FirstOrDefault()?.AllocationPercent ?? 0m)
             };
         }).ToList();
 
@@ -79,7 +87,10 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             TotalTargets = cards.Sum(x => x.Goal.TargetAmount),
             TotalMonthlyTargets = cards.Sum(x => x.MonthlyTarget),
             MonthlyPerformance = monthlyPerformance,
-            AvailableTransactions = availableTransactions
+            AvailableTransactions = availableTransactions,
+            AllocationBudget = allocationBudget,
+            TotalAllocationPercent = cards.Sum(x => x.AllocationPercent),
+            TotalPlannedAllocation = cards.Sum(x => x.PlannedAllocation)
         });
     }
 
@@ -203,6 +214,165 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         TempData["SuccessMessage"] = reachedMilestones.Count > 0
             ? $"{activityMessage} Milestones achieved: {string.Join(", ", reachedMilestones)}%."
             : activityMessage;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateRecurringSchedule(int goalId, decimal amount,
+        SavingsScheduleFrequency frequency, DateTime nextDueDate, DateTime? endDate,
+        CancellationToken cancellationToken)
+    {
+        var goal = await database.SavingsGoals.FirstOrDefaultAsync(x => x.Id == goalId
+            && x.CurrencyCode == "USD" && x.Status == SavingsGoalStatus.Active, cancellationToken);
+        if (goal is null) return NotFound();
+        if (amount <= 0m || amount > 999999999999m || !Enum.IsDefined(frequency)
+            || nextDueDate.Date < DateTime.Today
+            || (endDate.HasValue && endDate.Value.Date < nextDueDate.Date))
+        {
+            TempData["ErrorMessage"] = "Enter a valid recurring amount, frequency, and due-date range.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        database.RecurringSavingsContributions.Add(new RecurringSavingsContribution
+        {
+            SavingsGoalId = goal.Id,
+            Amount = amount,
+            Frequency = frequency,
+            NextDueDate = nextDueDate.Date,
+            EndDate = endDate?.Date,
+            IsActive = true,
+            CreatedUtc = DateTime.UtcNow,
+            UpdatedUtc = DateTime.UtcNow
+        });
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Recurring savings schedule created. Due contributions will await your confirmation.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RecordScheduledContribution(int scheduleId, CancellationToken cancellationToken)
+    {
+        var schedule = await database.RecurringSavingsContributions
+            .Include(x => x.SavingsGoal).ThenInclude(x => x.Contributions)
+            .Include(x => x.SavingsGoal).ThenInclude(x => x.Milestones)
+            .FirstOrDefaultAsync(x => x.Id == scheduleId && x.IsActive, cancellationToken);
+        if (schedule is null) return NotFound();
+        var today = DateTime.Today;
+        if (schedule.SavingsGoal.Status != SavingsGoalStatus.Active || schedule.NextDueDate.Date > today
+            || (schedule.EndDate.HasValue && schedule.NextDueDate.Date > schedule.EndDate.Value.Date))
+        {
+            TempData["ErrorMessage"] = "This scheduled contribution is not currently due or its goal is inactive.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var goal = schedule.SavingsGoal;
+        var contribution = new SavingsContribution
+        {
+            SavingsGoalId = goal.Id,
+            Amount = schedule.Amount,
+            Type = SavingsContributionType.Contribution,
+            ContributionDate = schedule.NextDueDate.Date,
+            Notes = $"Recurring schedule #{schedule.Id}",
+            CreatedUtc = DateTime.UtcNow
+        };
+        database.SavingsContributions.Add(contribution);
+        goal.Contributions.Add(contribution);
+        goal.UpdatedUtc = DateTime.UtcNow;
+        var progress = savingsService.CalculateProgress(goal, today);
+        foreach (var milestone in new[] { 25, 50, 75, 100 })
+        {
+            if (progress.CurrentAmount >= goal.TargetAmount * milestone / 100m
+                && goal.Milestones.All(x => x.MilestonePercent != milestone))
+            {
+                database.SavingsGoalMilestones.Add(new SavingsGoalMilestone
+                {
+                    SavingsGoalId = goal.Id, MilestonePercent = milestone, AchievedUtc = DateTime.UtcNow
+                });
+            }
+        }
+        goal.Status = progress.CurrentAmount >= goal.TargetAmount
+            ? SavingsGoalStatus.Completed : SavingsGoalStatus.Active;
+        var nextDueDate = savingsService.GetNextSavingsDueDate(schedule.NextDueDate, schedule.Frequency);
+        if (schedule.EndDate.HasValue && nextDueDate.Date > schedule.EndDate.Value.Date)
+            schedule.IsActive = false;
+        else
+            schedule.NextDueDate = nextDueDate;
+        schedule.UpdatedUtc = DateTime.UtcNow;
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = $"Scheduled savings contribution of {schedule.Amount:C} recorded.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeactivateRecurringSchedule(int id, CancellationToken cancellationToken)
+    {
+        var schedule = await database.RecurringSavingsContributions.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (schedule is null) return NotFound();
+        schedule.IsActive = false;
+        schedule.UpdatedUtc = DateTime.UtcNow;
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Recurring savings schedule deactivated.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveAllocationPlan(decimal monthlyBudget, CancellationToken cancellationToken)
+    {
+        if (monthlyBudget < 0m || monthlyBudget > 999999999999m)
+        {
+            TempData["ErrorMessage"] = "Enter a valid monthly savings allocation budget.";
+            return RedirectToAction(nameof(Index));
+        }
+        var budget = await database.SavingsAllocationBudgets.FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
+        if (budget is null)
+        {
+            budget = new SavingsAllocationBudget { Id = 1, MonthlyBudget = monthlyBudget, UpdatedUtc = DateTime.UtcNow };
+            database.SavingsAllocationBudgets.Add(budget);
+        }
+        else
+        {
+            budget.MonthlyBudget = monthlyBudget;
+            budget.UpdatedUtc = DateTime.UtcNow;
+        }
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Monthly savings allocation budget saved.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveGoalAllocation(int goalId, decimal allocationPercent, CancellationToken cancellationToken)
+    {
+        if (allocationPercent is < 0m or > 100m)
+        {
+            TempData["ErrorMessage"] = "Allocation must be between 0% and 100%.";
+            return RedirectToAction(nameof(Index));
+        }
+        var goal = await database.SavingsGoals.FirstOrDefaultAsync(x => x.Id == goalId
+            && x.CurrencyCode == "USD" && x.Status != SavingsGoalStatus.Archived, cancellationToken);
+        if (goal is null) return NotFound();
+        var settings = await database.SavingsAllocationSettings
+            .Where(x => x.SavingsGoalId != goalId)
+            .Select(x => x.AllocationPercent).ToListAsync(cancellationToken);
+        if (!savingsService.IsAllocationTotalValid(settings, allocationPercent))
+        {
+            TempData["ErrorMessage"] = "Goal allocations cannot total more than 100%.";
+            return RedirectToAction(nameof(Index));
+        }
+        var setting = await database.SavingsAllocationSettings.FirstOrDefaultAsync(x => x.SavingsGoalId == goalId, cancellationToken);
+        if (setting is null)
+        {
+            database.SavingsAllocationSettings.Add(new SavingsAllocationSetting
+            {
+                SavingsGoalId = goalId, AllocationPercent = allocationPercent, UpdatedUtc = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            setting.AllocationPercent = allocationPercent;
+            setting.UpdatedUtc = DateTime.UtcNow;
+        }
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Goal allocation updated.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -387,6 +557,9 @@ public sealed class SavingsGoalsIndexViewModel
     public decimal TotalMonthlyTargets { get; set; }
     public List<SavingsMonthlyPerformanceViewModel> MonthlyPerformance { get; set; } = [];
     public List<FinancialTransaction> AvailableTransactions { get; set; } = [];
+    public SavingsAllocationBudget? AllocationBudget { get; set; }
+    public decimal TotalAllocationPercent { get; set; }
+    public decimal TotalPlannedAllocation { get; set; }
 }
 
 public sealed class SavingsMonthlyPerformanceViewModel
@@ -404,4 +577,6 @@ public sealed class SavingsGoalCardViewModel
     public decimal MonthlyTarget { get; set; }
     public decimal MonthlyContributed { get; set; }
     public decimal MonthlyRemaining { get; set; }
+    public decimal AllocationPercent { get; set; }
+    public decimal PlannedAllocation { get; set; }
 }
