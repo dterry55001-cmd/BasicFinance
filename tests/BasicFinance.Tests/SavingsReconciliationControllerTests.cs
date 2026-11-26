@@ -78,7 +78,8 @@ public sealed class SavingsReconciliationControllerTests
         await database.SaveChangesAsync();
 
         var controller = new SavingsReconciliationController(
-            database, new AccountBalanceService(database), new SavingsGoalService());
+            database, new AccountBalanceService(database), new SavingsGoalService(),
+            new SavingsNotificationService(database, new SavingsGoalService()));
         controller.TempData = new TempDataDictionary(new DefaultHttpContext(), new InMemoryTempDataProvider());
 
         var runResult = await controller.Run(goal.Id, new DateTime(2026, 11, 1), DateTime.Today,
@@ -92,6 +93,9 @@ public sealed class SavingsReconciliationControllerTests
         Assert.Equal(0m, session.Difference);
         var transactionItem = Assert.Single(session.Items, x => x.TransactionId == transaction.Id);
         Assert.Equal(SavingsReconciliationItemStatus.UnmatchedTransaction, transactionItem.Status);
+        var exceptionAlert = await database.SavingsNotifications.SingleAsync();
+        Assert.Equal("Reconciliation exceptions", exceptionAlert.Category);
+        Assert.Contains("1 unmatched transaction", exceptionAlert.Message);
 
         var matchResult = await controller.Match(session.Id, transaction.Id, contribution.Id, CancellationToken.None);
         Assert.IsType<RedirectToActionResult>(matchResult);
@@ -128,7 +132,8 @@ public sealed class SavingsReconciliationControllerTests
         await database.SaveChangesAsync();
 
         var controller = new SavingsReconciliationController(
-            database, new AccountBalanceService(database), new SavingsGoalService());
+            database, new AccountBalanceService(database), new SavingsGoalService(),
+            new SavingsNotificationService(database, new SavingsGoalService()));
         controller.TempData = new TempDataDictionary(new DefaultHttpContext(), new InMemoryTempDataProvider());
 
         var result = await controller.Run(goal.Id, DateTime.Today, DateTime.Today.AddDays(1), 0m, CancellationToken.None);
