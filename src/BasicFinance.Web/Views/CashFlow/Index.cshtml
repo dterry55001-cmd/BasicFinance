@@ -14,6 +14,7 @@
         "week" => Model.WeeklyForecast.Sum(x => x.ExpectedExpenses),
         _ => Model.Forecast.Sum(x => x.ExpectedExpenses)
     };
+    var maxMonthlyFlow = Math.Max(1m, Model.Forecast.SelectMany(x => new[] { x.ExpectedIncome, x.ExpectedExpenses }).DefaultIfEmpty(1m).Max());
     var endingBalance = Model.Period switch
     {
         "day" => Model.DailyForecast.LastOrDefault()?.ProjectedEndingBalance ?? Model.OpeningBalance,
@@ -111,6 +112,22 @@ else if (Model.AlertsEnabled && Model.HasLowBalanceWarning)
         </tbody></table></div>
     }
     @if (!Model.Schedules.Any()) { <p class="empty-state">Add recurring income and expense schedules to build your forecast.</p> }
+</section>
+<section class="table-card forecast-report">
+    <h2>Monthly forecast chart</h2>
+    <p class="page-description">Expected recurring income and expenses for each month in the selected monthly horizon.</p>
+    <div class="forecast-chart-legend"><span><i class="forecast-income-key"></i> Expected income</span><span><i class="forecast-expense-key"></i> Expected expenses</span></div>
+    @foreach (var month in Model.Forecast)
+    {
+        <div class="forecast-chart-row">
+            <div class="forecast-chart-month">@month.Month.ToString("MMM yy")</div>
+            <div class="forecast-chart-bars">
+                <div class="forecast-bar-track"><div class="forecast-bar forecast-income-bar" style="width:@((month.ExpectedIncome / maxMonthlyFlow * 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%" title="Income @month.ExpectedIncome.ToString("C")"></div></div>
+                <div class="forecast-bar-track"><div class="forecast-bar forecast-expense-bar" style="width:@((month.ExpectedExpenses / maxMonthlyFlow * 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%" title="Expenses @month.ExpectedExpenses.ToString("C")"></div></div>
+            </div>
+            <div class="forecast-chart-balance">Ending balance: <strong>@month.ProjectedEndingBalance.ToString("C")</strong></div>
+        </div>
+    }
 </section>
 <section class="table-card">
     <h2>Actual vs. forecast — completed months</h2>
