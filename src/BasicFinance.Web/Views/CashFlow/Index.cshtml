@@ -23,6 +23,23 @@
     <article class="summary-card"><span>Forecast expenses</span><strong>@totalExpenses.ToString("C")</strong><small>Recurring expenses in selected period</small></article>
     <article class="summary-card"><span>Projected ending balance</span><strong class="@(endingBalance < 0 ? "text-danger" : "")">@endingBalance.ToString("C")</strong><small>At the end of the forecast</small></article>
 </div>
+@if (Model.AlertsEnabled && Model.HasProjectedShortage)
+{
+    <div class="notice notice-error" role="alert"><strong>Projected cash shortage</strong> — Your forecast falls below $0.00. Lowest projected balance: @Model.LowestProjectedBalance.ToString("C"). Review upcoming income and expenses.</div>
+}
+else if (Model.AlertsEnabled && Model.HasLowBalanceWarning)
+{
+    <div class="notice notice-warning" role="status"><strong>Low-balance warning</strong> — Your forecast falls below your @Model.LowBalanceThreshold.ToString("C") warning threshold. Lowest projected balance: @Model.LowestProjectedBalance.ToString("C").</div>
+}
+<section class="table-card">
+    <h2>Cash-flow alert settings</h2>
+    <form asp-action="UpdateAlertPreference" method="post" class="form-grid">
+        @Html.AntiForgeryToken()
+        <label>Low-balance threshold <input name="lowBalanceThreshold" type="number" min="0" max="999999999999" step="0.01" value="@Model.LowBalanceThreshold" required /></label>
+        <label class="checkbox-label"><input name="alertsEnabled" type="checkbox" value="true" checked="@(Model.AlertsEnabled)" /> Enable low-balance and projected-shortage alerts</label>
+        <div class="form-actions"><button class="button button-primary" type="submit">Save alert settings</button></div>
+    </form>
+</section>
 <section class="table-card">
     <h2>Monthly cash flow projection</h2>
     <div class="table-scroll"><table>
