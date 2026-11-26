@@ -149,3 +149,26 @@ public sealed class RecurringSavingsContribution
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
+
+public sealed class SavingsAllocationBudget
+{
+    public int Id { get; set; } = 1;
+
+    [Range(typeof(decimal), "0", "999999999999")]
+    public decimal MonthlyBudget { get; set; }
+
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed class SavingsAllocationSetting
+{
+    public int Id { get; set; }
+
+    public int SavingsGoalId { get; set; }
+    public SavingsGoal SavingsGoal { get; set; } = null!;
+
+    [Range(typeof(decimal), "0", "100")]
+    public decimal AllocationPercent { get; set; }
+
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
