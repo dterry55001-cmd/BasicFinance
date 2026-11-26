@@ -117,3 +117,35 @@ public sealed class SavingsGoalMilestone
     public int MilestonePercent { get; set; }
     public DateTime AchievedUtc { get; set; } = DateTime.UtcNow;
 }
+
+public enum SavingsScheduleFrequency
+{
+    Weekly,
+    Biweekly,
+    Monthly,
+    Quarterly,
+    Yearly
+}
+
+public sealed class RecurringSavingsContribution
+{
+    public int Id { get; set; }
+
+    public int SavingsGoalId { get; set; }
+    public SavingsGoal SavingsGoal { get; set; } = null!;
+
+    [Range(typeof(decimal), "0.01", "999999999999")]
+    public decimal Amount { get; set; }
+
+    public SavingsScheduleFrequency Frequency { get; set; } = SavingsScheduleFrequency.Monthly;
+
+    [DataType(DataType.Date)]
+    public DateTime NextDueDate { get; set; }
+
+    [DataType(DataType.Date)]
+    public DateTime? EndDate { get; set; }
+
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
