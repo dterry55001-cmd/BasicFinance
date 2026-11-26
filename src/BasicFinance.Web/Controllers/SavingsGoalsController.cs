@@ -147,11 +147,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         if (transactionId.HasValue)
         {
             linkedTransaction = await database.Transactions.FirstOrDefaultAsync(x => x.Id == transactionId.Value, cancellationToken);
-            var validTransactionType = linkedTransaction is not null && (type == SavingsContributionType.Contribution
-                ? linkedTransaction.Type is TransactionType.Income or TransactionType.Deposit
-                : linkedTransaction.Type is TransactionType.Expense or TransactionType.Withdrawal);
-            if (!validTransactionType || linkedTransaction!.CurrencyCode != goal.CurrencyCode
-                || linkedTransaction.Amount != amount || linkedTransaction.TransactionDate.Date != contributionDate.Date
+            if (!savingsService.IsCompatibleTransaction(linkedTransaction, type, amount, contributionDate, goal.CurrencyCode)
                 || await database.SavingsContributions.AnyAsync(x => x.TransactionId == transactionId.Value, cancellationToken))
             {
                 TempData["ErrorMessage"] = "The selected transaction must be unlinked, match the contribution type, amount, date, and currency.";
