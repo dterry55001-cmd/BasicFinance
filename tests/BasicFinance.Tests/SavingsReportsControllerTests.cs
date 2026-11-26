@@ -97,5 +97,18 @@ public sealed class SavingsReportsControllerTests
         var csv = Encoding.UTF8.GetString(file.FileContents);
         Assert.Contains("\"Family \"\"Travel\"\" Fund\"", csv);
         Assert.Contains("125.00", csv);
+
+        database.SavingsGoals.Add(new SavingsGoal
+        {
+            Name = "=HYPERLINK(\"https://example.com\",\"Click\")",
+            TargetAmount = 500m,
+            CurrencyCode = "USD",
+            StartDate = new DateTime(2026, 1, 1),
+            Status = SavingsGoalStatus.Active
+        });
+        await database.SaveChangesAsync();
+        var protectedResult = await controller.Export(2026, 11, CancellationToken.None);
+        var protectedCsv = Encoding.UTF8.GetString(Assert.IsType<FileContentResult>(protectedResult).FileContents);
+        Assert.Contains("\"'=HYPERLINK", protectedCsv);
     }
 }
