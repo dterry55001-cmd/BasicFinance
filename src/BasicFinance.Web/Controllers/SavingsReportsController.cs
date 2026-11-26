@@ -56,6 +56,7 @@ public sealed class SavingsReportsController(
         var end = start.AddMonths(1);
         var isCurrentMonth = start.Year == today.Year && start.Month == today.Month;
         var reportEnd = isCurrentMonth ? today : end.AddDays(-1);
+        if (reportEnd > today) reportEnd = today;
 
         var goals = await database.SavingsGoals.AsNoTracking()
             .Include(x => x.Contributions)
@@ -67,7 +68,8 @@ public sealed class SavingsReportsController(
         var goalRows = goals.Select(goal =>
         {
             var entries = goal.Contributions
-                .Where(x => x.ContributionDate.Date >= start && x.ContributionDate.Date < end)
+                .Where(x => x.ContributionDate.Date >= start && x.ContributionDate.Date < end
+                    && x.ContributionDate.Date <= reportEnd)
                 .ToList();
             var contributions = entries.Where(x => x.Type == SavingsContributionType.Contribution).Sum(x => x.Amount);
             var withdrawals = entries.Where(x => x.Type == SavingsContributionType.Withdrawal).Sum(x => x.Amount);
@@ -98,9 +100,12 @@ public sealed class SavingsReportsController(
         var emergencyRows = new List<SavingsEmergencyTrendPoint>();
         if (emergencyGoal is not null)
         {
+            var trendAnchor = new DateTime(year, month, 1);
+            var currentMonth = new DateTime(today.Year, today.Month, 1);
+            if (trendAnchor > currentMonth) trendAnchor = currentMonth;
             for (var offset = 11; offset >= 0; offset--)
             {
-                var trendMonth = new DateTime(year, month, 1).AddMonths(-offset);
+                var trendMonth = trendAnchor.AddMonths(-offset);
                 var trendEnd = trendMonth.AddMonths(1).AddDays(-1);
                 if (trendEnd > today) trendEnd = today;
                 var balance = emergencyGoal.Contributions
