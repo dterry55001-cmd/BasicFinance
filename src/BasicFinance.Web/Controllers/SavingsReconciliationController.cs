@@ -255,7 +255,10 @@ public sealed class SavingsReconciliationController(
         var contributionOnlyItem = session.Items.FirstOrDefault(x =>
             x.SavingsContributionId == contribution.Id && !x.TransactionId.HasValue);
         if (contributionOnlyItem is not null)
+        {
+            session.Items.Remove(contributionOnlyItem);
             database.SavingsReconciliationItems.Remove(contributionOnlyItem);
+        }
         session.MatchedCount = session.Items.Count(x => x.Status == SavingsReconciliationItemStatus.Matched);
         session.UnmatchedTransactionCount = session.Items.Count(x => x.Status == SavingsReconciliationItemStatus.UnmatchedTransaction);
         session.UnmatchedContributionCount = session.Items.Count(x => x.Status == SavingsReconciliationItemStatus.UnmatchedContribution);
