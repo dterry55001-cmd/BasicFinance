@@ -102,6 +102,7 @@ public sealed class SavingsReconciliationControllerTests
         Assert.Equal(SavingsReconciliationItemStatus.Matched, transactionItem.Status);
         await database.Entry(session).ReloadAsync();
         Assert.Equal(1, session.MatchedCount);
+        Assert.Equal(0, session.UnmatchedContributionCount);
     }
 
     [Fact]
