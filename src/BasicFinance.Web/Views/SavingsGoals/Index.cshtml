@@ -1,0 +1,136 @@
+@model BasicFinance.Web.Controllers.SavingsGoalsIndexViewModel
+@using BasicFinance.Web.Models
+@{
+    ViewData["Title"] = "Savings Goals";
+    var today = DateTime.Today;
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">FINANCIAL PLANNING</p>
+        <h1>Savings Goals</h1>
+        <p class="page-description">Build savings habits, track goal progress, and plan your emergency reserve.</p>
+    </div>
+</section>
+@if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="notice notice-error" role="alert">@error</div> }
+
+<div class="summary-grid">
+    <article class="summary-card"><span>Total saved across goals</span><strong>@Model.TotalSaved.ToString("C")</strong><small>Recorded contributions less withdrawals</small></article>
+    <article class="summary-card"><span>Total goal targets</span><strong>@Model.TotalTargets.ToString("C")</strong><small>Active and paused goals</small></article>
+    <article class="summary-card"><span>Remaining to targets</span><strong>@Math.Max(0m, Model.TotalTargets - Model.TotalSaved).ToString("C")</strong><small>Across tracked savings goals</small></article>
+    <article class="summary-card"><span>Monthly savings targets</span><strong>@Model.TotalMonthlyTargets.ToString("C")</strong><small>Combined target for this month</small></article>
+</div>
+
+<section class="table-card savings-emergency-card">
+    <div class="section-heading"><div><h2>Emergency fund planner</h2><p>Estimate the cash reserve needed to cover essential living expenses.</p></div></div>
+    <div class="summary-grid">
+        <article class="summary-card"><span>Emergency fund balance</span><strong>@Model.EmergencyFundCurrentAmount.ToString("C")</strong></article>
+        <article class="summary-card"><span>Target reserve</span><strong>@Model.EmergencyFundTargetAmount.ToString("C")</strong></article>
+        <article class="summary-card"><span>Coverage</span><strong>@Model.EmergencyFundCoverageMonths.ToString("0.0") months</strong></article>
+        <article class="summary-card"><span>Target coverage</span><strong>@(Model.EmergencyFundPlan?.TargetCoverageMonths ?? 6) months</strong></article>
+    </div>
+    <div class="savings-progress-track" role="progressbar" aria-label="Emergency fund coverage progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Clamp(Model.EmergencyFundCoverageMonths / Math.Max(1, Model.EmergencyFundPlan?.TargetCoverageMonths ?? 6) * 100m, 0m, 100m).ToString("0")">
+        <div class="savings-progress-fill" style="width:@Math.Clamp(Model.EmergencyFundCoverageMonths / Math.Max(1, Model.EmergencyFundPlan?.TargetCoverageMonths ?? 6) * 100m, 0m, 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+    </div>
+    <form asp-action="SaveEmergencyFundPlan" method="post" class="form-grid savings-plan-form">
+        @Html.AntiForgeryToken()
+        <label>Essential monthly expenses <input name="monthlyEssentialExpenses" type="number" min="0.01" max="999999999999" step="0.01" value="@(Model.EmergencyFundPlan?.MonthlyEssentialExpenses ?? 0m)" required /></label>
+        <label>Target coverage <select name="targetCoverageMonths">
+            @for (var months = 3; months <= 12; months++) { <option value="@months" selected="@(months == (Model.EmergencyFundPlan?.TargetCoverageMonths ?? 6))">@months months</option> }
+        </select></label>
+        <div class="form-actions"><button class="button button-primary" type="submit">Save emergency fund plan</button></div>
+    </form>
+</section>
+
+<section class="table-card">
+    <h2>Create a savings goal</h2>
+    <form asp-action="CreateGoal" method="post" class="form-grid">
+        @Html.AntiForgeryToken()
+        <label>Goal name <input name="name" maxlength="100" required placeholder="e.g. New vehicle" /></label>
+        <label>Target amount <input name="targetAmount" type="number" min="0.01" max="999999999999" step="0.01" required /></label>
+        <label>Start date <input name="startDate" type="date" value="@today.ToString("yyyy-MM-dd")" required /></label>
+        <label>Target date (optional) <input name="targetDate" type="date" /></label>
+        <label>Priority <select name="priority">@for (var priority = 1; priority <= 5; priority++) { <option value="@priority" selected="@(priority == 3)">@(priority == 1 ? "1 — Highest" : priority == 5 ? "5 — Lowest" : priority.ToString())</option> }</select></label>
+        <label>Description <input name="description" maxlength="500" placeholder="What are you saving for?" /></label>
+        <div class="form-actions"><button class="button button-primary" type="submit">Create savings goal</button></div>
+    </form>
+</section>
+
+<section class="section-block">
+    <div class="section-heading"><div><h2>Your savings goals</h2><p>Track contributions, monthly targets, milestones, and estimated completion.</p></div></div>
+    @if (!Model.Goals.Any())
+    {
+        <div class="empty-state"><h2>No savings goals yet</h2><p>Create a savings goal or configure your emergency fund plan to start tracking progress.</p></div>
+    }
+    else
+    {
+        @foreach (var card in Model.Goals)
+        {
+            var goal = card.Goal;
+            <article class="table-card savings-goal-card">
+                <div class="savings-goal-heading">
+                    <div><p class="eyebrow">@(goal.IsEmergencyFund ? "EMERGENCY RESERVE" : "SAVINGS GOAL")</p><h2>@goal.Name</h2><p class="page-description">@goal.Description</p></div>
+                    <span class="status-pill @(goal.Status == SavingsGoalStatus.Completed ? "status-active" : "")">@goal.Status</span>
+                </div>
+                <div class="savings-goal-stats">
+                    <div><span>Saved</span><strong>@card.Progress.CurrentAmount.ToString("C")</strong></div>
+                    <div><span>Target</span><strong>@goal.TargetAmount.ToString("C")</strong></div>
+                    <div><span>Remaining</span><strong>@card.Progress.RemainingAmount.ToString("C")</strong></div>
+                    <div><span>Progress</span><strong>@card.Progress.ProgressPercent.ToString("0.#")%</strong></div>
+                </div>
+                <div class="savings-progress-track" role="progressbar" aria-label="@goal.Name progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@card.Progress.ProgressPercent.ToString("0")">
+                    <div class="savings-progress-fill" style="width:@card.Progress.ProgressPercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                </div>
+                <div class="savings-goal-meta">
+                    <span>Target date: @(goal.TargetDate?.ToString("MMM d, yyyy") ?? "Not set")</span>
+                    <span>Estimated completion: @(card.Progress.EstimatedCompletionDate?.ToString("MMM yyyy") ?? "Not enough contribution history")</span>
+                </div>
+                <div class="savings-goal-actions">
+                    @if (goal.Status == SavingsGoalStatus.Active)
+                    {
+                        <form asp-action="AddContribution" method="post" class="form-grid">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="goalId" value="@goal.Id" />
+                            <label>Amount <input name="amount" type="number" min="0.01" max="999999999999" step="0.01" required /></label>
+                            <label>Entry type <select name="type"><option value="@((int)SavingsContributionType.Contribution)">Contribution</option><option value="@((int)SavingsContributionType.Withdrawal)">Withdrawal</option></select></label>
+                            <label>Date <input name="contributionDate" type="date" value="@today.ToString("yyyy-MM-dd")" required /></label>
+                            <label>Notes <input name="notes" maxlength="300" /></label>
+                            <div class="form-actions"><button class="button button-primary" type="submit">Record savings activity</button></div>
+                        </form>
+                    }
+                    <form asp-action="SaveMonthlyTarget" method="post" class="form-grid">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="goalId" value="@goal.Id" />
+                        <input type="hidden" name="year" value="@today.Year" />
+                        <input type="hidden" name="month" value="@today.Month" />
+                        <label>This month's target <input name="targetAmount" type="number" min="0.01" max="999999999999" step="0.01" value="@(card.MonthlyTarget > 0m ? card.MonthlyTarget : "")" required /></label>
+                        <div class="form-actions"><button class="button button-secondary" type="submit">Save monthly target</button></div>
+                    </form>
+                    <div class="savings-monthly-progress"><span>This month: @card.MonthlyContributed.ToString("C") contributed</span><strong>@card.MonthlyRemaining.ToString("C") remaining to target</strong></div>
+                </div>
+                @if (goal.Milestones.Any())
+                {
+                    <div class="savings-milestones"><strong>Milestones achieved:</strong> @string.Join(" · ", goal.Milestones.OrderBy(x => x.MilestonePercent).Select(x => x.MilestonePercent + "%"))</div>
+                }
+                @if (goal.Contributions.Any())
+                {
+                    <details class="savings-history"><summary>Recent savings activity (@goal.Contributions.Count)</summary>
+                        <div class="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Notes</th></tr></thead><tbody>
+                        @foreach (var item in goal.Contributions.OrderByDescending(x => x.ContributionDate).ThenByDescending(x => x.Id).Take(5))
+                        {
+                            <tr><td>@item.ContributionDate.ToString("d")</td><td>@item.Type</td><td class="@(item.Type == SavingsContributionType.Withdrawal ? "amount-out" : "amount-in")">@item.Amount.ToString("C")</td><td>@item.Notes</td></tr>
+                        }
+                        </tbody></table></div>
+                    </details>
+                }
+                @if (!goal.IsEmergencyFund && goal.Status != SavingsGoalStatus.Archived)
+                {
+                    <form asp-action="ArchiveGoal" method="post" class="savings-archive-form">
+                        @Html.AntiForgeryToken()<input type="hidden" name="id" value="@goal.Id" />
+                        <button class="text-button" type="submit">Archive goal</button>
+                    </form>
+                }
+            </article>
+        }
+    }
+</section>
