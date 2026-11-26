@@ -426,7 +426,9 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             schedule.NextDueDate = nextDueDate;
         schedule.UpdatedUtc = DateTime.UtcNow;
         await database.SaveChangesAsync(cancellationToken);
-        TempData["SuccessMessage"] = $"Scheduled savings contribution of {schedule.Amount:C} recorded.";
+        TempData["SuccessMessage"] = linkedTransaction is null
+            ? $"Scheduled savings contribution of {schedule.Amount:C} recorded."
+            : $"Scheduled savings contribution of {schedule.Amount:C} recorded and linked to the existing transaction. No transaction was created.";
         return RedirectToAction(nameof(Index));
     }
 
