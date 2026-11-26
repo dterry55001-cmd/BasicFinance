@@ -25,6 +25,42 @@
     <article class="summary-card"><span>Monthly savings targets</span><strong>@Model.TotalMonthlyTargets.ToString("C")</strong><small>Combined target for this month</small></article>
 </div>
 
+@if (Model.MatchingSuggestions.Any())
+{
+    <section class="table-card savings-match-suggestions">
+        <div class="section-heading">
+            <div>
+                <h2>Suggested transaction matches</h2>
+                <p>These existing transactions match an unlinked savings entry by amount, date, currency, and account direction. Review each suggestion before linking it.</p>
+            </div>
+            <span class="badge badge-warning">@Model.MatchingSuggestions.Count pending</span>
+        </div>
+        <div class="table-scroll"><table>
+            <thead><tr><th>Goal</th><th>Savings entry</th><th>Transaction</th><th>Amount</th><th>Date</th><th>Action</th></tr></thead>
+            <tbody>
+            @foreach (var suggestion in Model.MatchingSuggestions)
+            {
+                <tr>
+                    <td>@suggestion.GoalName</td>
+                    <td>@suggestion.ContributionType</td>
+                    <td>@suggestion.TransactionType · @suggestion.TransactionDescription</td>
+                    <td>@suggestion.ContributionAmount.ToString("C")</td>
+                    <td>@suggestion.TransactionDate.ToString("MMM d, yyyy")</td>
+                    <td>
+                        <form asp-action="LinkExistingTransaction" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="contributionId" value="@suggestion.ContributionId" />
+                            <input type="hidden" name="transactionId" value="@suggestion.TransactionId" />
+                            <button class="button button-secondary" type="submit">Confirm link</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    </section>
+}
+
 <section class="table-card savings-performance">
     <h2>Six-month savings performance</h2>
     <p class="page-description">Track recorded contributions, withdrawals, and net savings across the last six calendar months.</p>
