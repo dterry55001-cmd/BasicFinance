@@ -180,4 +180,20 @@ public sealed class CashFlowForecastServiceTests
         Assert.Equal(50m, result[0].ExpenseVariance);
     }
 
+    [Fact]
+    public void BuildForecast_ExcludesOccurrencesBeforeStartDateInFirstMonth()
+    {
+        var schedules = new[]
+        {
+            new RecurringCashFlow { Type = TransactionType.Expense, Amount = 100m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 1), IsActive = true },
+            new RecurringCashFlow { Type = TransactionType.Income, Amount = 500m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 10), IsActive = true }
+        };
+
+        var result = _service.BuildForecast(schedules, 100m, new DateTime(2026, 12, 5), 1);
+
+        Assert.Equal(500m, result[0].ExpectedIncome);
+        Assert.Equal(0m, result[0].ExpectedExpenses);
+        Assert.Equal(600m, result[0].ProjectedEndingBalance);
+    }
+
 }
