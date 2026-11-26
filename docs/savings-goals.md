@@ -49,3 +49,22 @@ Milestones are recorded once at 25%, 50%, 75%, and 100% of the goal target. Reac
 - `EmergencyFundPlans`: essential expense and coverage assumptions.
 
 All amounts are currently USD. Transaction links provide traceability only; they do not automatically synchronize savings ledger entries with account balances. Users remain responsible for recording the underlying financial transaction separately.
+
+
+## Savings automation and allocation
+
+### Recurring contribution schedules
+
+A recurring schedule defines a goal, amount, frequency (weekly, biweekly, monthly, quarterly, or yearly), next due date, optional end date, and active status. Due schedules are surfaced on the goal dashboard. Past-due schedules are labeled as missed contributions.
+
+A due occurrence is posted to the savings ledger only after the user confirms it. Confirmation advances the schedule to its next occurrence, and the schedule stops after its end date or when the goal is completed. Each schedule/due-date pair is unique, preventing duplicate ledger entries if a confirmation is retried. Deactivating a schedule stops future occurrences but preserves its contribution history.
+
+This is intentional confirmation-based automation: it does not create a bank transaction, transfer money, or alter account balances. The user records or links the actual financial transaction separately when appropriate.
+
+### Monthly allocation planning
+
+The allocation planner stores a monthly savings budget and a percentage allocation for each goal. Allocation percentages across non-archived USD goals cannot exceed 100%. Planned amounts are rounded to cents and calculated as:
+
+`Monthly savings budget × goal allocation percentage`
+
+The planner displays allocated percentages, planned amounts, and unallocated budget. These are recommendations only; they do not automatically fund goals or create ledger entries. Existing monthly savings targets remain separate progress targets.
