@@ -275,6 +275,66 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateGoal(int id, string name, string? description, decimal targetAmount,
+        DateTime startDate, DateTime? targetDate, int priority, CancellationToken cancellationToken)
+    {
+        var goal = await database.SavingsGoals.Include(x => x.Contributions)
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsEmergencyFund, cancellationToken);
+        if (goal is null) return NotFound();
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 100 || description?.Length > 500
+            || targetAmount <= 0m || targetAmount > 999999999999m || priority is < 1 or > 5
+            || (targetDate.HasValue && targetDate.Value.Date < startDate.Date))
+        {
+            TempData["ErrorMessage"] = "The savings goal changes are invalid.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        goal.Name = name.Trim();
+        goal.Description = description?.Trim();
+        goal.TargetAmount = targetAmount;
+        goal.StartDate = startDate.Date;
+        goal.TargetDate = targetDate?.Date;
+        goal.Priority = priority;
+        goal.UpdatedUtc = DateTime.UtcNow;
+        var progress = savingsService.CalculateProgress(goal, DateTime.Today);
+        if (goal.Status != SavingsGoalStatus.Paused)
+            goal.Status = progress.CurrentAmount >= goal.TargetAmount ? SavingsGoalStatus.Completed : SavingsGoalStatus.Active;
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = "Savings goal updated.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> PauseGoal(int id, CancellationToken cancellationToken)
+    {
+        var goal = await database.SavingsGoals.FirstOrDefaultAsync(x => x.Id == id && !x.IsEmergencyFund, cancellationToken);
+        if (goal is null) return NotFound();
+        if (goal.Status == SavingsGoalStatus.Active)
+        {
+            goal.Status = SavingsGoalStatus.Paused;
+            goal.UpdatedUtc = DateTime.UtcNow;
+            await database.SaveChangesAsync(cancellationToken);
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResumeGoal(int id, CancellationToken cancellationToken)
+    {
+        var goal = await database.SavingsGoals.Include(x => x.Contributions)
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsEmergencyFund, cancellationToken);
+        if (goal is null) return NotFound();
+        if (goal.Status == SavingsGoalStatus.Paused)
+        {
+            var progress = savingsService.CalculateProgress(goal, DateTime.Today);
+            goal.Status = progress.CurrentAmount >= goal.TargetAmount ? SavingsGoalStatus.Completed : SavingsGoalStatus.Active;
+            goal.UpdatedUtc = DateTime.UtcNow;
+            await database.SaveChangesAsync(cancellationToken);
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ArchiveGoal(int id, CancellationToken cancellationToken)
     {
         var goal = await database.SavingsGoals.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
