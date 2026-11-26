@@ -159,7 +159,13 @@ public sealed class SavingsReportsController(
         };
     }
 
-    private static string Csv(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
+    private static string Csv(string value)
+    {
+        var safeValue = value.Length > 0 && "=+-@\\t\\r".Contains(value[0])
+            ? "'" + value
+            : value;
+        return "\"" + safeValue.Replace("\"", "\"\"") + "\"";
+    }
 }
 
 public sealed class SavingsReportsViewModel
