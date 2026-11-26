@@ -41,6 +41,19 @@ else if (Model.AlertsEnabled && Model.HasLowBalanceWarning)
     </form>
 </section>
 <section class="table-card">
+    <h2>Cash-flow alert history</h2>
+    @if (!Model.AlertHistory.Any()) { <p class="empty-state">No projected cash-flow alerts have been recorded.</p> }
+    else
+    {
+        <div class="table-scroll"><table><thead><tr><th>Created</th><th>Alert</th><th>Forecast date</th><th>Projected balance</th><th>Status</th><th></th></tr></thead><tbody>
+        @foreach (var alert in Model.AlertHistory)
+        {
+            <tr><td>@alert.CreatedUtc.ToLocalTime().ToString("g")</td><td>@alert.Message</td><td>@alert.ForecastDate.ToString("d")</td><td class="@(alert.ProjectedBalance < 0 ? "text-danger" : "")">@alert.ProjectedBalance.ToString("C")</td><td>@(alert.IsRead ? "Read" : "Unread")</td><td>@if (!alert.IsRead) { <form asp-action="MarkAlertRead" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@alert.Id" /><button class="button button-secondary" type="submit">Mark read</button></form> }</td></tr>
+        }
+        </tbody></table></div>
+    }
+</section>
+<section class="table-card">
     <h2>Monthly cash flow projection</h2>
     <div class="table-scroll"><table>
         <thead><tr><th>Month</th><th>Starting balance</th><th>Expected income</th><th>Expected expenses</th><th>Net cash flow</th><th>Projected ending balance</th></tr></thead>
