@@ -86,7 +86,15 @@
     <div class="savings-progress-track" role="progressbar" aria-label="Emergency fund coverage progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Clamp(Model.EmergencyFundCoverageMonths / Math.Max(1, Model.EmergencyFundPlan?.TargetCoverageMonths ?? 6) * 100m, 0m, 100m).ToString("0")">
         <div class="savings-progress-fill" style="width:@Math.Clamp(Model.EmergencyFundCoverageMonths / Math.Max(1, Model.EmergencyFundPlan?.TargetCoverageMonths ?? 6) * 100m, 0m, 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div>
     </div>
-    <form asp-action="SaveEmergencyFundPlan" method="post" class="form-grid savings-plan-form">
+    <h3>Emergency fund readiness assessment</h3>
+    <p class="page-description">Compare your current reserve against common coverage milestones. Suggested monthly contributions assume a 12-month funding horizon and are planning estimates, not automatic transfers.</p>
+    <div class="table-scroll"><table><thead><tr><th>Coverage target</th><th>Target reserve</th><th>Funding gap</th><th>Suggested monthly savings</th><th>Readiness</th></tr></thead><tbody>
+    @foreach (var tier in Model.EmergencyFundReadiness)
+    {
+        <tr><td><strong>@tier.CoverageMonths months</strong></td><td>@tier.TargetAmount.ToString("C")</td><td>@tier.FundingGap.ToString("C")</td><td>@tier.SuggestedMonthlyContribution.ToString("C")</td><td><span class="status-pill @(tier.IsFunded ? "status-active" : "")">@(tier.IsFunded ? "Funded" : "In progress")</span></td></tr>
+    }
+    </tbody></table></div>
+        <form asp-action="SaveEmergencyFundPlan" method="post" class="form-grid savings-plan-form">
         @Html.AntiForgeryToken()
         <label>Essential monthly expenses <input name="monthlyEssentialExpenses" type="number" min="0.01" max="999999999999" step="0.01" value="@(Model.EmergencyFundPlan?.MonthlyEssentialExpenses ?? 0m)" required /></label>
         <label>Target coverage <select name="targetCoverageMonths">
