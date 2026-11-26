@@ -104,7 +104,11 @@ public sealed class SavingsReportsControllerTests
             TargetAmount = 500m,
             CurrencyCode = "USD",
             StartDate = new DateTime(2026, 1, 1),
-            Status = SavingsGoalStatus.Active
+            Status = SavingsGoalStatus.Active,
+            Contributions =
+            [
+                new SavingsContribution { Amount = 50m, Type = SavingsContributionType.Contribution, ContributionDate = new DateTime(2026, 11, 3) }
+            ]
         });
         await database.SaveChangesAsync();
         var protectedResult = await controller.Export(2026, 11, CancellationToken.None);
