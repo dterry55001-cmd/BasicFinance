@@ -122,3 +122,12 @@ The session compares goal contribution and withdrawal entries with transactions 
 Confirming a match links the existing transaction to the savings entry, preserving the one-transaction-per-contribution database constraint. It does not create, edit, or delete a financial transaction, contribution, or transfer. Entries already linked elsewhere cannot be reused. Reconciliation sessions preserve their results as history, and users can review the balance difference and all matched or unresolved items later.
 
 The balance comparison is account-level; it is not a separate cash sub-ledger for an individual goal. If an account holds funds for several purposes, the one-goal-per-account link rule means those purposes should use distinct accounts or remain unlinked until an appropriate allocation design is added. A zero account balance difference does not imply every savings ledger item is matched. Reconciliation is a review aid and does not replace a bank statement or accounting review.
+
+
+### Transaction match suggestions and reconciliation alerts
+
+The Savings dashboard proposes one-to-one exact matches between unlinked savings ledger entries and unlinked USD transactions. A suggestion requires the same amount and calendar date, matching currency, compatible transaction type, and correct account direction. When a goal has a linked account, a transfer into that account can support a contribution match and a transfer out can support a withdrawal match. When no account is linked, transfer transactions are excluded because their effect on the goal's cash account cannot be established.
+
+Suggestions are displayed only when each transaction has exactly one candidate savings entry and each savings entry has exactly one candidate transaction. Ambiguous candidates are withheld from the quick-link list and can be investigated through account reconciliation. Users explicitly confirm a suggested link. The application does not automatically link, create, or change transactions.
+
+When a reconciliation session contains unmatched transactions, unmatched savings entries, or potential duplicates, the application creates a persistent in-app reconciliation exception alert. The alert links conceptually to the saved session and is deduplicated by session identity. A reconciliation with no exceptions does not create an exception alert.
