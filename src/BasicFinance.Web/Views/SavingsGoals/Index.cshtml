@@ -21,6 +21,20 @@
     <article class="summary-card"><span>Monthly savings targets</span><strong>@Model.TotalMonthlyTargets.ToString("C")</strong><small>Combined target for this month</small></article>
 </div>
 
+<section class="table-card savings-performance">
+    <h2>Six-month savings performance</h2>
+    <p class="page-description">Track recorded contributions, withdrawals, and net savings across the last six calendar months.</p>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Month</th><th>Contributions</th><th>Withdrawals</th><th>Net savings</th></tr></thead>
+        <tbody>
+        @foreach (var month in Model.MonthlyPerformance)
+        {
+            <tr><td><strong>@month.Month.ToString("MMMM yyyy")</strong></td><td class="amount-in">@month.Contributions.ToString("C")</td><td class="amount-out">@month.Withdrawals.ToString("C")</td><td class="@(month.NetSavings < 0 ? "amount-out" : "amount-in")">@month.NetSavings.ToString("C")</td></tr>
+        }
+        </tbody>
+    </table></div>
+</section>
+
 <section class="table-card savings-emergency-card">
     <div class="section-heading"><div><h2>Emergency fund planner</h2><p>Estimate the cash reserve needed to cover essential living expenses.</p></div></div>
     <div class="summary-grid">
