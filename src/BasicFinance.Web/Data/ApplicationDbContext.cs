@@ -320,7 +320,11 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.Notes).HasMaxLength(300);
             entity.HasIndex(x => new { x.SavingsGoalId, x.ContributionDate });
             entity.HasIndex(x => x.TransactionId).IsUnique().HasFilter("\"TransactionId\" IS NOT NULL");
+            entity.HasIndex(x => new { x.RecurringSavingsContributionId, x.ScheduledDueDate }).IsUnique()
+                .HasFilter("\"RecurringSavingsContributionId\" IS NOT NULL AND \"ScheduledDueDate\" IS NOT NULL");
             entity.HasOne(x => x.Transaction).WithMany().HasForeignKey(x => x.TransactionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.RecurringSavingsContribution).WithMany(x => x.Contributions)
+                .HasForeignKey(x => x.RecurringSavingsContributionId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<EmergencyFundPlan>(entity =>
