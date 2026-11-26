@@ -42,6 +42,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<SavingsAllocationSetting> SavingsAllocationSettings => Set<SavingsAllocationSetting>();
     public DbSet<SavingsNotificationPreference> SavingsNotificationPreferences => Set<SavingsNotificationPreference>();
     public DbSet<SavingsNotification> SavingsNotifications => Set<SavingsNotification>();
+    public DbSet<SavingsReconciliationSession> SavingsReconciliationSessions => Set<SavingsReconciliationSession>();
+    public DbSet<SavingsReconciliationItem> SavingsReconciliationItems => Set<SavingsReconciliationItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -311,6 +313,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(x => new { x.Status, x.Priority });
             entity.HasIndex(x => x.IsEmergencyFund).IsUnique().HasFilter("\"IsEmergencyFund\" = 1");
+            entity.HasOne(x => x.LinkedAccount).WithMany().HasForeignKey(x => x.LinkedAccountId).OnDelete(DeleteBehavior.Restrict);
             entity.HasMany(x => x.Contributions).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.MonthlyTargets).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.Milestones).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
@@ -371,6 +374,27 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.EmergencyFundWarningMonths).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<SavingsReconciliationSession>(entity =>
+        {
+            entity.Property(x => x.StatementClosingBalance).HasColumnType("TEXT");
+            entity.Property(x => x.CalculatedAccountBalance).HasColumnType("TEXT");
+            entity.Property(x => x.Difference).HasColumnType("TEXT");
+            entity.HasIndex(x => new { x.SavingsGoalId, x.AccountId, x.PeriodStart, x.PeriodEnd });
+            entity.HasOne(x => x.SavingsGoal).WithMany().HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(x => x.Items).WithOne(x => x.Session).HasForeignKey(x => x.SavingsReconciliationSessionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SavingsReconciliationItem>(entity =>
+        {
+            entity.Property(x => x.Amount).HasColumnType("TEXT");
+            entity.Property(x => x.Description).HasMaxLength(160).IsRequired();
+            entity.HasIndex(x => x.TransactionId);
+            entity.HasIndex(x => x.SavingsContributionId);
+            entity.HasOne(x => x.Transaction).WithMany().HasForeignKey(x => x.TransactionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.SavingsContribution).WithMany().HasForeignKey(x => x.SavingsContributionId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<SavingsNotification>(entity =>
