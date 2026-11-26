@@ -178,7 +178,7 @@
                         {
                             <tr>
                                 <td>@schedule.Amount.ToString("C")</td><td>@schedule.Frequency</td><td>@schedule.NextDueDate.ToString("d")</td>
-                                <td>@(schedule.IsActive ? (schedule.NextDueDate.Date <= today ? "Due — confirmation needed" : "Scheduled") : "Inactive")</td>
+                                <td>@(schedule.IsActive ? (schedule.NextDueDate.Date < today ? "Overdue — missed contribution" : schedule.NextDueDate.Date == today ? "Due — confirmation needed" : "Scheduled") : "Inactive")</td>
                                 <td>
                                     @if (schedule.IsActive && schedule.NextDueDate.Date <= today && goal.Status == SavingsGoalStatus.Active)
                                     {
