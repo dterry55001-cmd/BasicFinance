@@ -12,11 +12,8 @@ public sealed class SavingsReconciliation : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<int>(
-            name: "LinkedAccountId",
-            table: "SavingsGoals",
-            type: "INTEGER",
-            nullable: true);
+        migrationBuilder.Sql(
+            "ALTER TABLE \"SavingsGoals\" ADD COLUMN \"LinkedAccountId\" INTEGER NULL REFERENCES \"Accounts\" (\"Id\") ON DELETE RESTRICT;");
 
         migrationBuilder.CreateIndex(
             name: "IX_SavingsGoals_LinkedAccountId",
