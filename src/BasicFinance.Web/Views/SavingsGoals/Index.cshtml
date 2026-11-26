@@ -100,7 +100,7 @@
                     <span>Estimated completion: @(card.Progress.EstimatedCompletionDate?.ToString("MMM yyyy") ?? "Not enough contribution history")</span>
                 </div>
                 <div class="savings-goal-actions">
-                    @if (goal.Status == SavingsGoalStatus.Active)
+                    @if (goal.Status is SavingsGoalStatus.Active or SavingsGoalStatus.Completed)
                     {
                         <form asp-action="AddContribution" method="post" class="form-grid">
                             @Html.AntiForgeryToken()
