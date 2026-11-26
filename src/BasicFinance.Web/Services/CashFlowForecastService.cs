@@ -15,7 +15,8 @@ public sealed class CashFlowForecastService
         {
             var monthStart = firstMonth.AddMonths(offset);
             var monthEnd = monthStart.AddMonths(1);
-            var totals = SumOccurrences(schedules, monthStart, monthEnd);
+            var periodStart = offset == 0 && startDate.Date > monthStart ? startDate.Date : monthStart;
+            var totals = SumOccurrences(schedules, periodStart, monthEnd);
             var net = totals.Income - totals.Expenses;
             balance += net;
             results.Add(new CashFlowForecastMonth(monthStart, totals.Income, totals.Expenses, net, balance));
