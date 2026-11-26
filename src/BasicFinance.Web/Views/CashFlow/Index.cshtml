@@ -113,6 +113,27 @@ else if (Model.AlertsEnabled && Model.HasLowBalanceWarning)
     @if (!Model.Schedules.Any()) { <p class="empty-state">Add recurring income and expense schedules to build your forecast.</p> }
 </section>
 <section class="table-card">
+    <h2>Actual vs. forecast — completed months</h2>
+    <p class="page-description">Compare scheduled recurring cash flow with posted USD transactions. Variance is actual minus forecast; a positive expense variance means spending exceeded the forecast.</p>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Month</th><th>Forecast income</th><th>Actual income</th><th>Income variance</th><th>Forecast expenses</th><th>Actual expenses</th><th>Expense variance</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.ActualVsForecast)
+        {
+            <tr>
+                <td><strong>@item.Month.ToString("MMM yyyy")</strong></td>
+                <td>@item.ForecastIncome.ToString("C")</td>
+                <td>@item.ActualIncome.ToString("C")</td>
+                <td class="@(item.IncomeVariance < 0 ? "text-danger" : "text-success")">@item.IncomeVariance.ToString("+C;-C;C0")</td>
+                <td>@item.ForecastExpenses.ToString("C")</td>
+                <td>@item.ActualExpenses.ToString("C")</td>
+                <td class="@(item.ExpenseVariance > 0 ? "text-danger" : "text-success")">@item.ExpenseVariance.ToString("+C;-C;C0")</td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
+</section>
+<section class="table-card">
     <h2>Add recurring cash flow</h2>
     @if (!Model.Accounts.Any()) { <p class="empty-state">Create an active USD checking, savings, or cash account before adding schedules.</p> }
     else
