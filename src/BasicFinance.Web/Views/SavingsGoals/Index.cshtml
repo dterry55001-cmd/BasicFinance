@@ -109,6 +109,15 @@
                             <label>Entry type <select name="type"><option value="@((int)SavingsContributionType.Contribution)">Contribution</option><option value="@((int)SavingsContributionType.Withdrawal)">Withdrawal</option></select></label>
                             <label>Date <input name="contributionDate" type="date" value="@today.ToString("yyyy-MM-dd")" required /></label>
                             <label>Notes <input name="notes" maxlength="300" /></label>
+                            <label>Link existing transaction (optional)
+                                <select name="transactionId">
+                                    <option value="">No transaction link</option>
+                                    @foreach (var transaction in Model.AvailableTransactions)
+                                    {
+                                        <option value="@transaction.Id">@transaction.TransactionDate.ToString("d") · @transaction.Type · @transaction.Description · @transaction.Amount.ToString("C")</option>
+                                    }
+                                </select>
+                            </label>
                             <div class="form-actions"><button class="button button-primary" type="submit">Record savings activity</button></div>
                         </form>
                     }
@@ -129,7 +138,7 @@
                 @if (goal.Contributions.Any())
                 {
                     <details class="savings-history"><summary>Recent savings activity (@goal.Contributions.Count)</summary>
-                        <div class="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Notes</th></tr></thead><tbody>
+                        <div class="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Transaction</th><th>Notes</th></tr></thead><tbody>
                         @foreach (var item in goal.Contributions.OrderByDescending(x => x.ContributionDate).ThenByDescending(x => x.Id).Take(5))
                         {
                             <tr><td>@item.ContributionDate.ToString("d")</td><td>@item.Type</td><td class="@(item.Type == SavingsContributionType.Withdrawal ? "amount-out" : "amount-in")">@item.Amount.ToString("C")</td><td>@item.Notes</td></tr>
