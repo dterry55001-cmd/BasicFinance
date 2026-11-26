@@ -128,7 +128,7 @@ public sealed class SavingsReconciliationControllerTests
 
         var controller = new SavingsReconciliationController(
             database, new AccountBalanceService(database), new SavingsGoalService());
-        controller.TempData = new TempDataDictionary(new DefaultHttpContext(), new SessionStateTempDataProvider());
+        controller.TempData = new TempDataDictionary(new DefaultHttpContext(), new InMemoryTempDataProvider());
 
         var result = await controller.Run(goal.Id, DateTime.Today, DateTime.Today.AddDays(1), 0m, CancellationToken.None);
 
