@@ -280,7 +280,6 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             Type = SavingsContributionType.Contribution,
             ContributionDate = schedule.NextDueDate.Date,
             RecurringSavingsContributionId = schedule.Id,
-            RecurringSavingsContribution = schedule,
             ScheduledDueDate = schedule.NextDueDate.Date,
             Notes = $"Recurring schedule #{schedule.Id}",
             CreatedUtc = DateTime.UtcNow
