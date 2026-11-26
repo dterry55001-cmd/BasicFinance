@@ -196,4 +196,65 @@ public sealed class CashFlowForecastServiceTests
         Assert.Equal(600m, result[0].ProjectedEndingBalance);
     }
 
+    [Fact]
+    public void BuildActualVsForecast_SeparatesTransactionsByCalendarMonthAndExcludesTransfers()
+    {
+        var schedules = new[]
+        {
+            new RecurringCashFlow
+            {
+                Type = TransactionType.Income, Amount = 100m, CurrencyCode = "USD",
+                Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 1), IsActive = true
+            },
+            new RecurringCashFlow
+            {
+                Type = TransactionType.Expense, Amount = 40m, CurrencyCode = "USD",
+                Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 5), IsActive = true
+            }
+        };
+        var transactions = new[]
+        {
+            new FinancialTransaction { Type = TransactionType.Income, Amount = 80m, CurrencyCode = "USD", TransactionDate = new DateTime(2026, 12, 31) },
+            new FinancialTransaction { Type = TransactionType.Expense, Amount = 50m, CurrencyCode = "USD", TransactionDate = new DateTime(2027, 1, 1) },
+            new FinancialTransaction { Type = TransactionType.Transfer, Amount = 500m, CurrencyCode = "USD", TransactionDate = new DateTime(2026, 12, 15) }
+        };
+
+        var result = _service.BuildActualVsForecast(schedules, transactions, new DateTime(2026, 12, 20), 2);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(80m, result[0].ActualIncome);
+        Assert.Equal(0m, result[0].ActualExpenses);
+        Assert.Equal(0m, result[1].ActualIncome);
+        Assert.Equal(50m, result[1].ActualExpenses);
+    }
+
+    [Fact]
+    public void BuildForecast_ExcludesScheduleWhenFirstDueDateIsAfterItsEndDate()
+    {
+        var schedule = new RecurringCashFlow
+        {
+            Type = TransactionType.Expense, Amount = 125m, CurrencyCode = "USD",
+            Frequency = CashFlowFrequency.Weekly, NextDueDate = new DateTime(2026, 12, 8),
+            EndDate = new DateTime(2026, 12, 7), IsActive = true
+        };
+
+        var result = _service.BuildForecast([schedule], 500m, new DateTime(2026, 12, 1), 1);
+
+        Assert.Equal(0m, result[0].ExpectedExpenses);
+        Assert.Equal(500m, result[0].ProjectedEndingBalance);
+    }
+
+    [Fact]
+    public void BuildForecast_RejectsUnknownRecurringFrequencyWhenOccurrenceIsDue()
+    {
+        var schedule = new RecurringCashFlow
+        {
+            Type = TransactionType.Income, Amount = 100m, CurrencyCode = "USD",
+            Frequency = (CashFlowFrequency)999, NextDueDate = new DateTime(2026, 12, 1), IsActive = true
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            _service.BuildForecast([schedule], 0m, new DateTime(2026, 12, 1), 1));
+    }
+
 }
