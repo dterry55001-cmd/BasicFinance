@@ -303,6 +303,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
         goal.Status = progress.CurrentAmount >= goal.TargetAmount
             ? SavingsGoalStatus.Completed : SavingsGoalStatus.Active;
         var nextDueDate = savingsService.GetNextSavingsDueDate(schedule.NextDueDate, schedule.Frequency);
+        if (goal.Status == SavingsGoalStatus.Completed)
+            schedule.IsActive = false;
         if (schedule.EndDate.HasValue && nextDueDate.Date > schedule.EndDate.Value.Date)
             schedule.IsActive = false;
         else
@@ -361,7 +363,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             && x.CurrencyCode == "USD" && x.Status != SavingsGoalStatus.Archived, cancellationToken);
         if (goal is null) return NotFound();
         var settings = await database.SavingsAllocationSettings
-            .Where(x => x.SavingsGoalId != goalId)
+            .Where(x => x.SavingsGoalId != goalId && x.SavingsGoal.Status != SavingsGoalStatus.Archived
+                && x.SavingsGoal.CurrencyCode == "USD")
             .Select(x => x.AllocationPercent).ToListAsync(cancellationToken);
         if (!savingsService.IsAllocationTotalValid(settings, allocationPercent))
         {
