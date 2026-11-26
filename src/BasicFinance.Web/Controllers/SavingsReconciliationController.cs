@@ -207,7 +207,15 @@ public sealed class SavingsReconciliationController(
             .Include(x => x.Items).ThenInclude(x => x.SavingsContribution)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (session is null) return NotFound();
-        return View(new SavingsReconciliationDetailsViewModel { Session = session });
+        var availableContributions = await database.SavingsContributions.AsNoTracking()
+            .Where(x => x.SavingsGoalId == session.SavingsGoalId && x.TransactionId == null)
+            .OrderByDescending(x => x.ContributionDate).ThenByDescending(x => x.Id)
+            .ToListAsync(cancellationToken);
+        return View(new SavingsReconciliationDetailsViewModel
+        {
+            Session = session,
+            AvailableContributions = availableContributions
+        });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -277,4 +285,5 @@ public sealed class SavingsReconciliationIndexViewModel
 public sealed class SavingsReconciliationDetailsViewModel
 {
     public SavingsReconciliationSession Session { get; set; } = null!;
+    public List<SavingsContribution> AvailableContributions { get; set; } = [];
 }
