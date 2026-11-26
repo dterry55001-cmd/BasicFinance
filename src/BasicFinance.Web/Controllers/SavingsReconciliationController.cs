@@ -15,13 +15,14 @@ public sealed class SavingsReconciliationController(
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var goals = await database.SavingsGoals.AsNoTracking()
-            .Include(x => x.LinkedAccount)
             .Where(x => x.CurrencyCode == "USD" && x.Status != SavingsGoalStatus.Archived)
             .OrderBy(x => x.Name).ToListAsync(cancellationToken);
         var accounts = await database.Accounts.AsNoTracking()
             .Where(x => x.CurrencyCode == "USD" && x.Status == AccountStatus.Active
                 && (x.Type == AccountType.Savings || x.Type == AccountType.Checking || x.Type == AccountType.Cash))
             .OrderBy(x => x.Name).ToListAsync(cancellationToken);
+        foreach (var goal in goals)
+            goal.LinkedAccount = accounts.FirstOrDefault(x => x.Id == goal.LinkedAccountId);
         var sessions = await database.SavingsReconciliationSessions.AsNoTracking()
             .Include(x => x.SavingsGoal).Include(x => x.Account)
             .OrderByDescending(x => x.CreatedUtc).Take(50).ToListAsync(cancellationToken);
@@ -71,13 +72,15 @@ public sealed class SavingsReconciliationController(
     public async Task<IActionResult> Run(int goalId, DateTime periodStart, DateTime periodEnd,
         decimal statementClosingBalance, CancellationToken cancellationToken)
     {
-        var goal = await database.SavingsGoals.Include(x => x.LinkedAccount)
-            .FirstOrDefaultAsync(x => x.Id == goalId && x.CurrencyCode == "USD"
-                && x.Status != SavingsGoalStatus.Archived, cancellationToken);
+        var goal = await database.SavingsGoals.FirstOrDefaultAsync(x => x.Id == goalId && x.CurrencyCode == "USD"
+            && x.Status != SavingsGoalStatus.Archived, cancellationToken);
         if (goal is null) return NotFound();
-        if (!goal.LinkedAccountId.HasValue || goal.LinkedAccount is null
-            || goal.LinkedAccount.Status != AccountStatus.Active
-            || goal.LinkedAccount.CurrencyCode != goal.CurrencyCode)
+        var account = goal.LinkedAccountId.HasValue
+            ? await database.Accounts.FirstOrDefaultAsync(x => x.Id == goal.LinkedAccountId.Value, cancellationToken)
+            : null;
+        if (account is null || account.Status != AccountStatus.Active
+            || account.CurrencyCode != goal.CurrencyCode
+            || account.Type is not (AccountType.Savings or AccountType.Checking or AccountType.Cash))
         {
             TempData["ErrorMessage"] = "Link an active USD financial account to this goal before reconciling.";
             return RedirectToAction(nameof(Index));
@@ -90,8 +93,7 @@ public sealed class SavingsReconciliationController(
             return RedirectToAction(nameof(Index));
         }
 
-        var accountId = goal.LinkedAccountId.Value;
-        var account = goal.LinkedAccount;
+        var accountId = account.Id;
         var transactions = await database.Transactions.AsNoTracking()
             .Where(x => x.CurrencyCode == goal.CurrencyCode && x.TransactionDate >= periodStart.Date
                 && x.TransactionDate < periodEnd.Date.AddDays(1)
