@@ -1,0 +1,93 @@
+@model BasicFinance.Web.Controllers.SavingsReconciliationDetailsViewModel
+@using BasicFinance.Web.Models
+@{
+    ViewData["Title"] = "Reconciliation details";
+    var session = Model.Session;
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">SAVINGS CONTROL</p>
+        <h1>Reconciliation details</h1>
+        <p class="page-description">@session.SavingsGoal.Name · @session.Account.Name · @session.PeriodStart.ToString("MMM d, yyyy") – @session.PeriodEnd.ToString("MMM d, yyyy")</p>
+    </div>
+    <a class="button button-secondary" asp-action="Index">Back to reconciliation</a>
+</section>
+@if (TempData["SuccessMessage"] is string success) { <div class="notice notice-success" role="status">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="notice notice-error" role="alert">@error</div> }
+
+<div class="summary-grid">
+    <article class="summary-card"><span>Statement closing balance</span><strong>@session.StatementClosingBalance.ToString("C")</strong></article>
+    <article class="summary-card"><span>Calculated account balance</span><strong>@session.CalculatedAccountBalance.ToString("C")</strong></article>
+    <article class="summary-card"><span>Difference</span><strong class="@(session.Difference == 0m ? "amount-in" : "amount-out")">@session.Difference.ToString("C")</strong><small>Statement minus calculated balance</small></article>
+    <article class="summary-card"><span>Matched entries</span><strong>@session.MatchedCount</strong><small>@(session.UnmatchedTransactionCount + session.UnmatchedContributionCount + session.PotentialDuplicateCount) unresolved exceptions</small></article>
+</div>
+
+<div class="alert alert-info" role="note">
+    The balance comparison uses the account's opening balance plus recorded transactions through the period end. It is independent of the goal's contribution ledger. A zero difference does not by itself prove every goal entry is matched.
+</div>
+
+<section class="table-card">
+    <h2>Account and savings activity</h2>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Status</th><th>Date</th><th>Description</th><th>Transaction</th><th>Savings entry</th><th>Amount</th><th>Action</th></tr></thead>
+        <tbody>
+        @foreach (var item in session.Items.OrderBy(x => x.EventDate).ThenBy(x => x.Id))
+        {
+            var transaction = item.Transaction;
+            var expectedType = transaction is null ? (SavingsContributionType?)null
+                : transaction.Type == TransactionType.Transfer
+                    ? transaction.RelatedAccountId == session.AccountId ? SavingsContributionType.Contribution : SavingsContributionType.Withdrawal
+                    : transaction.Type is TransactionType.Income or TransactionType.Deposit ? SavingsContributionType.Contribution
+                    : transaction.Type is TransactionType.Expense or TransactionType.Withdrawal ? SavingsContributionType.Withdrawal
+                    : null;
+            var candidates = transaction is null || expectedType is null
+                ? new List<SavingsContribution>()
+                : Model.AvailableContributions.Where(x => x.Type == expectedType && x.Amount == transaction.Amount
+                    && x.ContributionDate.Date == transaction.TransactionDate.Date).ToList();
+            <tr>
+                <td>
+                    @switch (item.Status)
+                    {
+                        case SavingsReconciliationItemStatus.Matched: <span class="badge badge-success">Matched</span>; break;
+                        case SavingsReconciliationItemStatus.PotentialDuplicate: <span class="badge badge-warning">Potential duplicate</span>; break;
+                        case SavingsReconciliationItemStatus.AlreadyLinked: <span class="badge badge-secondary">Already linked</span>; break;
+                        case SavingsReconciliationItemStatus.UnmatchedTransaction: <span class="badge badge-warning">Unmatched transaction</span>; break;
+                        default: <span class="badge badge-warning">Unmatched savings entry</span>; break;
+                    }
+                </td>
+                <td>@item.EventDate.ToString("MMM d, yyyy")</td>
+                <td>@item.Description</td>
+                <td>@(transaction is null ? "—" : $"#{transaction.Id} · {transaction.Type}")</td>
+                <td>@(item.SavingsContribution is null ? "—" : $"#{item.SavingsContribution.Id} · {item.SavingsContribution.Type}")</td>
+                <td>@item.Amount.ToString("C")</td>
+                <td>
+                    @if (transaction is not null && item.SavingsContributionId is null && candidates.Any()
+                        && item.Status is SavingsReconciliationItemStatus.UnmatchedTransaction or SavingsReconciliationItemStatus.PotentialDuplicate)
+                    {
+                        <form asp-action="Match" method="post" class="inline-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="sessionId" value="@session.Id" />
+                            <input type="hidden" name="transactionId" value="@transaction.Id" />
+                            <select name="contributionId" aria-label="Choose matching savings entry">
+                                @foreach (var candidate in candidates)
+                                {
+                                    <option value="@candidate.Id">#@candidate.Id · @candidate.Type · @candidate.Amount.ToString("C") · @candidate.ContributionDate.ToString("d")</option>
+                                }
+                            </select>
+                            <button class="button button-secondary" type="submit">Confirm match</button>
+                        </form>
+                    }
+                    else if (item.Status == SavingsReconciliationItemStatus.Matched)
+                    {
+                        <span>Linked</span>
+                    }
+                    else
+                    {
+                        <span>Review manually</span>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
+</section>
