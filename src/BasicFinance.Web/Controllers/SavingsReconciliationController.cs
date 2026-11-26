@@ -116,6 +116,10 @@ public sealed class SavingsReconciliationController(
         session.Difference = statementClosingBalance - session.CalculatedAccountBalance;
 
         var usedContributionIds = new HashSet<int>();
+        var linkedTransactionIds = await database.SavingsContributions.AsNoTracking()
+            .Where(x => x.TransactionId.HasValue)
+            .Select(x => x.TransactionId!.Value)
+            .ToHashSetAsync(cancellationToken);
         foreach (var transaction in transactions)
         {
             var direction = GetDirection(transaction, accountId);
@@ -143,10 +147,10 @@ public sealed class SavingsReconciliationController(
             var candidates = contributions.Where(x => !x.TransactionId.HasValue && !usedContributionIds.Contains(x.Id)
                 && x.Type == direction && x.Amount == transaction.Amount
                 && x.ContributionDate.Date == transaction.TransactionDate.Date).ToList();
-            var status = candidates.Count > 1
-                ? SavingsReconciliationItemStatus.PotentialDuplicate
-                : candidates.Count == 1
-                    ? SavingsReconciliationItemStatus.UnmatchedTransaction
+            var status = linkedTransactionIds.Contains(transaction.Id)
+                ? SavingsReconciliationItemStatus.AlreadyLinked
+                : candidates.Count > 1
+                    ? SavingsReconciliationItemStatus.PotentialDuplicate
                     : SavingsReconciliationItemStatus.UnmatchedTransaction;
             session.Items.Add(new SavingsReconciliationItem
             {
@@ -248,6 +252,10 @@ public sealed class SavingsReconciliationController(
         contribution.TransactionId = transaction.Id;
         item.SavingsContributionId = contribution.Id;
         item.Status = SavingsReconciliationItemStatus.Matched;
+        var contributionOnlyItem = session.Items.FirstOrDefault(x =>
+            x.SavingsContributionId == contribution.Id && !x.TransactionId.HasValue);
+        if (contributionOnlyItem is not null)
+            database.SavingsReconciliationItems.Remove(contributionOnlyItem);
         session.MatchedCount = session.Items.Count(x => x.Status == SavingsReconciliationItemStatus.Matched);
         session.UnmatchedTransactionCount = session.Items.Count(x => x.Status == SavingsReconciliationItemStatus.UnmatchedTransaction);
         session.UnmatchedContributionCount = session.Items.Count(x => x.Status == SavingsReconciliationItemStatus.UnmatchedContribution);
