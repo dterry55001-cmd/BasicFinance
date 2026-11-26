@@ -30,7 +30,8 @@ public sealed class DatabaseMigrationTests
             "CashFlowAlertPreferences", "CashFlowAlerts", "SavingsGoals", "SavingsContributions",
             "EmergencyFundPlans", "SavingsMonthlyTargets", "SavingsGoalMilestones",
             "RecurringSavingsContributions", "SavingsAllocationBudgets", "SavingsAllocationSettings",
-            "SavingsNotificationPreferences", "SavingsNotifications"
+            "SavingsNotificationPreferences", "SavingsNotifications",
+            "SavingsReconciliationSessions", "SavingsReconciliationItems"
         };
 
         foreach (var table in expectedTables)
