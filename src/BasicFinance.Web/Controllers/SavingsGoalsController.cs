@@ -11,7 +11,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var goals = await database.SavingsGoals.AsNoTracking()
-            .Include(x => x.Contributions)
+            .Include(x => x.Contributions).ThenInclude(x => x.Transaction)
             .Include(x => x.MonthlyTargets)
             .Include(x => x.Milestones)
             .Where(x => x.Status != SavingsGoalStatus.Archived && x.CurrencyCode == "USD")
@@ -19,6 +19,14 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             .ToListAsync(cancellationToken);
         var plan = await database.EmergencyFundPlans.AsNoTracking().FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
         var today = DateTime.Today;
+        var availableTransactions = await database.Transactions.AsNoTracking()
+            .Where(x => x.CurrencyCode == "USD"
+                && x.TransactionDate <= today
+                && (x.Type == TransactionType.Income || x.Type == TransactionType.Deposit
+                    || x.Type == TransactionType.Expense || x.Type == TransactionType.Withdrawal)
+                && !database.SavingsContributions.Any(contribution => contribution.TransactionId == x.Id))
+            .OrderByDescending(x => x.TransactionDate).ThenByDescending(x => x.Id)
+            .Take(100).ToListAsync(cancellationToken);
         var cards = goals.Select(goal =>
         {
             var progress = savingsService.CalculateProgress(goal, today);
@@ -70,7 +78,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             TotalSaved = cards.Sum(x => x.Progress.CurrentAmount),
             TotalTargets = cards.Sum(x => x.Goal.TargetAmount),
             TotalMonthlyTargets = cards.Sum(x => x.MonthlyTarget),
-            MonthlyPerformance = monthlyPerformance
+            MonthlyPerformance = monthlyPerformance,
+            AvailableTransactions = availableTransactions
         });
     }
 
@@ -114,7 +123,7 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AddContribution(int goalId, decimal amount, SavingsContributionType type,
-        DateTime contributionDate, string? notes, CancellationToken cancellationToken)
+        DateTime contributionDate, string? notes, int? transactionId, CancellationToken cancellationToken)
     {
         var goal = await database.SavingsGoals
             .Include(x => x.Contributions)
@@ -134,6 +143,22 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             return RedirectToAction(nameof(Index));
         }
 
+        FinancialTransaction? linkedTransaction = null;
+        if (transactionId.HasValue)
+        {
+            linkedTransaction = await database.Transactions.FirstOrDefaultAsync(x => x.Id == transactionId.Value, cancellationToken);
+            var validTransactionType = linkedTransaction is not null && (type == SavingsContributionType.Contribution
+                ? linkedTransaction.Type is TransactionType.Income or TransactionType.Deposit
+                : linkedTransaction.Type is TransactionType.Expense or TransactionType.Withdrawal);
+            if (!validTransactionType || linkedTransaction!.CurrencyCode != goal.CurrencyCode
+                || linkedTransaction.Amount != amount || linkedTransaction.TransactionDate.Date != contributionDate.Date
+                || await database.SavingsContributions.AnyAsync(x => x.TransactionId == transactionId.Value, cancellationToken))
+            {
+                TempData["ErrorMessage"] = "The selected transaction must be unlinked, match the contribution type, amount, date, and currency.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
         var current = savingsService.CalculateProgress(goal, DateTime.Today).CurrentAmount;
         if (type == SavingsContributionType.Withdrawal && amount > current)
         {
@@ -147,6 +172,8 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             Amount = amount,
             Type = type,
             ContributionDate = contributionDate.Date,
+            TransactionId = linkedTransaction?.Id,
+            Transaction = linkedTransaction,
             Notes = notes?.Trim(),
             CreatedUtc = DateTime.UtcNow
         };
@@ -363,6 +390,7 @@ public sealed class SavingsGoalsIndexViewModel
     public decimal TotalTargets { get; set; }
     public decimal TotalMonthlyTargets { get; set; }
     public List<SavingsMonthlyPerformanceViewModel> MonthlyPerformance { get; set; } = [];
+    public List<FinancialTransaction> AvailableTransactions { get; set; } = [];
 }
 
 public sealed class SavingsMonthlyPerformanceViewModel
