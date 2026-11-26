@@ -25,14 +25,6 @@ public sealed class SavingsReconciliation : Migration
             unique: true,
             filter: "\"LinkedAccountId\" IS NOT NULL AND \"Status\" <> 3");
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_SavingsGoals_Accounts_LinkedAccountId",
-            table: "SavingsGoals",
-            column: "LinkedAccountId",
-            principalTable: "Accounts",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
-
         migrationBuilder.CreateTable(
             name: "SavingsReconciliationSessions",
             columns: table => new
@@ -94,7 +86,6 @@ public sealed class SavingsReconciliation : Migration
     {
         migrationBuilder.DropTable("SavingsReconciliationItems");
         migrationBuilder.DropTable("SavingsReconciliationSessions");
-        migrationBuilder.DropForeignKey("FK_SavingsGoals_Accounts_LinkedAccountId", "SavingsGoals");
         migrationBuilder.DropIndex("IX_SavingsGoals_LinkedAccountId", "SavingsGoals");
         migrationBuilder.DropColumn("LinkedAccountId", "SavingsGoals");
     }
