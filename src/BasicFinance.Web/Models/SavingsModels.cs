@@ -177,3 +177,43 @@ public sealed class SavingsAllocationSetting
 
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
+
+
+public sealed class SavingsNotificationPreference
+{
+    public int Id { get; set; } = 1;
+    public bool UpcomingContributionRemindersEnabled { get; set; } = true;
+    public bool MissedContributionAlertsEnabled { get; set; } = true;
+    public bool MilestoneNotificationsEnabled { get; set; } = true;
+    public bool EmergencyFundWarningsEnabled { get; set; } = true;
+    public bool MonthlyAllocationReviewsEnabled { get; set; } = true;
+
+    [Range(0, 30)]
+    public int UpcomingReminderDays { get; set; } = 3;
+
+    [Range(typeof(decimal), "0.5", "24")]
+    public decimal EmergencyFundWarningMonths { get; set; } = 3m;
+
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed class SavingsNotification
+{
+    public int Id { get; set; }
+
+    [Required, StringLength(64)]
+    public string NotificationKey { get; set; } = string.Empty;
+
+    [Required, StringLength(20)]
+    public string Level { get; set; } = "Information";
+
+    [Required, StringLength(60)]
+    public string Category { get; set; } = string.Empty;
+
+    [Required, StringLength(500)]
+    public string Message { get; set; } = string.Empty;
+
+    public DateTime EventDate { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public bool IsRead { get; set; }
+}
