@@ -58,6 +58,19 @@ public sealed class SavingsGoalService
         };
     }
 
+    public decimal? CalculateRequiredMonthlyContribution(decimal remainingAmount, DateTime? targetDate, DateTime today)
+    {
+        if (!targetDate.HasValue) return null;
+        if (remainingAmount <= 0m) return 0m;
+
+        var target = targetDate.Value.Date;
+        var months = (target.Year - today.Year) * 12 + target.Month - today.Month;
+        if (target.Day < today.Day) months--;
+        months = Math.Max(1, months);
+
+        return decimal.Ceiling(remainingAmount / months * 100m) / 100m;
+    }
+
     public decimal CalculateAllocationAmount(decimal monthlyBudget, decimal allocationPercent)
     {
         if (monthlyBudget < 0m || allocationPercent is < 0m or > 100m)
