@@ -75,4 +75,63 @@ public sealed class CashFlowForecastServiceTests
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             _service.BuildForecast([], 0m, DateTime.Today, 0));
     }
+    [Fact]
+    public void BuildDailyForecast_PlacesOccurrencesInTheirExactDayAndCarriesBalanceForward()
+    {
+        var schedules = new[]
+        {
+            new RecurringCashFlow { Type = TransactionType.Income, Amount = 500m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Weekly, NextDueDate = new DateTime(2026, 12, 2), IsActive = true },
+            new RecurringCashFlow { Type = TransactionType.Expense, Amount = 75m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 3), IsActive = true }
+        };
+        var result = _service.BuildDailyForecast(schedules, 100m, new DateTime(2026, 12, 1), 4);
+        Assert.Equal(4, result.Count);
+        Assert.Equal(new DateTime(2026, 12, 1), result[0].StartDate);
+        Assert.Equal(0m, result[0].ExpectedIncome);
+        Assert.Equal(500m, result[1].ExpectedIncome);
+        Assert.Equal(75m, result[2].ExpectedExpenses);
+        Assert.Equal(525m, result[3].ProjectedEndingBalance);
+    }
+
+    [Fact]
+    public void BuildWeeklyForecast_IncludesOccurrencesOnFirstAndLastDaysOfWeek()
+    {
+        var schedules = new[]
+        {
+            new RecurringCashFlow { Type = TransactionType.Income, Amount = 100m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Weekly, NextDueDate = new DateTime(2026, 12, 1), IsActive = true },
+            new RecurringCashFlow { Type = TransactionType.Expense, Amount = 25m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Weekly, NextDueDate = new DateTime(2026, 12, 7), IsActive = true }
+        };
+        var result = _service.BuildWeeklyForecast(schedules, 50m, new DateTime(2026, 12, 1), 2);
+        Assert.Equal(2, result.Count);
+        Assert.Equal(new DateTime(2026, 12, 1), result[0].StartDate);
+        Assert.Equal(new DateTime(2026, 12, 7), result[0].EndDate);
+        Assert.Equal(100m, result[0].ExpectedIncome);
+        Assert.Equal(25m, result[0].ExpectedExpenses);
+        Assert.Equal(125m, result[0].ProjectedEndingBalance);
+        Assert.Equal(100m, result[1].ExpectedIncome);
+    }
+
+    [Fact]
+    public void BuildDailyForecast_RespectsInclusiveScheduleEndDate()
+    {
+        var schedule = new RecurringCashFlow
+        {
+            Type = TransactionType.Expense, Amount = 10m, CurrencyCode = "USD",
+            Frequency = CashFlowFrequency.Weekly, NextDueDate = new DateTime(2026, 12, 1),
+            EndDate = new DateTime(2026, 12, 8), IsActive = true
+        };
+        var result = _service.BuildDailyForecast([schedule], 100m, new DateTime(2026, 12, 1), 15);
+        Assert.Equal(10m, result[0].ExpectedExpenses);
+        Assert.Equal(10m, result[7].ExpectedExpenses);
+        Assert.All(result.Skip(8), item => Assert.Equal(0m, item.ExpectedExpenses));
+    }
+
+    [Fact]
+    public void BuildDailyAndWeeklyForecast_RejectInvalidHorizons()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => _service.BuildDailyForecast([], 0m, DateTime.Today, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _service.BuildDailyForecast([], 0m, DateTime.Today, 91));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _service.BuildWeeklyForecast([], 0m, DateTime.Today, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _service.BuildWeeklyForecast([], 0m, DateTime.Today, 53));
+    }
+
 }
