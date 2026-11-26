@@ -148,6 +148,63 @@ public sealed class SavingsTransactionMatchControllerTests
         Assert.Null(contribution.TransactionId);
     }
 
+
+    [Fact]
+    public async Task RecordScheduledContribution_ConfirmsAndLinksMatchingTransfer()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var database = new ApplicationDbContext(options);
+        await database.Database.MigrateAsync();
+
+        var checking = NewAccount("Checking", AccountType.Checking);
+        var savings = NewAccount("Savings", AccountType.Savings);
+        database.Accounts.AddRange(checking, savings);
+        await database.SaveChangesAsync();
+        var goal = NewGoal(savings.Id);
+        database.SavingsGoals.Add(goal);
+        await database.SaveChangesAsync();
+
+        var dueDate = new DateTime(2026, 11, 20);
+        var schedule = new RecurringSavingsContribution
+        {
+            SavingsGoalId = goal.Id,
+            Amount = 100m,
+            Frequency = SavingsScheduleFrequency.Monthly,
+            NextDueDate = dueDate,
+            IsActive = true
+        };
+        var transaction = new FinancialTransaction
+        {
+            AccountId = checking.Id,
+            RelatedAccountId = savings.Id,
+            Type = TransactionType.Transfer,
+            Description = "Scheduled savings transfer",
+            Amount = 100m,
+            CurrencyCode = "USD",
+            TransactionDate = dueDate
+        };
+        database.RecurringSavingsContributions.Add(schedule);
+        database.Transactions.Add(transaction);
+        await database.SaveChangesAsync();
+
+        var controller = new SavingsGoalsController(database, new SavingsGoalService())
+        {
+            TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
+        };
+        var result = await controller.RecordScheduledContribution(schedule.Id, transaction.Id, CancellationToken.None);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        var contribution = await database.SavingsContributions.SingleAsync();
+        Assert.Equal(transaction.Id, contribution.TransactionId);
+        Assert.Equal(dueDate, contribution.ScheduledDueDate);
+        Assert.Equal(dueDate, contribution.ContributionDate);
+        await database.Entry(schedule).ReloadAsync();
+        Assert.Equal(new DateTime(2026, 12, 20), schedule.NextDueDate);
+        Assert.Equal(1, await database.Transactions.CountAsync());
+    }
+
     private static Account NewAccount(string name, AccountType type) => new()
     {
         Name = name,
