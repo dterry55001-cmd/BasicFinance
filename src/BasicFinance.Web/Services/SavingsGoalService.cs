@@ -30,7 +30,7 @@ public sealed class SavingsGoalService
     }
 
     public bool IsCompatibleTransaction(FinancialTransaction? transaction, SavingsContributionType contributionType,
-        decimal amount, DateTime contributionDate, string currencyCode)
+        decimal amount, DateTime contributionDate, string currencyCode, int? linkedAccountId = null)
     {
         if (transaction is null || amount <= 0m) return false;
 
@@ -43,7 +43,28 @@ public sealed class SavingsGoalService
         return compatibleType
             && string.Equals(transaction.CurrencyCode, currencyCode, StringComparison.OrdinalIgnoreCase)
             && transaction.Amount == amount
-            && transaction.TransactionDate.Date == contributionDate.Date;
+            && transaction.TransactionDate.Date == contributionDate.Date
+            && IsTransactionForLinkedAccount(transaction, contributionType, linkedAccountId);
+    }
+
+
+    public bool IsTransactionForLinkedAccount(
+        FinancialTransaction transaction,
+        SavingsContributionType contributionType,
+        int? linkedAccountId)
+    {
+        if (!linkedAccountId.HasValue) return transaction.Type != TransactionType.Transfer;
+        if (transaction.Type == TransactionType.Transfer)
+        {
+            return contributionType == SavingsContributionType.Contribution
+                ? transaction.RelatedAccountId == linkedAccountId.Value
+                : transaction.AccountId == linkedAccountId.Value;
+        }
+
+        if (transaction.AccountId != linkedAccountId.Value) return false;
+        return contributionType == SavingsContributionType.Contribution
+            ? transaction.Type is TransactionType.Income or TransactionType.Deposit
+            : transaction.Type is TransactionType.Expense or TransactionType.Withdrawal;
     }
 
     public DateTime GetNextSavingsDueDate(DateTime currentDueDate, SavingsScheduleFrequency frequency)
