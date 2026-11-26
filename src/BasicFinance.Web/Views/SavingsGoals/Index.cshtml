@@ -141,7 +141,7 @@
                         <div class="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Transaction</th><th>Notes</th></tr></thead><tbody>
                         @foreach (var item in goal.Contributions.OrderByDescending(x => x.ContributionDate).ThenByDescending(x => x.Id).Take(5))
                         {
-                            <tr><td>@item.ContributionDate.ToString("d")</td><td>@item.Type</td><td class="@(item.Type == SavingsContributionType.Withdrawal ? "amount-out" : "amount-in")">@item.Amount.ToString("C")</td><td>@item.Notes</td></tr>
+                            <tr><td>@item.ContributionDate.ToString("d")</td><td>@item.Type</td><td class="@(item.Type == SavingsContributionType.Withdrawal ? "amount-out" : "amount-in")">@item.Amount.ToString("C")</td><td>@(item.Transaction is null ? "Manual entry" : $"#{item.Transaction.Id} — {item.Transaction.Description}")</td><td>@item.Notes</td></tr>
                         }
                         </tbody></table></div>
                     </details>
