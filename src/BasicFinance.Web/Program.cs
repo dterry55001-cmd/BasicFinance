@@ -15,6 +15,7 @@ builder.Services.AddScoped<TransactionCategorySeeder>();
 builder.Services.AddScoped<TransactionRuleService>();
 builder.Services.AddScoped<DebtManagementService>();
 builder.Services.AddScoped<CashFlowForecastService>();
+builder.Services.AddScoped<SavingsGoalService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
