@@ -106,6 +106,6 @@ The selected month can be exported as UTF-8 CSV. Text fields are quoted and embe
 
 Reports include active, paused, and completed goals, while archived goals are excluded. A goal's closing balance is the recorded contributions less recorded withdrawals through the report period's end date (capped at today). The emergency fund trend uses the selected month as its anchor unless that month is in the future, in which case the current month is used.
 
-CSV export is intended for spreadsheet use and contains the selected month's goal-level rows. It does not include account balances or create accounting transactions.
+CSV export is intended for spreadsheet use and contains the selected month's goal-level rows. Text fields are quoted, embedded quotes are escaped, and formula-like text prefixes are neutralized to reduce spreadsheet formula-injection risk. It does not include account balances or create accounting transactions.
 
 The reports view also includes a comparative monthly bar chart for planned targets and actual contributions, plus a trailing emergency-fund balance chart. Accessible tabular values remain available alongside the charts so the information is not conveyed by color or bar length alone.
