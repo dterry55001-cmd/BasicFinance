@@ -32,6 +32,11 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<RecurringCashFlow> RecurringCashFlows => Set<RecurringCashFlow>();
     public DbSet<CashFlowAlertPreference> CashFlowAlertPreferences => Set<CashFlowAlertPreference>();
     public DbSet<CashFlowAlert> CashFlowAlerts => Set<CashFlowAlert>();
+    public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
+    public DbSet<SavingsContribution> SavingsContributions => Set<SavingsContribution>();
+    public DbSet<EmergencyFundPlan> EmergencyFundPlans => Set<EmergencyFundPlan>();
+    public DbSet<SavingsMonthlyTarget> SavingsMonthlyTargets => Set<SavingsMonthlyTarget>();
+    public DbSet<SavingsGoalMilestone> SavingsGoalMilestones => Set<SavingsGoalMilestone>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -291,6 +296,46 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.HasIndex(x => new { x.IsActive, x.NextDueDate });
             entity.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SavingsGoal>(entity =>
+        {
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.TargetAmount).HasColumnType("TEXT");
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.HasIndex(x => new { x.Status, x.Priority });
+            entity.HasIndex(x => x.IsEmergencyFund).IsUnique().HasFilter("\"IsEmergencyFund\" = 1");
+            entity.HasMany(x => x.Contributions).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.MonthlyTargets).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.Milestones).WithOne(x => x.SavingsGoal).HasForeignKey(x => x.SavingsGoalId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SavingsContribution>(entity =>
+        {
+            entity.Property(x => x.Amount).HasColumnType("TEXT");
+            entity.Property(x => x.Notes).HasMaxLength(300);
+            entity.HasIndex(x => new { x.SavingsGoalId, x.ContributionDate });
+            entity.HasIndex(x => x.TransactionId).IsUnique().HasFilter("\"TransactionId\" IS NOT NULL");
+            entity.HasOne(x => x.Transaction).WithMany().HasForeignKey(x => x.TransactionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EmergencyFundPlan>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.MonthlyEssentialExpenses).HasColumnType("TEXT");
+            entity.Property(x => x.UpdatedUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<SavingsMonthlyTarget>(entity =>
+        {
+            entity.Property(x => x.TargetAmount).HasColumnType("TEXT");
+            entity.HasIndex(x => new { x.SavingsGoalId, x.Year, x.Month }).IsUnique();
+        });
+
+        modelBuilder.Entity<SavingsGoalMilestone>(entity =>
+        {
+            entity.HasIndex(x => new { x.SavingsGoalId, x.MilestonePercent }).IsUnique();
         });
 
         modelBuilder.Entity<BudgetLine>(entity =>
