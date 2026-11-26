@@ -217,3 +217,50 @@ public sealed class SavingsNotification
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public bool IsRead { get; set; }
 }
+
+
+public enum SavingsReconciliationItemStatus
+{
+    Matched,
+    UnmatchedTransaction,
+    UnmatchedContribution,
+    PotentialDuplicate,
+    AlreadyLinked
+}
+
+public sealed class SavingsReconciliationSession
+{
+    public int Id { get; set; }
+    public int SavingsGoalId { get; set; }
+    public SavingsGoal SavingsGoal { get; set; } = null!;
+    public int AccountId { get; set; }
+    public Account Account { get; set; } = null!;
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+    public decimal StatementClosingBalance { get; set; }
+    public decimal CalculatedAccountBalance { get; set; }
+    public decimal Difference { get; set; }
+    public int MatchedCount { get; set; }
+    public int UnmatchedTransactionCount { get; set; }
+    public int UnmatchedContributionCount { get; set; }
+    public int PotentialDuplicateCount { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public ICollection<SavingsReconciliationItem> Items { get; set; } = new List<SavingsReconciliationItem>();
+}
+
+public sealed class SavingsReconciliationItem
+{
+    public int Id { get; set; }
+    public int SavingsReconciliationSessionId { get; set; }
+    public SavingsReconciliationSession Session { get; set; } = null!;
+    public int? TransactionId { get; set; }
+    public FinancialTransaction? Transaction { get; set; }
+    public int? SavingsContributionId { get; set; }
+    public SavingsContribution? SavingsContribution { get; set; }
+    public SavingsReconciliationItemStatus Status { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime EventDate { get; set; }
+    [StringLength(160)]
+    public string Description { get; set; } = string.Empty;
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+}
