@@ -90,3 +90,20 @@ Notifications are generated when the Savings alerts page is opened. This impleme
 ### Financial integration safeguards
 
 Savings reminders and recommendations do not create transactions, move money, or change account balances. A recurring contribution remains a user-confirmed savings ledger entry. Where an actual financial transaction exists, users can link it through the existing transaction-linking workflow. The transaction compatibility checks continue to validate type, amount, date, and currency, and each transaction can be linked to only one savings contribution.
+
+
+## Savings reporting and analytics
+
+The Savings reports page provides a selected-month report and a calendar-year summary for USD goals that are not archived. It reports:
+- monthly planned target versus actual recorded contributions
+- withdrawals and net savings
+- contribution variance against the monthly target
+- closing savings balance and goal progress
+- estimated completion date where recent net contribution activity supports an estimate
+- monthly annual-summary totals and trailing 12-month emergency-fund balances
+
+The selected month can be exported as UTF-8 CSV. Text fields are quoted and embedded quotes are escaped. Report actuals exclude future-dated ledger entries. For the current month, actual activity is month-to-date while the planned target is the full-month target; the displayed variance is preliminary. The variance is defined as actual contributions minus planned target. Withdrawals are displayed separately and are not subtracted from this target variance.
+
+Reports include active, paused, and completed goals, while archived goals are excluded. A goal's closing balance is the recorded contributions less recorded withdrawals through the report period's end date (capped at today). The emergency fund trend uses the selected month as its anchor unless that month is in the future, in which case the current month is used.
+
+CSV export is intended for spreadsheet use and contains the selected month's goal-level rows. It does not include account balances or create accounting transactions.
