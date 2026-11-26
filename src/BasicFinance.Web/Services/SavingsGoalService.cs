@@ -29,6 +29,22 @@ public sealed class SavingsGoalService
         return new SavingsGoalProgress(currentAmount, remainingAmount, progressPercent, averageMonthlyContribution, estimatedCompletionDate);
     }
 
+    public bool IsCompatibleTransaction(FinancialTransaction? transaction, SavingsContributionType contributionType,
+        decimal amount, DateTime contributionDate, string currencyCode)
+    {
+        if (transaction is null || amount <= 0m) return false;
+
+        var compatibleType = contributionType == SavingsContributionType.Contribution
+            ? transaction.Type is TransactionType.Income or TransactionType.Deposit
+            : contributionType == SavingsContributionType.Withdrawal
+                && transaction.Type is TransactionType.Expense or TransactionType.Withdrawal;
+
+        return compatibleType
+            && string.Equals(transaction.CurrencyCode, currencyCode, StringComparison.OrdinalIgnoreCase)
+            && transaction.Amount == amount
+            && transaction.TransactionDate.Date == contributionDate.Date;
+    }
+
     public decimal CalculateEmergencyFundCoverageMonths(decimal currentAmount, decimal monthlyEssentialExpenses)
     {
         if (monthlyEssentialExpenses <= 0m) return 0m;
