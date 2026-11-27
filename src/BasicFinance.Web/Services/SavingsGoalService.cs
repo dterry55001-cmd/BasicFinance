@@ -93,6 +93,53 @@ public sealed class SavingsGoalService
         return decimal.Ceiling(remainingAmount / months * 100m) / 100m;
     }
 
+
+    public SavingsCashFlowCapacity CalculateCashFlowCapacity(
+        IEnumerable<FinancialTransaction> transactions,
+        IEnumerable<RecurringSavingsContribution> recurringSchedules,
+        DateTime today,
+        decimal? userMonthlyBudget)
+    {
+        if (userMonthlyBudget < 0m) throw new ArgumentOutOfRangeException(nameof(userMonthlyBudget));
+
+        var currentMonth = new DateTime(today.Year, today.Month, 1);
+        var periodStart = currentMonth.AddMonths(-3);
+        var eligibleTransactions = transactions
+            .Where(x => x.CurrencyCode == "USD" && x.TransactionDate.Date >= periodStart
+                && x.TransactionDate.Date < currentMonth)
+            .ToList();
+
+        var monthlyIncome = eligibleTransactions
+            .Where(x => x.Type is TransactionType.Income or TransactionType.Deposit)
+            .Sum(x => x.Amount) / 3m;
+        var monthlyExpenses = eligibleTransactions
+            .Where(x => x.Type is TransactionType.Expense or TransactionType.Withdrawal)
+            .Sum(x => x.Amount) / 3m;
+        var averageMonthlySurplus = monthlyIncome - monthlyExpenses;
+
+        var committedMonthlySavings = recurringSchedules
+            .Where(x => x.IsActive && (!x.EndDate.HasValue || x.NextDueDate.Date <= x.EndDate.Value.Date))
+            .Sum(x => x.Frequency switch
+            {
+                SavingsScheduleFrequency.Weekly => x.Amount * 52m / 12m,
+                SavingsScheduleFrequency.Biweekly => x.Amount * 26m / 12m,
+                SavingsScheduleFrequency.Monthly => x.Amount,
+                SavingsScheduleFrequency.Quarterly => x.Amount / 3m,
+                SavingsScheduleFrequency.Yearly => x.Amount / 12m,
+                _ => 0m
+            });
+
+        var surplusAfterCommitments = Math.Max(0m, averageMonthlySurplus - committedMonthlySavings);
+        var recommendedCapacity = userMonthlyBudget.HasValue
+            ? Math.Min(surplusAfterCommitments, userMonthlyBudget.Value)
+            : surplusAfterCommitments;
+
+        return new SavingsCashFlowCapacity(
+            periodStart, currentMonth.AddDays(-1), monthlyIncome, monthlyExpenses,
+            averageMonthlySurplus, committedMonthlySavings, surplusAfterCommitments,
+            recommendedCapacity, userMonthlyBudget.HasValue);
+    }
+
     public decimal CalculateAllocationAmount(decimal monthlyBudget, decimal allocationPercent)
     {
         if (monthlyBudget < 0m || allocationPercent is < 0m or > 100m)
@@ -129,3 +176,15 @@ public sealed record SavingsGoalProgress(
     decimal ProgressPercent,
     decimal AverageMonthlyContribution,
     DateTime? EstimatedCompletionDate);
+
+
+public sealed record SavingsCashFlowCapacity(
+    DateTime PeriodStart,
+    DateTime PeriodEnd,
+    decimal AverageMonthlyIncome,
+    decimal AverageMonthlyExpenses,
+    decimal AverageMonthlySurplus,
+    decimal ExistingMonthlySavingsCommitments,
+    decimal SurplusAfterCommitments,
+    decimal RecommendedMonthlyCapacity,
+    bool UsesUserBudget);
