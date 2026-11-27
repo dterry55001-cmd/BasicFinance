@@ -95,11 +95,21 @@ public sealed class CashFlowForecastService
                 continue;
 
             var due = schedule.NextDueDate.Date;
-            while (due < periodStart && due < periodEndExclusive)
+            var endDate = schedule.EndDate?.Date;
+
+            // An expired schedule cannot contribute to this period. Skip it before
+            // advancing old dates, avoiding potentially thousands of useless iterations.
+            if (endDate.HasValue && (endDate.Value < periodStart.Date || due > endDate.Value))
+                continue;
+
+            while (due < periodStart && due < periodEndExclusive
+                && (!endDate.HasValue || due <= endDate.Value))
+            {
                 due = NextDate(due, schedule.Frequency);
+            }
 
             while (due >= periodStart && due < periodEndExclusive
-                && (!schedule.EndDate.HasValue || due <= schedule.EndDate.Value.Date))
+                && (!endDate.HasValue || due <= endDate.Value))
             {
                 if (schedule.Type == TransactionType.Income) income += schedule.Amount;
                 else expenses += schedule.Amount;

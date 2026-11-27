@@ -83,6 +83,51 @@ public sealed class DebtManagementServiceTests
     }
 
     [Fact]
+    public void PayoffPlanner_RollsFreedMinimumPaymentsIntoFixedMonthlyBudget()
+    {
+        var debts = new[]
+        {
+            new DebtPayoffDebtInput { AccountId = 1, Name = "First debt", Balance = 100m, AnnualRatePercent = 0m, MinimumPayment = 100m },
+            new DebtPayoffDebtInput { AccountId = 2, Name = "Second debt", Balance = 1000m, AnnualRatePercent = 0m, MinimumPayment = 50m }
+        };
+
+        var result = _service.CalculatePayoff(debts, 0m, avalanche: false,
+            startDate: new DateTime(2026, 1, 1), applyMinimumPaymentFloor: false);
+
+        Assert.True(result.ReachedDebtFree);
+        Assert.Equal(8, result.MonthsToPayoff);
+        Assert.Equal(1100m, result.TotalPaid);
+        Assert.Equal(0m, result.TotalInterest);
+        Assert.Equal(8, result.Debts.Single(debt => debt.AccountId == 2).MonthsToPayoff);
+    }
+
+    [Fact]
+    public void PayoffPlanner_RejectsDuplicateAccountIds()
+    {
+        var debts = new[]
+        {
+            new DebtPayoffDebtInput { AccountId = 1, Balance = 100m, MinimumPayment = 10m },
+            new DebtPayoffDebtInput { AccountId = 1, Balance = 200m, MinimumPayment = 10m }
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+            _service.CalculatePayoff(debts, 0m, avalanche: false));
+    }
+
+    [Fact]
+    public void PayoffPlanner_ZeroBalancePortfolioIsImmediatelyDebtFree()
+    {
+        var result = _service.CalculatePayoff(
+            [new DebtPayoffDebtInput { AccountId = 1, Name = "Paid", Balance = 0m }],
+            0m, avalanche: false, startDate: new DateTime(2026, 1, 15));
+
+        Assert.True(result.ReachedDebtFree);
+        Assert.Equal(0, result.MonthsToPayoff);
+        Assert.Equal(new DateTime(2026, 1, 15), result.DebtFreeDate);
+        Assert.Equal(0m, result.TotalPaid);
+    }
+
+    [Fact]
     public void AccountPayoff_ProducesDecliningBalanceScheduleAndFinalZero()
     {
         var result = _service.CalculateAccountPayoff(1200m, 12m, 100m, 25m,

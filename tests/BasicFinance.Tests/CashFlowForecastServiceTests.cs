@@ -245,6 +245,45 @@ public sealed class CashFlowForecastServiceTests
     }
 
     [Fact]
+    public void BuildForecast_SkipsScheduleThatExpiredYearsBeforeForecastWindow()
+    {
+        var schedule = new RecurringCashFlow
+        {
+            Type = TransactionType.Expense,
+            Amount = 125m,
+            CurrencyCode = "USD",
+            Frequency = CashFlowFrequency.Monthly,
+            NextDueDate = new DateTime(2010, 1, 1),
+            EndDate = new DateTime(2010, 12, 31),
+            IsActive = true
+        };
+
+        var result = _service.BuildForecast([schedule], 500m, new DateTime(2026, 12, 1), 1);
+
+        Assert.Equal(0m, result[0].ExpectedExpenses);
+        Assert.Equal(500m, result[0].ProjectedEndingBalance);
+    }
+
+    [Fact]
+    public void BuildForecast_SkipsExpiredScheduleBeforeValidatingItsFrequency()
+    {
+        var schedule = new RecurringCashFlow
+        {
+            Type = TransactionType.Expense,
+            Amount = 125m,
+            CurrencyCode = "USD",
+            Frequency = (CashFlowFrequency)999,
+            NextDueDate = new DateTime(2010, 1, 1),
+            EndDate = new DateTime(2010, 12, 31),
+            IsActive = true
+        };
+
+        var result = _service.BuildForecast([schedule], 500m, new DateTime(2026, 12, 1), 1);
+
+        Assert.Equal(0m, result[0].ExpectedExpenses);
+    }
+
+    [Fact]
     public void BuildForecast_RejectsUnknownRecurringFrequencyWhenOccurrenceIsDue()
     {
         var schedule = new RecurringCashFlow

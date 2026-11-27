@@ -91,74 +91,104 @@ public sealed class DebtManagementService
         DateTime? startDate = null,
         bool applyMinimumPaymentFloor = true)
     {
-        if (extraMonthlyPayment < 0) throw new ArgumentOutOfRangeException(nameof(extraMonthlyPayment));
-        if (debts.Any(debt => debt.Balance < 0 || debt.AnnualRatePercent is < 0 or > 100 || debt.MinimumPayment < 0))
-            throw new ArgumentOutOfRangeException(nameof(debts), "Debt balances, APRs, and minimum payments must be non-negative and APR must not exceed 100.");
+        ArgumentNullException.ThrowIfNull(debts);
+        if (extraMonthlyPayment < 0m)
+            throw new ArgumentOutOfRangeException(nameof(extraMonthlyPayment));
+        if (debts.Any(debt => debt.Balance < 0m || debt.AnnualRatePercent is < 0m or > 100m || debt.MinimumPayment < 0m))
+            throw new ArgumentOutOfRangeException(nameof(debts),
+                "Debt balances, APRs, and minimum payments must be non-negative and APR must not exceed 100.");
+        if (debts.GroupBy(debt => debt.AccountId).Any(group => group.Count() > 1))
+            throw new ArgumentException("Each debt must have a unique account ID.", nameof(debts));
 
-        var balances = debts.Where(debt => debt.Balance > 0)
-            .ToDictionary(debt => debt.AccountId, debt => decimal.Round(debt.Balance, 2));
+        var planStart = (startDate ?? DateTime.Today).Date;
+        var balances = debts.ToDictionary(debt => debt.AccountId,
+            debt => decimal.Round(debt.Balance, 2, MidpointRounding.AwayFromZero));
         var interestByDebt = debts.ToDictionary(debt => debt.AccountId, _ => 0m);
-        var payoffMonthByDebt = new Dictionary<int, int>();
+        var payoffMonthByDebt = debts
+            .Where(debt => debt.Balance <= 0m)
+            .ToDictionary(debt => debt.AccountId, _ => 0);
+
+        var scheduledMinimums = debts.ToDictionary(debt => debt.AccountId, debt =>
+        {
+            var startingBalance = balances[debt.AccountId];
+            if (startingBalance <= 0m) return 0m;
+            var enteredMinimum = debt.MinimumPayment;
+            var scheduled = applyMinimumPaymentFloor
+                ? Math.Max(enteredMinimum, Math.Max(1m, decimal.Round(startingBalance * 0.01m, 2, MidpointRounding.AwayFromZero)))
+                : enteredMinimum;
+            return Math.Min(startingBalance, scheduled);
+        });
+
+        // The comparison uses one fixed monthly budget. A paid-off debt's unused
+        // minimum payment is therefore rolled into the remaining priority debt.
+        var monthlyBudget = scheduledMinimums.Values.Sum() + extraMonthlyPayment;
         var totalInterest = 0m;
         var totalPaid = 0m;
         var month = 0;
-        var planStart = (startDate ?? DateTime.Today).Date;
 
-        while (balances.Values.Any(value => value > 0) && month < 1200)
+        while (balances.Values.Any(value => value > 0m) && month < 1200)
         {
             month++;
             var monthlyInterest = new Dictionary<int, decimal>();
-            foreach (var debt in debts.Where(debt => balances.GetValueOrDefault(debt.AccountId) > 0))
+            foreach (var debt in debts)
             {
-                var interest = decimal.Round(balances[debt.AccountId] * debt.AnnualRatePercent / 1200m, 2, MidpointRounding.AwayFromZero);
-                balances[debt.AccountId] += interest;
+                var balance = balances[debt.AccountId];
+                if (balance <= 0m) continue;
+
+                var interest = decimal.Round(
+                    balance * debt.AnnualRatePercent / 1200m,
+                    2,
+                    MidpointRounding.AwayFromZero);
+                balances[debt.AccountId] = balance + interest;
                 monthlyInterest[debt.AccountId] = interest;
                 interestByDebt[debt.AccountId] += interest;
                 totalInterest += interest;
             }
 
-            var remainingBudget = debts.Sum(debt =>
-            {
-                if (!balances.TryGetValue(debt.AccountId, out var balance) || balance <= 0) return 0m;
-                var minimum = applyMinimumPaymentFloor
-                    ? Math.Max(debt.MinimumPayment, Math.Max(1m, decimal.Round(balance * 0.01m, 2)))
-                    : debt.MinimumPayment;
-                return Math.Min(balance, minimum);
-            }) + extraMonthlyPayment;
+            var remainingBudget = monthlyBudget;
 
+            // Pay each account's scheduled minimum first. Any unused amount for
+            // an account already paid off remains available for priority allocation.
             foreach (var debt in debts)
             {
-                if (!balances.TryGetValue(debt.AccountId, out var balance) || balance <= 0) continue;
-                var scheduledMinimum = applyMinimumPaymentFloor
-                    ? Math.Max(debt.MinimumPayment, Math.Max(1m, decimal.Round(balance * 0.01m, 2)))
-                    : debt.MinimumPayment;
-                var minimum = Math.Min(balance, scheduledMinimum);
-                var payment = Math.Min(balance, Math.Min(minimum, remainingBudget));
-                balances[debt.AccountId] -= payment;
+                var balance = balances[debt.AccountId];
+                if (balance <= 0m || remainingBudget <= 0m) continue;
+
+                var payment = Math.Min(balance, Math.Min(scheduledMinimums[debt.AccountId], remainingBudget));
+                balances[debt.AccountId] = decimal.Round(balance - payment, 2, MidpointRounding.AwayFromZero);
                 remainingBudget -= payment;
                 totalPaid += payment;
-                if (balances[debt.AccountId] == 0) payoffMonthByDebt.TryAdd(debt.AccountId, month);
+                if (balances[debt.AccountId] <= 0m)
+                {
+                    balances[debt.AccountId] = 0m;
+                    payoffMonthByDebt.TryAdd(debt.AccountId, month);
+                }
             }
 
-            var priority = debts.Where(debt => balances.GetValueOrDefault(debt.AccountId) > 0);
+            var priority = debts.Where(debt => balances[debt.AccountId] > 0m);
             priority = avalanche
-                ? priority.OrderByDescending(debt => debt.AnnualRatePercent).ThenBy(debt => balances[debt.AccountId])
-                : priority.OrderBy(debt => balances[debt.AccountId]).ThenByDescending(debt => debt.AnnualRatePercent);
+                ? priority.OrderByDescending(debt => debt.AnnualRatePercent)
+                    .ThenBy(debt => balances[debt.AccountId])
+                : priority.OrderBy(debt => balances[debt.AccountId])
+                    .ThenByDescending(debt => debt.AnnualRatePercent);
 
             foreach (var debt in priority)
             {
-                if (remainingBudget <= 0) break;
+                if (remainingBudget <= 0m) break;
                 var payment = Math.Min(balances[debt.AccountId], remainingBudget);
-                balances[debt.AccountId] -= payment;
+                balances[debt.AccountId] = decimal.Round(
+                    balances[debt.AccountId] - payment, 2, MidpointRounding.AwayFromZero);
                 remainingBudget -= payment;
                 totalPaid += payment;
-                if (balances[debt.AccountId] == 0) payoffMonthByDebt.TryAdd(debt.AccountId, month);
+                if (balances[debt.AccountId] <= 0m)
+                {
+                    balances[debt.AccountId] = 0m;
+                    payoffMonthByDebt.TryAdd(debt.AccountId, month);
+                }
             }
-
-            if (remainingBudget > 0 && balances.Values.All(value => value <= 0)) break;
         }
 
-        var reachedDebtFree = balances.Values.All(value => value <= 0);
+        var reachedDebtFree = balances.Values.All(value => value <= 0m);
         var payoffLines = debts.Select(debt =>
         {
             var payoffMonth = payoffMonthByDebt.GetValueOrDefault(debt.AccountId, reachedDebtFree ? month : 1200);
@@ -168,7 +198,7 @@ public sealed class DebtManagementService
                 AccountName = debt.Name,
                 MonthsToPayoff = payoffMonth,
                 PayoffDate = planStart.AddMonths(payoffMonth),
-                InterestPaid = interestByDebt.GetValueOrDefault(debt.AccountId)
+                InterestPaid = interestByDebt[debt.AccountId]
             };
         }).ToList();
 
@@ -183,6 +213,7 @@ public sealed class DebtManagementService
             Debts = payoffLines
         };
     }
+
     public IReadOnlyList<EarlyPayoffScenarioResult> CalculateEarlyPayoffScenarios(
         decimal startingBalance, decimal annualRatePercent, decimal minimumPayment,
         decimal oneTimePayment, int oneTimePaymentMonth, decimal extraMonthlyPayment,

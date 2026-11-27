@@ -81,6 +81,13 @@ public sealed class SavingsContribution
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }
 
+public sealed record EmergencyFundCoverageTier(
+    int CoverageMonths,
+    decimal TargetAmount,
+    decimal FundingGap,
+    decimal SuggestedMonthlyContribution,
+    bool IsFunded);
+
 public sealed class EmergencyFundPlan
 {
     public int Id { get; set; } = 1;

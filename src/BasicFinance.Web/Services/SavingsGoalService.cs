@@ -159,6 +159,28 @@ public sealed class SavingsGoalService
         return Math.Max(0m, currentAmount) / monthlyEssentialExpenses;
     }
 
+    public IReadOnlyList<EmergencyFundCoverageTier> BuildEmergencyFundReadiness(
+        decimal currentAmount,
+        decimal monthlyEssentialExpenses)
+    {
+        if (monthlyEssentialExpenses < 0m)
+            throw new ArgumentOutOfRangeException(nameof(monthlyEssentialExpenses));
+
+        var reserve = Math.Max(0m, currentAmount);
+        return new[] { 1, 3, 6, 12 }
+            .Select(months =>
+            {
+                var target = monthlyEssentialExpenses * months;
+                var gap = Math.Max(0m, target - reserve);
+                var suggestedMonthlyContribution =
+                    decimal.Ceiling(gap / 12m * 100m) / 100m;
+
+                return new EmergencyFundCoverageTier(
+                    months, target, gap, suggestedMonthlyContribution, gap == 0m);
+            })
+            .ToArray();
+    }
+
     public decimal CalculateMonthlyNetContribution(IEnumerable<SavingsContribution> contributions, int year, int month)
     {
         if (month is < 1 or > 12) throw new ArgumentOutOfRangeException(nameof(month));
