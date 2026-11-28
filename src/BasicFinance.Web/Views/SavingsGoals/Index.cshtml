@@ -94,6 +94,25 @@
         <tr><td><strong>@tier.CoverageMonths months</strong></td><td>@tier.TargetAmount.ToString("C")</td><td>@tier.FundingGap.ToString("C")</td><td>@tier.SuggestedMonthlyContribution.ToString("C")</td><td><span class="status-pill @(tier.IsFunded ? "status-active" : "")">@(tier.IsFunded ? "Funded" : "In progress")</span></td></tr>
     }
     </tbody></table></div>
+    <h3>24-month emergency fund projection</h3>
+    <p class="page-description">Projection includes active recurring contributions scheduled after this month. It does not assume unrecorded extra deposits, withdrawals, investment growth, or automatic transfers. Scheduled contributions remain estimates until confirmed.</p>
+    <p><strong>Estimated target date:</strong> @(Model.EmergencyFundProjection.EstimatedCompletionDate?.ToString("MMM yyyy") ?? "Not reached within 24 months")</p>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Month</th><th>Opening balance</th><th>Scheduled contributions</th><th>Projected closing balance</th><th>Target progress</th><th>Status</th></tr></thead>
+        <tbody>
+        @foreach (var month in Model.EmergencyFundProjection.Months)
+        {
+            <tr>
+                <td><strong>@month.Month.ToString("MMMM yyyy")</strong></td>
+                <td>@month.OpeningBalance.ToString("C")</td>
+                <td>@month.PlannedContributions.ToString("C")</td>
+                <td>@month.ProjectedClosingBalance.ToString("C")</td>
+                <td>@month.TargetProgressPercent.ToString("0.#")%</td>
+                <td>@(month.TargetReached ? "Target reached" : "Building reserve")</td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
         <form asp-action="SaveEmergencyFundPlan" method="post" class="form-grid savings-plan-form">
         @Html.AntiForgeryToken()
         <label>Essential monthly expenses <input name="monthlyEssentialExpenses" type="number" min="0.01" max="999999999999" step="0.01" value="@(Model.EmergencyFundPlan?.MonthlyEssentialExpenses ?? 0m)" required /></label>

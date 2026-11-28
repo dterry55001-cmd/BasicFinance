@@ -181,6 +181,85 @@ public sealed class SavingsGoalService
             .ToArray();
     }
 
+    public EmergencyFundProjectionResult BuildEmergencyFundProjection(
+        decimal currentAmount,
+        decimal monthlyEssentialExpenses,
+        int targetCoverageMonths,
+        IEnumerable<RecurringSavingsContribution> recurringSchedules,
+        DateTime asOfDate,
+        int projectionMonths = 24)
+    {
+        ArgumentNullException.ThrowIfNull(recurringSchedules);
+        if (currentAmount < 0m) currentAmount = 0m;
+        if (monthlyEssentialExpenses < 0m)
+            throw new ArgumentOutOfRangeException(nameof(monthlyEssentialExpenses));
+        if (targetCoverageMonths is < 1 or > 24)
+            throw new ArgumentOutOfRangeException(nameof(targetCoverageMonths));
+        if (projectionMonths is < 1 or > 120)
+            throw new ArgumentOutOfRangeException(nameof(projectionMonths));
+
+        var targetAmount = monthlyEssentialExpenses * targetCoverageMonths;
+        var balance = currentAmount;
+        var start = new DateTime(asOfDate.Year, asOfDate.Month, 1).AddMonths(1);
+        var schedules = recurringSchedules
+            .Where(schedule => schedule.IsActive)
+            .Select(schedule =>
+            {
+                if (schedule.Amount <= 0m)
+                    throw new ArgumentOutOfRangeException(nameof(recurringSchedules),
+                        "Active recurring savings amounts must be greater than zero.");
+                if (!Enum.IsDefined(schedule.Frequency))
+                    throw new ArgumentOutOfRangeException(nameof(recurringSchedules),
+                        "An active recurring savings schedule has an unsupported frequency.");
+
+                return new EmergencyFundScheduleState(schedule, schedule.NextDueDate.Date);
+            })
+            .ToList();
+
+        var rows = new List<EmergencyFundProjectionMonth>();
+        DateTime? completionDate = balance >= targetAmount ? asOfDate.Date : null;
+
+        for (var index = 0; index < projectionMonths; index++)
+        {
+            var monthStart = start.AddMonths(index);
+            var monthEnd = monthStart.AddMonths(1);
+            var opening = balance;
+            var contributions = 0m;
+
+            foreach (var state in schedules)
+            {
+                var endDate = state.Schedule.EndDate?.Date;
+                if (endDate.HasValue && (endDate.Value < monthStart || state.NextDueDate > endDate.Value))
+                    continue;
+
+                while (state.NextDueDate < monthStart
+                    && (!endDate.HasValue || state.NextDueDate <= endDate.Value))
+                {
+                    state.NextDueDate = GetNextSavingsDueDate(state.NextDueDate, state.Schedule.Frequency);
+                }
+
+                while (state.NextDueDate >= monthStart && state.NextDueDate < monthEnd
+                    && (!endDate.HasValue || state.NextDueDate <= endDate.Value))
+                {
+                    contributions += state.Schedule.Amount;
+                    state.NextDueDate = GetNextSavingsDueDate(state.NextDueDate, state.Schedule.Frequency);
+                }
+            }
+
+            balance += contributions;
+            if (!completionDate.HasValue && balance >= targetAmount)
+                completionDate = monthEnd.AddDays(-1);
+
+            rows.Add(new EmergencyFundProjectionMonth(
+                monthStart, opening, contributions, balance,
+                targetAmount <= 0m ? 100m : Math.Clamp(balance / targetAmount * 100m, 0m, 100m),
+                balance >= targetAmount));
+        }
+
+        return new EmergencyFundProjectionResult(
+            currentAmount, targetAmount, completionDate, rows);
+    }
+
     public decimal CalculateMonthlyNetContribution(IEnumerable<SavingsContribution> contributions, int year, int month)
     {
         if (month is < 1 or > 12) throw new ArgumentOutOfRangeException(nameof(month));
@@ -210,3 +289,25 @@ public sealed record SavingsCashFlowCapacity(
     decimal SurplusAfterCommitments,
     decimal RecommendedMonthlyCapacity,
     bool UsesUserBudget);
+
+internal sealed class EmergencyFundScheduleState(
+    RecurringSavingsContribution schedule,
+    DateTime nextDueDate)
+{
+    public RecurringSavingsContribution Schedule { get; } = schedule;
+    public DateTime NextDueDate { get; set; } = nextDueDate;
+}
+
+public sealed record EmergencyFundProjectionMonth(
+    DateTime Month,
+    decimal OpeningBalance,
+    decimal PlannedContributions,
+    decimal ProjectedClosingBalance,
+    decimal TargetProgressPercent,
+    bool TargetReached);
+
+public sealed record EmergencyFundProjectionResult(
+    decimal StartingBalance,
+    decimal TargetAmount,
+    DateTime? EstimatedCompletionDate,
+    IReadOnlyList<EmergencyFundProjectionMonth> Months);

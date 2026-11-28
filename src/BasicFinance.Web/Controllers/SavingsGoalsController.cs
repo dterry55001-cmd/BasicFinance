@@ -157,6 +157,13 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
             EmergencyFundCoverageMonths = coverage,
             EmergencyFundReadiness = savingsService.BuildEmergencyFundReadiness(
                 emergencyProgress?.CurrentAmount ?? 0m, monthlyExpenses),
+            EmergencyFundProjection = savingsService.BuildEmergencyFundProjection(
+                emergencyProgress?.CurrentAmount ?? 0m,
+                monthlyExpenses,
+                plan?.TargetCoverageMonths ?? 6,
+                emergencyGoal?.RecurringContributions ?? [],
+                today,
+                24),
             TotalSaved = cards.Sum(x => x.Progress.CurrentAmount),
             TotalTargets = cards.Sum(x => x.Goal.TargetAmount),
             TotalMonthlyTargets = cards.Sum(x => x.MonthlyTarget),
@@ -686,6 +693,8 @@ public sealed class SavingsGoalsIndexViewModel
     public decimal EmergencyFundTargetAmount { get; set; }
     public decimal EmergencyFundCoverageMonths { get; set; }
     public IReadOnlyList<EmergencyFundCoverageTier> EmergencyFundReadiness { get; set; } = [];
+    public EmergencyFundProjectionResult EmergencyFundProjection { get; set; } =
+        new(0m, 0m, null, []);
     public decimal TotalSaved { get; set; }
     public decimal TotalTargets { get; set; }
     public decimal TotalMonthlyTargets { get; set; }

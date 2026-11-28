@@ -187,6 +187,64 @@ public sealed class SavingsGoalServiceTests
     }
 
     [Fact]
+    public void BuildEmergencyFundProjection_ProjectsRecurringMonthlyContributionsWithoutCreatingEntries()
+    {
+        var schedules = new[]
+        {
+            new RecurringSavingsContribution
+            {
+                Amount = 500m,
+                Frequency = SavingsScheduleFrequency.Monthly,
+                NextDueDate = new DateTime(2026, 12, 5),
+                IsActive = true
+            }
+        };
+
+        var result = _service.BuildEmergencyFundProjection(
+            1000m, 1000m, 3, schedules, new DateTime(2026, 11, 27), 6);
+
+        Assert.Equal(3000m, result.TargetAmount);
+        Assert.Equal(new DateTime(2027, 3, 31), result.EstimatedCompletionDate);
+        Assert.Equal(new[] { 500m, 500m, 500m, 500m, 500m, 500m },
+            result.Months.Select(month => month.PlannedContributions));
+        Assert.Equal(4000m, result.Months[^1].ProjectedClosingBalance);
+        Assert.Empty(schedules[0].SavingsGoal?.Contributions ?? []);
+    }
+
+    [Fact]
+    public void BuildEmergencyFundProjection_RespectsScheduleEndDate()
+    {
+        var schedule = new RecurringSavingsContribution
+        {
+            Amount = 250m,
+            Frequency = SavingsScheduleFrequency.Monthly,
+            NextDueDate = new DateTime(2026, 12, 1),
+            EndDate = new DateTime(2027, 1, 31),
+            IsActive = true
+        };
+
+        var result = _service.BuildEmergencyFundProjection(
+            0m, 1000m, 1, [schedule], new DateTime(2026, 11, 27), 4);
+
+        Assert.Equal(new[] { 250m, 250m, 0m, 0m },
+            result.Months.Select(month => month.PlannedContributions));
+        Assert.Null(result.EstimatedCompletionDate);
+    }
+
+    [Fact]
+    public void BuildEmergencyFundProjection_ReportsAlreadyFundedAndNoContributionScenarios()
+    {
+        var alreadyFunded = _service.BuildEmergencyFundProjection(
+            6000m, 1000m, 6, [], new DateTime(2026, 11, 27), 3);
+        var noSchedule = _service.BuildEmergencyFundProjection(
+            100m, 1000m, 6, [], new DateTime(2026, 11, 27), 3);
+
+        Assert.Equal(new DateTime(2026, 11, 27), alreadyFunded.EstimatedCompletionDate);
+        Assert.Null(noSchedule.EstimatedCompletionDate);
+        Assert.All(noSchedule.Months, month => Assert.Equal(100m, month.ProjectedClosingBalance));
+    }
+
+    [Fact]
     public void CalculateMonthlyNetContribution_SubtractsWithdrawalsWithinSelectedMonth()
     {
         var entries = new[]
