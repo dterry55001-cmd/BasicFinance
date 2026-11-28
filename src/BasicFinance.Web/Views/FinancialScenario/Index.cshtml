@@ -1,0 +1,103 @@
+@model BasicFinance.Web.Models.FinancialScenarioViewModel
+@{
+    ViewData["Title"] = "What-if Scenario Planner";
+    var comparison = Model.Comparison;
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">FINANCIAL PLANNING · PHASE 7.10</p>
+        <h1>What-if scenario planner</h1>
+        <p class="page-description">Compare a changed monthly plan with a read-only baseline built from your financial records. Adjustments are hypothetical and never write to accounts, budgets, savings goals, debts, or transactions.</p>
+    </div>
+</section>
+@if (Model.Warnings.Count > 0)
+{
+    <section class="table-card">
+        <h2>Baseline notes</h2>
+        <ul>@foreach (var warning in Model.Warnings) { <li>@warning</li> }</ul>
+    </section>
+}
+<form asp-action="Compare" method="post" class="form-card">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="section-block">
+        <h2>Current baseline (USD)</h2>
+        <div class="summary-grid">
+            <article class="summary-card"><span>Outstanding debt</span><strong>@Model.StartingDebtBalance.ToString("C")</strong></article>
+            <article class="summary-card"><span>Weighted debt rate</span><strong>@Model.AnnualDebtRatePercent.ToString("0.00")%</strong></article>
+            <article class="summary-card"><span>Monthly minimum payments</span><strong>@Model.MonthlyDebtPayment.ToString("C")</strong></article>
+            <article class="summary-card"><span>Savings goal progress</span><strong>@Model.StartingSavingsBalance.ToString("C")</strong></article>
+            <article class="summary-card"><span>Recurring savings schedules</span><strong>@Model.MonthlySavingsContribution.ToString("C") / mo.</strong></article>
+            <article class="summary-card"><span>Average monthly income</span><strong>@Model.MonthlyIncome.ToString("C")</strong></article>
+            <article class="summary-card"><span>Planned monthly expenses</span><strong>@Model.MonthlyExpenses.ToString("C")</strong></article>
+        </div>
+        <p class="muted">Income uses the previous three completed months. Expenses use current-month budget lines. Debt and savings figures are restricted to USD; no exchange-rate conversion is applied.</p>
+    </section>
+    <section class="section-block">
+        <h2>What would change?</h2>
+        <div class="form-grid">
+            <label>Monthly income change (USD)
+                <input asp-for="MonthlyIncomeChange" type="number" step="0.01" />
+                <span asp-validation-for="MonthlyIncomeChange" class="field-error"></span>
+                <small>Positive for an increase; negative for a decrease.</small>
+            </label>
+            <label>Monthly expense change (USD)
+                <input asp-for="MonthlyExpenseChange" type="number" step="0.01" />
+                <span asp-validation-for="MonthlyExpenseChange" class="field-error"></span>
+                <small>Positive for higher expenses; negative for reductions.</small>
+            </label>
+            <label>Annual debt-rate change (percentage points)
+                <input asp-for="AnnualDebtRateChange" type="number" min="-100" max="100" step="0.01" />
+                <span asp-validation-for="AnnualDebtRateChange" class="field-error"></span>
+                <small>Applied to the weighted baseline rate. The resulting rate must remain between 0% and 100%.</small>
+            </label>
+            <label>Monthly debt-payment change (USD)
+                <input asp-for="MonthlyDebtPaymentChange" type="number" step="0.01" />
+                <span asp-validation-for="MonthlyDebtPaymentChange" class="field-error"></span>
+                <small>Positive for extra payments; negative to reduce payments. Payments cannot fall below zero.</small>
+            </label>
+            <label>Monthly savings contribution change (USD)
+                <input asp-for="MonthlySavingsContributionChange" type="number" step="0.01" />
+                <span asp-validation-for="MonthlySavingsContributionChange" class="field-error"></span>
+                <small>Positive to save more; negative to reduce planned contributions.</small>
+            </label>
+            <label>Projection horizon (months)
+                <input asp-for="ProjectionMonths" type="number" min="1" max="120" step="1" />
+                <span asp-validation-for="ProjectionMonths" class="field-error"></span>
+            </label>
+        </div>
+    </section>
+    <div class="form-actions"><button class="button button-primary" type="submit">Compare scenario</button></div>
+</form>
+
+@if (comparison is not null)
+{
+    <section class="section-block">
+        <h2>Baseline vs. adjusted plan</h2>
+        <div class="table-card">
+            <div class="table-scroll"><table>
+                <thead><tr><th>Measure</th><th>Baseline</th><th>Adjusted plan</th><th>Difference</th></tr></thead>
+                <tbody>
+                    <tr><td>Ending debt</td><td>@comparison.Baseline.EndingDebtBalance.ToString("C")</td><td>@comparison.Scenario.EndingDebtBalance.ToString("C")</td><td>@comparison.DifferenceInEndingDebt.ToString("+0.00;-0.00;0.00")</td></tr>
+                    <tr><td>Ending savings goal progress</td><td>@comparison.Baseline.EndingSavingsBalance.ToString("C")</td><td>@comparison.Scenario.EndingSavingsBalance.ToString("C")</td><td>@comparison.DifferenceInEndingSavings.ToString("+0.00;-0.00;0.00")</td></tr>
+                    <tr><td>Cumulative net cash flow</td><td>@comparison.Baseline.CumulativeNetCashFlow.ToString("C")</td><td>@comparison.Scenario.CumulativeNetCashFlow.ToString("C")</td><td>@comparison.DifferenceInCumulativeCashFlow.ToString("+0.00;-0.00;0.00")</td></tr>
+                    <tr><td>Total debt interest</td><td>@comparison.Baseline.TotalDebtInterest.ToString("C")</td><td>@comparison.Scenario.TotalDebtInterest.ToString("C")</td><td>@((comparison.Scenario.TotalDebtInterest - comparison.Baseline.TotalDebtInterest).ToString("+0.00;-0.00;0.00"))</td></tr>
+                    <tr><td>Debt-free month</td><td>@(comparison.Baseline.DebtFreeMonth?.ToString() ?? "Not within horizon")</td><td>@(comparison.Scenario.DebtFreeMonth?.ToString() ?? "Not within horizon")</td><td>Month number within selected horizon</td></tr>
+                </tbody>
+            </table></div>
+        </div>
+    </section>
+    <section class="section-block">
+        <h2>Monthly adjusted-plan projection</h2>
+        <div class="table-card"><div class="table-scroll"><table>
+            <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Debt interest</th><th>Debt payment</th><th>Closing debt</th><th>Savings contribution</th><th>Closing savings progress</th><th>Net cash flow</th></tr></thead>
+            <tbody>
+            @foreach (var month in comparison.Scenario.Months)
+            {
+                <tr><td>@month.Month</td><td>@month.Income.ToString("C")</td><td>@month.Expenses.ToString("C")</td><td>@month.DebtInterest.ToString("C")</td><td>@month.DebtPayment.ToString("C")</td><td>@month.ClosingDebtBalance.ToString("C")</td><td>@month.SavingsContribution.ToString("C")</td><td>@month.ClosingSavingsBalance.ToString("C")</td><td>@month.NetCashFlow.ToString("C")</td></tr>
+            }
+            </tbody>
+        </table></div></div>
+    </section>
+    <p class="page-description">Estimates assume stable monthly baselines and constant interest rates apart from your adjustment. They do not model taxes, fees, changing lender minimums, investment returns, inflation, or unplanned events. Confirm actual terms before making financial decisions.</p>
+}
