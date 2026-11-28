@@ -20,16 +20,28 @@
             <a class="navigation-link" asp-controller="Home" asp-action="Index">Overview</a>
             <a class="navigation-link" asp-controller="Budgets" asp-action="Index">Budget</a>
             <a class="navigation-link" asp-controller="CashFlow" asp-action="Index">Cash Flow</a>
-            <a class="navigation-link" asp-controller="FinancialPlanning" asp-action="Index">Financial Planning</a>
-            <a class="navigation-link" asp-controller="RetirementPlanning" asp-action="Index">Retirement Planning</a>
-            <a class="navigation-link" asp-controller="FinancialScenario" asp-action="Index">What-if Planner</a>
-            <a class="navigation-link" asp-controller="SavingsGoals" asp-action="Index">Savings</a>
-            <a class="navigation-link" asp-controller="SavingsNotifications" asp-action="Index">Savings alerts</a>
-            <a class="navigation-link" asp-controller="SavingsReports" asp-action="Index">Savings reports</a>
-            <a class="navigation-link" asp-controller="SavingsReconciliation" asp-action="Index">Reconciliation</a>
 
             <details class="nav-menu">
-                <summary>Accounts</summary>
+                <summary aria-label="Financial planning menu">Planning</summary>
+                <div class="nav-menu-panel">
+                    <a asp-controller="FinancialPlanning" asp-action="Index">Financial planning</a>
+                    <a asp-controller="RetirementPlanning" asp-action="Index">Retirement planning</a>
+                    <a asp-controller="FinancialScenario" asp-action="Index">What-if planner</a>
+                </div>
+            </details>
+
+            <details class="nav-menu">
+                <summary aria-label="Savings menu">Savings</summary>
+                <div class="nav-menu-panel">
+                    <a asp-controller="SavingsGoals" asp-action="Index">Savings goals</a>
+                    <a asp-controller="SavingsNotifications" asp-action="Index">Savings alerts</a>
+                    <a asp-controller="SavingsReports" asp-action="Index">Savings reports</a>
+                    <a asp-controller="SavingsReconciliation" asp-action="Index">Reconciliation</a>
+                </div>
+            </details>
+
+            <details class="nav-menu">
+                <summary aria-label="Accounts menu">Accounts</summary>
                 <div class="nav-menu-panel">
                     <a asp-controller="Accounts" asp-action="Index">All accounts</a>
                     <a asp-controller="AccountManagement" asp-action="Index">Debt management</a>
@@ -37,7 +49,7 @@
             </details>
 
             <details class="nav-menu">
-                <summary>Debt center</summary>
+                <summary aria-label="Debt center menu">Debt Center</summary>
                 <div class="nav-menu-panel">
                     <a asp-controller="DebtDashboard" asp-action="Index">Debt dashboard</a>
                     <a asp-controller="DebtAnalytics" asp-action="Index">Debt analytics</a>
@@ -54,7 +66,7 @@
             </details>
 
             <details class="nav-menu">
-                <summary>Activity</summary>
+                <summary aria-label="Activity menu">Activity</summary>
                 <div class="nav-menu-panel">
                     <a asp-controller="Transactions" asp-action="Index">Transactions</a>
                     <a asp-controller="Categories" asp-action="Index">Categories</a>
@@ -62,7 +74,7 @@
             </details>
 
             <details class="nav-menu">
-                <summary>Tools</summary>
+                <summary aria-label="Tools menu">Tools</summary>
                 <div class="nav-menu-panel">
                     <a asp-controller="Rules" asp-action="Index">Automation rules</a>
                     <a asp-controller="Imports" asp-action="Index">Statement imports</a>
