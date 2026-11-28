@@ -143,4 +143,48 @@ public sealed class FinancialPlanningDashboardServiceTests
             DateOnly asOfDate, string reportingCurrency, CancellationToken cancellationToken = default) =>
             Task.FromResult(data with { AsOfDate = asOfDate, RequestedReportingCurrency = reportingCurrency });
     }
+
+    [Fact]
+    public async Task BuildAsync_DoesNotMutateAggregatedSourceData()
+    {
+        var accounts = new List<PlanningAccountInput>
+        {
+            Account(1, AccountType.Checking, "USD", 1200m),
+            Account(2, AccountType.Retirement, "USD", 8500m),
+            Account(3, AccountType.Debt, "USD", 2400m)
+        };
+        var debts = new List<PlanningDebtInput>
+        {
+            new(3, "Auto loan", DebtAccountType.InstallmentLoan, "USD", 2400m, 5.5m, 150m, null)
+        };
+        var budgets = new List<PlanningBudgetInput>
+        {
+            new(1, 2026, 11, "USD", 1, "Housing", 900m, 100m)
+        };
+        var savings = new List<PlanningSavingsGoalInput>
+        {
+            new(1, "Emergency reserve", "USD", 6000m, 2100m, null, true, 1)
+        };
+        var originalAccounts = accounts.ToArray();
+        var originalDebts = debts.ToArray();
+        var originalBudgets = budgets.ToArray();
+        var originalSavings = savings.ToArray();
+        var data = new FinancialPlanningData(
+            new DateOnly(2026, 11, 27), "USD", accounts, debts, budgets, savings,
+            [], [], [], []);
+
+        var result = await new FinancialPlanningDashboardService(new StubProvider(data))
+            .BuildAsync(new DateOnly(2026, 11, 27), "USD");
+
+        Assert.Equal(originalAccounts, accounts);
+        Assert.Equal(originalDebts, debts);
+        Assert.Equal(originalBudgets, budgets);
+        Assert.Equal(originalSavings, savings);
+        Assert.Equal(9700m, Assert.Single(result.CurrencySummaries).TotalAssets);
+        Assert.Equal(2400m, Assert.Single(result.CurrencySummaries).TotalLiabilities);
+        Assert.Equal(7300m, Assert.Single(result.CurrencySummaries).NetWorth);
+        Assert.Equal(2100m, result.SavingsGoalProgressTotal);
+        Assert.Equal(1, result.BudgetLineCount);
+    }
+
 }
