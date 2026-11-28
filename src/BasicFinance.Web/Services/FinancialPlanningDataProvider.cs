@@ -56,11 +56,16 @@ public sealed class FinancialPlanningDataProvider(ApplicationDbContext database,
             debtWarnings.Length == 0 ? null : $"{debtWarnings.Length} debt account(s) need rate or payment details."));
 
         var budgetStart = new DateTime(asOfDate.Year, asOfDate.Month, 1);
-        var budgets = await database.BudgetPeriods.AsNoTracking()
+        var budgetPeriods = await database.BudgetPeriods.AsNoTracking()
+            .Include(x => x.Lines)
+                .ThenInclude(line => line.Category)
             .Where(x => x.Year == asOfDate.Year && x.Month == asOfDate.Month)
-            .SelectMany(x => x.Lines.Select(line => new PlanningBudgetInput(x.Id, x.Year, x.Month, x.CurrencyCode,
-                line.CategoryId, line.Category.Name, line.PlannedAmount, line.RolloverAmount)))
             .ToListAsync(cancellationToken);
+        var budgets = budgetPeriods
+            .SelectMany(period => period.Lines.Select(line => new PlanningBudgetInput(
+                period.Id, period.Year, period.Month, period.CurrencyCode,
+                line.CategoryId, line.Category.Name, line.PlannedAmount, line.RolloverAmount)))
+            .ToArray();
         sources.Add(new("Budget Management", budgets.Count == 0 ? PlanningSourceStatus.Missing :
             budgets.Any(x => x.CurrencyCode != reportingCurrency) ? PlanningSourceStatus.Partial : PlanningSourceStatus.Available,
             retrievedUtc, budgets.Count == 0 ? $"No budget lines were found for {budgetStart:yyyy-MM}." :
