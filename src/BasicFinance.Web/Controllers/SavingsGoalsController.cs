@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BasicFinance.Web.Controllers;
 
-public sealed class SavingsGoalsController(ApplicationDbContext database, SavingsGoalService savingsService) : Controller
+public sealed class SavingsGoalsController(ApplicationDbContext database, SavingsGoalService savingsService, SavingsGoalProjectionCalculator projectionCalculator) : Controller
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
@@ -98,7 +98,11 @@ public sealed class SavingsGoalsController(ApplicationDbContext database, Saving
                 AllocationPercent = goal.AllocationSettings.FirstOrDefault()?.AllocationPercent ?? 0m,
                 PlannedAllocation = savingsService.CalculateAllocationAmount(
                     allocationBudget?.MonthlyBudget ?? 0m,
-                    goal.AllocationSettings.FirstOrDefault()?.AllocationPercent ?? 0m)
+                    goal.AllocationSettings.FirstOrDefault()?.AllocationPercent ?? 0m),
+                Projection = projectionCalculator.Calculate(
+                    Math.Max(0m, progress.CurrentAmount), goal.TargetAmount, goal.CurrencyCode,
+                    goal.Status == SavingsGoalStatus.Active ? goal.RecurringContributions : [],
+                    null, today, 24)
             };
         }).ToList();
 
@@ -725,6 +729,7 @@ public sealed class SavingsGoalCardViewModel
     public decimal MonthlyRemaining { get; set; }
     public decimal AllocationPercent { get; set; }
     public decimal PlannedAllocation { get; set; }
+    public SavingsGoalProjectionResult Projection { get; set; } = null!;
 }
 
 public sealed class SavingsFundingRecommendationViewModel

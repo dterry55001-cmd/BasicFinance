@@ -221,6 +221,27 @@
                     <span>Target date: @(goal.TargetDate?.ToString("MMM d, yyyy") ?? "Not set")</span>
                     <span>Estimated completion: @(card.Progress.EstimatedCompletionDate?.ToString("MMM yyyy") ?? "Not enough contribution history")</span>
                 </div>
+                <details class="savings-history">
+                    <summary>Forward savings projection (24 months)</summary>
+                    <p class="muted">Based on the current saved balance and active recurring schedules. This is a planning estimate, not a recorded contribution or account balance.</p>
+                    <p><strong>Estimated target completion:</strong> @(card.Projection.EstimatedCompletionDate?.ToString("MMMM yyyy") ?? "Not reached within the projection period")</p>
+                    <div class="table-scroll"><table>
+                        <thead><tr><th>Month</th><th>Opening</th><th>Planned contributions</th><th>Planned withdrawals</th><th>Projected closing</th><th>Target progress</th></tr></thead>
+                        <tbody>
+                        @foreach (var month in card.Projection.Months.Take(12))
+                        {
+                            <tr>
+                                <td>@month.Month.ToString("MMM yyyy")</td>
+                                <td>@month.OpeningBalance.ToString("C")</td>
+                                <td>@month.PlannedContributions.ToString("C")</td>
+                                <td>@month.PlannedWithdrawals.ToString("C")</td>
+                                <td>@month.ClosingBalance.ToString("C")</td>
+                                <td>@month.TargetProgressPercent.ToString("0.0")%</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table></div>
+                </details>
                 <div class="savings-goal-actions">
                     @if (goal.Status is SavingsGoalStatus.Active or SavingsGoalStatus.Completed)
                     {
