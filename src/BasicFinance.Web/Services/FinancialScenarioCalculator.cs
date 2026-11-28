@@ -17,6 +17,11 @@ public sealed class FinancialScenarioCalculator
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(scenarioAssumptions);
         Validate(input);
+        ValidateAssumptions(scenarioAssumptions);
+        ValidateEvents(scenarioEvents, input.ProjectionMonths);
+        var effectiveScenarioRate = input.AnnualDebtRatePercent + scenarioAssumptions.AnnualDebtRateChange;
+        if (effectiveScenarioRate is < 0m or > 100m)
+            throw new ArgumentOutOfRangeException(nameof(scenarioAssumptions), "The resulting annual debt rate must be between 0 and 100 percent.");
         var baseline = Run(input, input.Assumptions, input.Events, "Baseline");
         var scenario = Run(input, scenarioAssumptions, scenarioEvents, scenarioName);
         return new FinancialScenarioComparison(
