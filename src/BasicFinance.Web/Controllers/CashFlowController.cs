@@ -111,6 +111,7 @@ public sealed class CashFlowController(ApplicationDbContext database, CashFlowFo
             AlertsEnabled = preference?.AlertsEnabled ?? true,
             AlertHistory = alertHistory,
             Forecast = forecast,
+            VariableForecast = forecastService.BuildVariableForecast(transactions, DateTime.Today, months, "USD", 6),
             DailyForecast = dailyForecast,
             WeeklyForecast = weeklyForecast,
             ActualVsForecast = actualVsForecast,
@@ -221,6 +222,7 @@ public sealed class CashFlowIndexViewModel
     public bool AlertsEnabled { get; set; } = true;
     public List<CashFlowAlert> AlertHistory { get; set; } = [];
     public IReadOnlyList<CashFlowForecastMonth> Forecast { get; set; } = [];
+    public VariableCashFlowForecast VariableForecast { get; set; } = null!;
     public IReadOnlyList<CashFlowForecastPeriod> DailyForecast { get; set; } = [];
     public IReadOnlyList<CashFlowForecastPeriod> WeeklyForecast { get; set; } = [];
     public IReadOnlyList<CashFlowActualVsForecastMonth> ActualVsForecast { get; set; } = [];

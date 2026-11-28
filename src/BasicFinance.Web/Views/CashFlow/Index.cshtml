@@ -130,6 +130,33 @@ else if (Model.AlertsEnabled && Model.HasLowBalanceWarning)
     }
 </section>
 <section class="table-card">
+    <h2>Variable income and expense outlook</h2>
+    <p class="page-description">A supplemental estimate based on the average of the six completed months before the forecast begins. It is shown separately from recurring schedules and is not added again to the cash-balance projection.</p>
+    <div class="summary-grid">
+        <article class="summary-card"><span>Historical average income</span><strong>@Model.VariableForecast.AverageMonthlyIncome.ToString("C")</strong></article>
+        <article class="summary-card"><span>Historical average expenses</span><strong>@Model.VariableForecast.AverageMonthlyExpenses.ToString("C")</strong></article>
+        <article class="summary-card"><span>Historical net cash flow</span><strong>@((Model.VariableForecast.AverageMonthlyIncome - Model.VariableForecast.AverageMonthlyExpenses).ToString("C"))</strong></article>
+        <article class="summary-card"><span>Estimate confidence</span><strong>@Model.VariableForecast.Confidence</strong><small>@Model.VariableForecast.HistoricalMonths completed months, @Model.VariableForecast.CurrencyCode</small></article>
+    </div>
+    <p class="muted">History: @Model.VariableForecast.HistoryStart.ToString("MMM yyyy") through @Model.VariableForecast.HistoryEnd.ToString("MMM yyyy"). Historical low/high ranges show the lowest and highest monthly totals in that period; they are not statistical confidence intervals.</p>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Month</th><th>Estimated variable income</th><th>Estimated variable expenses</th><th>Estimated net cash flow</th><th>Historical income range</th><th>Historical expense range</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.VariableForecast.Months)
+        {
+            <tr>
+                <td><strong>@item.Month.ToString("MMM yyyy")</strong></td>
+                <td>@item.ExpectedVariableIncome.ToString("C")</td>
+                <td>@item.ExpectedVariableExpenses.ToString("C")</td>
+                <td class="@(item.ExpectedVariableIncome - item.ExpectedVariableExpenses < 0 ? "text-danger" : "")">@((item.ExpectedVariableIncome - item.ExpectedVariableExpenses).ToString("C"))</td>
+                <td>@item.HistoricalLowIncome.ToString("C") – @item.HistoricalHighIncome.ToString("C")</td>
+                <td>@item.HistoricalLowExpenses.ToString("C") – @item.HistoricalHighExpenses.ToString("C")</td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
+</section>
+<section class="table-card">
     <h2>Actual vs. forecast — completed months</h2>
     <p class="page-description">Compare scheduled recurring cash flow with posted USD transactions. Variance is actual minus forecast; a positive expense variance means spending exceeded the forecast.</p>
     <div class="table-scroll"><table>
