@@ -1,0 +1,95 @@
+@model BasicFinance.Web.Models.RetirementPlanningViewModel
+@{
+    ViewData["Title"] = "Retirement Planning";
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">FINANCIAL PLANNING</p>
+        <h1>Retirement projection</h1>
+        <p class="page-description">Estimate a future retirement account value using current account balances and editable assumptions.</p>
+        <p><a asp-controller="FinancialPlanning" asp-action="Index">Back to Financial Planning</a></p>
+    </div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="notice notice-warning" role="status">@Model.ErrorMessage</div>
+}
+@if (Model.Accounts.Count == 0)
+{
+    <section class="table-card">
+        <h2>No retirement accounts found</h2>
+        <p>Add an active account with the Retirement account type before creating an account-linked projection.</p>
+    </section>
+}
+else
+{
+    <section class="table-card">
+        <h2>Projection assumptions</h2>
+        <p class="page-description">The selected account's current balance and employer match percentage are read from Accounts. Other values are planning assumptions and do not update account records.</p>
+        <form asp-action="Project" method="post" class="form-grid">
+            @Html.AntiForgeryToken()
+            <label>Retirement account
+                <select name="SelectedAccountId" required>
+                    <option value="">Select account</option>
+                    @foreach (var account in Model.Accounts)
+                    {
+                        <option value="@account.AccountId" selected="@(Model.SelectedAccountId == account.AccountId)">
+                            @account.Name (@account.CurrencyCode) — @account.Balance.ToString("N2")
+                        </option>
+                    }
+                </select>
+            </label>
+            <label>Current age <input name="CurrentAge" type="number" min="18" max="100" value="@Model.CurrentAge" required /></label>
+            <label>Retirement age <input name="RetirementAge" type="number" min="19" max="100" value="@Model.RetirementAge" required /></label>
+            <label>Monthly employee contribution <input name="MonthlyEmployeeContribution" type="number" min="0" max="999999" step="0.01" value="@Model.MonthlyEmployeeContribution" required /></label>
+            <label>Employer match cap (monthly, optional) <input name="EmployerMatchCapMonthly" type="number" min="0" max="999999" step="0.01" value="@Model.EmployerMatchCapMonthly" /></label>
+            <label>Annual investment return (%) <input name="AnnualReturnPercent" type="number" min="-100" max="100" step="0.01" value="@Model.AnnualReturnPercent" required /></label>
+            <label>Annual fees (%) <input name="AnnualFeePercent" type="number" min="0" max="20" step="0.01" value="@Model.AnnualFeePercent" required /></label>
+            <label>Annual inflation (%) <input name="AnnualInflationPercent" type="number" min="0" max="50" step="0.01" value="@Model.AnnualInflationPercent" required /></label>
+            <label>Annual contribution increase (%) <input name="AnnualContributionIncreasePercent" type="number" min="0" max="100" step="0.01" value="@Model.AnnualContributionIncreasePercent" required /></label>
+            <div class="form-actions"><button class="button button-primary" type="submit">Calculate projection</button></div>
+        </form>
+        @if (Model.SelectedAccountId.HasValue)
+        {
+            var selected = Model.Accounts.SingleOrDefault(x => x.AccountId == Model.SelectedAccountId);
+            if (selected is not null)
+            {
+                <p class="muted">Employer match assumption from account: @(selected.EmployerMatchPercent?.ToString("0.##") ?? "Not set; assumed 0")%. Tax treatment: @(selected.TaxTreatment ?? "Not specified").</p>
+            }
+        }
+    </section>
+}
+
+@if (Model.Projection is not null)
+{
+    <section class="table-card">
+        <h2>Projected retirement balance</h2>
+        <div class="summary-grid">
+            <article class="summary-card"><span>Projected balance</span><strong>@Model.Projection.ProjectedBalance.ToString("C")</strong></article>
+            <article class="summary-card"><span>Today's purchasing power</span><strong>@Model.Projection.InflationAdjustedBalance.ToString("C")</strong></article>
+            <article class="summary-card"><span>Employee contributions</span><strong>@Model.Projection.TotalEmployeeContributions.ToString("C")</strong></article>
+            <article class="summary-card"><span>Employer contributions</span><strong>@Model.Projection.TotalEmployerContributions.ToString("C")</strong></article>
+        </div>
+        <p class="muted">Estimated investment growth: @Model.Projection.TotalInvestmentGrowth.ToString("C"). Projection horizon: @Model.Projection.YearsToRetirement years. This is an illustrative estimate, not a guaranteed return or retirement-income estimate.</p>
+        <div class="table-scroll"><table>
+            <thead><tr><th>Age</th><th>Employee contributions</th><th>Employer contributions</th><th>Investment growth</th><th>Projected balance</th><th>Inflation-adjusted balance</th></tr></thead>
+            <tbody>
+            @foreach (var year in Model.Projection.Years)
+            {
+                <tr><td>@year.Age</td><td>@year.EmployeeContributions.ToString("C")</td><td>@year.EmployerContributions.ToString("C")</td><td>@year.InvestmentGrowth.ToString("C")</td><td>@year.ClosingBalance.ToString("C")</td><td>@year.InflationAdjustedBalance.ToString("C")</td></tr>
+            }
+            </tbody>
+        </table></div>
+    </section>
+}
+<section class="table-card">
+    <h2>Important assumptions and limitations</h2>
+    <ul>
+        <li>Retirement balances remain classified as liquid assets in the portfolio, but access restrictions, taxes, and early-withdrawal penalties may apply.</li>
+        <li>Employer match is taken from the selected account's saved match percentage; a monthly cap can be entered for this projection.</li>
+        <li>Pensions and annuities may provide income rather than an investable account balance; this calculator does not estimate their lifetime income.</li>
+        <li>Taxes, contribution limits, Social Security, and sequence-of-return risk are not modeled.</li>
+        <li>Changing assumptions recalculates the estimate only; no account balances or transactions are changed.</li>
+    </ul>
+</section>
