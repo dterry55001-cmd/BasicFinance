@@ -18,6 +18,7 @@ builder.Services.AddScoped<CashFlowForecastService>();
 builder.Services.AddScoped<SavingsGoalService>();
 builder.Services.AddSingleton<SavingsGoalProjectionCalculator>();
 builder.Services.AddSingleton<RetirementProjectionCalculator>();
+builder.Services.AddSingleton<FinancialScenarioCalculator>();
 builder.Services.AddScoped<SavingsNotificationService>();
 builder.Services.AddHostedService<SavingsNotificationBackgroundService>();
 builder.Services.AddHealthChecks();
