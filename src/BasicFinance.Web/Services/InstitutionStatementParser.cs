@@ -13,7 +13,8 @@ public enum StatementSourceProfile
     AtomicBanking,
     RobinhoodBrokerage,
     RobinhoodBank,
-    ChaseBanking
+    ChaseBanking,
+    OfxBanking
 }
 
 /// <summary>
@@ -238,6 +239,66 @@ public sealed class InstitutionStatementParser
         }
 
         if (rows.Count == 0) throw new InvalidDataException("No transaction rows were found.");
+        return rows;
+    }
+
+    public IReadOnlyList<ParsedStatementRow> ParseOfx(string content, string accountKey)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            throw new InvalidDataException("The OFX/QFX statement is empty.");
+        if (string.IsNullOrWhiteSpace(accountKey))
+            throw new ArgumentException("A selected internal account key is required.", nameof(accountKey));
+
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            content, @"<STMTTRN>(.*?)</STMTTRN>", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (matches.Count == 0)
+            throw new InvalidDataException("No bank transactions were found. The file must contain OFX STMTTRN records.");
+
+        static string ReadTag(string block, string tag)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(
+                block, $@"<{tag}>([^<\\r\\n]*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return match.Success ? System.Net.WebUtility.HtmlDecode(match.Groups[1].Value.Trim()) : string.Empty;
+        }
+
+        static DateTime? ReadOfxDate(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            var digits = new string(value.TakeWhile(char.IsDigit).ToArray());
+            if (digits.Length < 8 || !DateTime.TryParseExact(digits[..8], "yyyyMMdd",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) return null;
+            return date.Date;
+        }
+
+        var rows = new List<ParsedStatementRow>();
+        for (var index = 0; index < matches.Count; index++)
+        {
+            var block = matches[index].Groups[1].Value;
+            var amountText = ReadTag(block, "TRNAMT");
+            var row = new ParsedStatementRow { RowNumber = index + 1 };
+            row.TransactionDate = ReadOfxDate(ReadTag(block, "DTPOSTED"));
+            row.PostingDate = row.TransactionDate;
+            row.Description = FirstNonEmpty(ReadTag(block, "NAME"), ReadTag(block, "MEMO"), ReadTag(block, "PAYEE"));
+            row.SourceReference = ReadTag(block, "FITID");
+            row.SourceType = ReadTag(block, "TRNTYPE");
+            row.Memo = ReadTag(block, "MEMO");
+            row.SignedAmount = TryDecimal(amountText);
+            row.SourceFields["TRNTYPE"] = row.SourceType ?? string.Empty;
+            row.SourceFields["DTPOSTED"] = ReadTag(block, "DTPOSTED");
+            row.SourceFields["TRNAMT"] = amountText;
+            row.SourceFields["FITID"] = row.SourceReference ?? string.Empty;
+            row.SourceFields["NAME"] = ReadTag(block, "NAME");
+            row.SourceFields["MEMO"] = row.Memo ?? string.Empty;
+
+            if (row.TransactionDate is null) row.ValidationError = "A valid OFX posting date is required.";
+            else if (row.SignedAmount is null) row.ValidationError = "A valid OFX transaction amount is required.";
+            else if (string.IsNullOrWhiteSpace(row.Description)) row.ValidationError = "A transaction name or memo is required.";
+            else
+            {
+                row.DuplicateFingerprint = BuildFingerprint(StatementSourceProfile.OfxBanking, accountKey, row);
+            }
+            rows.Add(row);
+        }
         return rows;
     }
 
