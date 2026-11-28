@@ -8,6 +8,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<AccountBalanceService>();
+builder.Services.AddScoped<IFinancialPlanningDataProvider, FinancialPlanningDataProvider>();
 builder.Services.AddScoped<CsvStatementParser>();
 builder.Services.AddScoped<InstitutionStatementParser>();
 builder.Services.AddScoped<StatementImportPreparationService>();
