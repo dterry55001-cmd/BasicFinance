@@ -35,9 +35,11 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
         var extension = file is null ? string.Empty : Path.GetExtension(file.FileName);
         var isOfx = extension.Equals(".ofx", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".qfx", StringComparison.OrdinalIgnoreCase);
-        if (file is not null && !extension.Equals(".csv", StringComparison.OrdinalIgnoreCase) && !isOfx)
-            ModelState.AddModelError("file", "Choose a CSV, OFX, or QFX statement file.");
+        var isQif = extension.Equals(".qif", StringComparison.OrdinalIgnoreCase);
+        if (file is not null && !extension.Equals(".csv", StringComparison.OrdinalIgnoreCase) && !isOfx && !isQif)
+            ModelState.AddModelError("file", "Choose a CSV, OFX, QFX, or QIF statement file.");
         if (isOfx) profile = StatementSourceProfile.OfxBanking;
+        if (isQif) profile = StatementSourceProfile.QifBanking;
         if (!ModelState.IsValid) return View();
 
         try
