@@ -334,3 +334,76 @@ public sealed class FinancialPlanningDataProviderTests
     }
 
 }
+
+
+    [Fact]
+    public async Task GetPlanningDataAsync_ExcludesInactiveAndArchivedAccountsAndArchivedSavingsGoals()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var active = new BasicFinance.Web.Models.Account
+        {
+            Name = "Active checking", Type = BasicFinance.Web.Models.AccountType.Checking,
+            CurrencyCode = "USD", OpeningBalance = 100m,
+            Status = BasicFinance.Web.Models.AccountStatus.Active
+        };
+        var inactive = new BasicFinance.Web.Models.Account
+        {
+            Name = "Inactive savings", Type = BasicFinance.Web.Models.AccountType.Savings,
+            CurrencyCode = "USD", OpeningBalance = 200m,
+            Status = BasicFinance.Web.Models.AccountStatus.Inactive
+        };
+        var archived = new BasicFinance.Web.Models.Account
+        {
+            Name = "Archived brokerage", Type = BasicFinance.Web.Models.AccountType.Brokerage,
+            CurrencyCode = "USD", OpeningBalance = 300m,
+            Status = BasicFinance.Web.Models.AccountStatus.Archived
+        };
+        var activeGoal = new BasicFinance.Web.Models.SavingsGoal
+        {
+            Name = "Current goal", TargetAmount = 1000m, CurrencyCode = "USD",
+            Status = BasicFinance.Web.Models.SavingsGoalStatus.Active,
+            Contributions =
+            [
+                new BasicFinance.Web.Models.SavingsContribution
+                {
+                    Amount = 125m, Type = BasicFinance.Web.Models.SavingsContributionType.Contribution,
+                    ContributionDate = new DateTime(2026, 11, 20)
+                }
+            ]
+        };
+        var archivedGoal = new BasicFinance.Web.Models.SavingsGoal
+        {
+            Name = "Old goal", TargetAmount = 2000m, CurrencyCode = "USD",
+            Status = BasicFinance.Web.Models.SavingsGoalStatus.Archived,
+            Contributions =
+            [
+                new BasicFinance.Web.Models.SavingsContribution
+                {
+                    Amount = 900m, Type = BasicFinance.Web.Models.SavingsContributionType.Contribution,
+                    ContributionDate = new DateTime(2026, 11, 20)
+                }
+            ]
+        };
+        db.Accounts.AddRange(active, inactive, archived);
+        db.SavingsGoals.AddRange(activeGoal, archivedGoal);
+        await db.SaveChangesAsync();
+
+        var provider = new FinancialPlanningDataProvider(db, new AccountBalanceService(db));
+        var result = await provider.GetPlanningDataAsync(new DateOnly(2026, 11, 27), "USD");
+
+        var account = Assert.Single(result.Accounts);
+        Assert.Equal(active.Id, account.AccountId);
+        Assert.Equal(100m, account.Balance);
+        var goal = Assert.Single(result.SavingsGoals);
+        Assert.Equal(activeGoal.Id, goal.GoalId);
+        Assert.Equal(125m, goal.CurrentAmount);
+        Assert.DoesNotContain(result.Accounts, x => x.AccountId == inactive.Id || x.AccountId == archived.Id);
+        Assert.DoesNotContain(result.SavingsGoals, x => x.GoalId == archivedGoal.Id);
+        Assert.Empty(db.ChangeTracker.Entries().Where(entry =>
+            entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted));
+    }
