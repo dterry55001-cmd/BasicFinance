@@ -333,8 +333,6 @@ public sealed class FinancialPlanningDataProviderTests
         Assert.Equal(10400m, retirementAccount.Balance);
     }
 
-}
-
 
     [Fact]
     public async Task GetPlanningDataAsync_ExcludesInactiveAndArchivedAccountsAndArchivedSavingsGoals()
@@ -407,3 +405,4 @@ public sealed class FinancialPlanningDataProviderTests
         Assert.Empty(db.ChangeTracker.Entries().Where(entry =>
             entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted));
     }
+}
