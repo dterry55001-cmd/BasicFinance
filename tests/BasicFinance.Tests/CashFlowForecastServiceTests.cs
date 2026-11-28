@@ -375,4 +375,23 @@ public sealed class CashFlowForecastServiceTests
     }
 
 
+    [Fact]
+    public void BuildForecastForCurrency_SeparatesCurrenciesAndPreservesEndDates()
+    {
+        var schedules = new[]
+        {
+            new RecurringCashFlow { Type = TransactionType.Income, Amount = 500m, CurrencyCode = "EUR", Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 1), EndDate = new DateTime(2027, 1, 1), IsActive = true },
+            new RecurringCashFlow { Type = TransactionType.Income, Amount = 900m, CurrencyCode = "USD", Frequency = CashFlowFrequency.Monthly, NextDueDate = new DateTime(2026, 12, 1), IsActive = true }
+        };
+        var result = _service.BuildForecastForCurrency(schedules, 100m, new DateTime(2026, 12, 1), 3, "EUR");
+        Assert.Equal(new[] { 600m, 1100m, 1100m }, result.Select(x => x.ProjectedEndingBalance));
+        Assert.Equal(new[] { 500m, 500m, 0m }, result.Select(x => x.ExpectedIncome));
+    }
+
+    [Fact]
+    public void BuildForecastForCurrency_RejectsInvalidCurrency()
+    {
+        Assert.Throws<ArgumentException>(() => _service.BuildForecastForCurrency([], 0m, DateTime.Today, 1, "eur"));
+    }
+
 }

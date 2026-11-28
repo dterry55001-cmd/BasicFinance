@@ -30,6 +30,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<BudgetAlertPreference> BudgetAlertPreferences => Set<BudgetAlertPreference>();
     public DbSet<BudgetAlert> BudgetAlerts => Set<BudgetAlert>();
     public DbSet<RecurringCashFlow> RecurringCashFlows => Set<RecurringCashFlow>();
+    public DbSet<CashFlowForecastSnapshot> CashFlowForecastSnapshots => Set<CashFlowForecastSnapshot>();
     public DbSet<CashFlowAlertPreference> CashFlowAlertPreferences => Set<CashFlowAlertPreference>();
     public DbSet<CashFlowAlert> CashFlowAlerts => Set<CashFlowAlert>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
@@ -294,6 +295,17 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasKey(x => x.Id);
             entity.Property(x => x.LowBalanceThreshold).HasColumnType("TEXT");
             entity.Property(x => x.UpdatedUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<CashFlowForecastSnapshot>(entity =>
+        {
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.OpeningBalance).HasColumnType("TEXT");
+            entity.Property(x => x.AssumptionsJson).HasColumnType("TEXT").IsRequired();
+            entity.Property(x => x.ResultsJson).HasColumnType("TEXT").IsRequired();
+            entity.Property(x => x.CalculationVersion).HasMaxLength(20).IsRequired();
+            entity.HasIndex(x => x.CreatedUtc);
+            entity.HasIndex(x => new { x.ForecastStartMonth, x.CurrencyCode });
         });
 
         modelBuilder.Entity<RecurringCashFlow>(entity =>

@@ -6,8 +6,16 @@ public sealed class CashFlowForecastService
 {
     public IReadOnlyList<CashFlowForecastMonth> BuildForecast(
         IEnumerable<RecurringCashFlow> schedules, decimal openingCashBalance, DateTime startDate, int months = 3)
+        => BuildForecastForCurrency(schedules, openingCashBalance, startDate, months, "USD");
+
+    public IReadOnlyList<CashFlowForecastMonth> BuildForecastForCurrency(
+        IEnumerable<RecurringCashFlow> schedules, decimal openingCashBalance, DateTime startDate,
+        int months, string currencyCode)
     {
         if (months is < 1 or > 24) throw new ArgumentOutOfRangeException(nameof(months));
+        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3 ||
+            currencyCode.Any(c => !char.IsAsciiLetterUpper(c)))
+            throw new ArgumentException("Currency code must be three uppercase letters.", nameof(currencyCode));
         var firstMonth = new DateTime(startDate.Year, startDate.Month, 1);
         var results = new List<CashFlowForecastMonth>();
         var balance = openingCashBalance;
@@ -16,7 +24,7 @@ public sealed class CashFlowForecastService
             var monthStart = firstMonth.AddMonths(offset);
             var monthEnd = monthStart.AddMonths(1);
             var periodStart = offset == 0 && startDate.Date > monthStart ? startDate.Date : monthStart;
-            var totals = SumOccurrences(schedules, periodStart, monthEnd);
+            var totals = SumOccurrences(schedules, periodStart, monthEnd, currencyCode);
             var net = totals.Income - totals.Expenses;
             balance += net;
             results.Add(new CashFlowForecastMonth(monthStart, totals.Income, totals.Expenses, net, balance));
@@ -145,12 +153,12 @@ public sealed class CashFlowForecastService
     }
 
     private static (decimal Income, decimal Expenses) SumOccurrences(
-        IEnumerable<RecurringCashFlow> schedules, DateTime periodStart, DateTime periodEndExclusive)
+        IEnumerable<RecurringCashFlow> schedules, DateTime periodStart, DateTime periodEndExclusive, string currencyCode = "USD")
     {
         decimal income = 0m, expenses = 0m;
         foreach (var schedule in schedules)
         {
-            if (!schedule.IsActive || schedule.CurrencyCode != "USD"
+            if (!schedule.IsActive || schedule.CurrencyCode != currencyCode
                 || schedule.Type is not (TransactionType.Income or TransactionType.Expense))
                 continue;
 
