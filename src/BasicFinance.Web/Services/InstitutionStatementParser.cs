@@ -14,7 +14,8 @@ public enum StatementSourceProfile
     RobinhoodBrokerage,
     RobinhoodBank,
     ChaseBanking,
-    OfxBanking
+    OfxBanking,
+    QifBanking
 }
 
 /// <summary>
@@ -299,6 +300,80 @@ public sealed class InstitutionStatementParser
             }
             rows.Add(row);
         }
+        return rows;
+    }
+
+    public IReadOnlyList<ParsedStatementRow> ParseQif(string content, string accountKey)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            throw new InvalidDataException("The QIF statement is empty.");
+        if (string.IsNullOrWhiteSpace(accountKey))
+            throw new ArgumentException("A selected internal account key is required.", nameof(accountKey));
+
+        var rows = new List<ParsedStatementRow>();
+        var fields = new Dictionary<char, string>();
+        var rowNumber = 0;
+
+        void FinishRecord()
+        {
+            if (fields.Count == 0) return;
+            rowNumber++;
+            var dateText = fields.GetValueOrDefault('D') ?? string.Empty;
+            var amountText = fields.GetValueOrDefault('T') ?? string.Empty;
+            DateTime? date = null;
+            string[] formats = ["M/d/yyyy", "M/d/yy", "MM/dd/yyyy", "MM/dd/yy",
+                "d/M/yyyy", "d-MMM-yyyy", "yyyy-MM-dd", "MMM d yyyy"];
+            if (DateTime.TryParseExact(dateText.Trim(), formats, CultureInfo.InvariantCulture,
+                DateTimeStyles.AllowWhiteSpaces, out var parsedDate))
+                date = parsedDate.Date;
+            else if (DateTime.TryParse(dateText, CultureInfo.InvariantCulture,
+                DateTimeStyles.AllowWhiteSpaces, out parsedDate))
+                date = parsedDate.Date;
+
+            var amount = TryDecimal(amountText);
+            var row = new ParsedStatementRow
+            {
+                RowNumber = rowNumber,
+                TransactionDate = date,
+                PostingDate = date,
+                Description = FirstNonEmpty(fields.GetValueOrDefault('P') ?? string.Empty,
+                    fields.GetValueOrDefault('M') ?? string.Empty),
+                Memo = fields.GetValueOrDefault('M'),
+                SourceReference = fields.GetValueOrDefault('N'),
+                SourceCategory = fields.GetValueOrDefault('L'),
+                SourceType = fields.GetValueOrDefault('C'),
+                SignedAmount = amount
+            };
+            foreach (var field in fields)
+                row.SourceFields[field.Key.ToString()] = field.Value;
+
+            if (row.TransactionDate is null)
+                row.ValidationError = "A valid QIF transaction date is required.";
+            else if (row.SignedAmount is null)
+                row.ValidationError = "A valid QIF transaction amount is required.";
+            else if (string.IsNullOrWhiteSpace(row.Description))
+                row.ValidationError = "A QIF payee or memo is required.";
+            else
+                row.DuplicateFingerprint = BuildFingerprint(StatementSourceProfile.QifBanking, accountKey, row);
+
+            rows.Add(row);
+            fields = new Dictionary<char, string>();
+        }
+
+        foreach (var rawLine in content.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith("!", StringComparison.Ordinal)) continue;
+            if (line == "^") { FinishRecord(); continue; }
+            if (line.Length < 2) continue;
+            var code = line[0];
+            if (!char.IsLetter(code)) continue;
+            fields[char.ToUpperInvariant(code)] = line[1..].Trim();
+        }
+        FinishRecord();
+
+        if (rows.Count == 0)
+            throw new InvalidDataException("No QIF transaction records were found.");
         return rows;
     }
 
