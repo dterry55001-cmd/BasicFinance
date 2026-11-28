@@ -257,7 +257,7 @@ public sealed class InstitutionStatementParser
         static string ReadTag(string block, string tag)
         {
             var match = System.Text.RegularExpressions.Regex.Match(
-                block, $@"<{tag}>([^<\\r\\n]*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                block, $@"<{tag}>([^<\r\n]*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             return match.Success ? System.Net.WebUtility.HtmlDecode(match.Groups[1].Value.Trim()) : string.Empty;
         }
 
