@@ -257,4 +257,80 @@ public sealed class FinancialPlanningDataProviderTests
         Assert.Equal(1150m, result.Accounts.Sum(x => x.Balance));
     }
 
+
+    [Fact]
+    public async Task GetPlanningDataAsync_CalculatesDebtAndRetirementBalancesUsingTheirOwnSignRules()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var loan = new BasicFinance.Web.Models.Account
+        {
+            Name = "Personal loan", Type = BasicFinance.Web.Models.AccountType.Debt,
+            DebtType = BasicFinance.Web.Models.DebtAccountType.PersonalLoan,
+            CurrencyCode = "USD", OpeningBalance = 5000m,
+            InterestRatePercent = 8m, MinimumPayment = 150m
+        };
+        var retirement = new BasicFinance.Web.Models.Account
+        {
+            Name = "Roth IRA", Type = BasicFinance.Web.Models.AccountType.Retirement,
+            RetirementType = BasicFinance.Web.Models.RetirementAccountType.RothIra,
+            CurrencyCode = "USD", OpeningBalance = 10000m
+        };
+        db.Accounts.AddRange(loan, retirement);
+        await db.SaveChangesAsync();
+
+        db.Transactions.AddRange(
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = loan.Id, Type = BasicFinance.Web.Models.TransactionType.Expense,
+                Description = "Loan charge", Amount = 200m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 20)
+            },
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = loan.Id, Type = BasicFinance.Web.Models.TransactionType.Income,
+                Description = "Loan payment", Amount = 300m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 25)
+            },
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = loan.Id, Type = BasicFinance.Web.Models.TransactionType.Expense,
+                Description = "Future loan charge", Amount = 900m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 28)
+            },
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = retirement.Id, Type = BasicFinance.Web.Models.TransactionType.Deposit,
+                Description = "Retirement contribution", Amount = 500m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 22)
+            },
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = retirement.Id, Type = BasicFinance.Web.Models.TransactionType.Withdrawal,
+                Description = "Retirement withdrawal", Amount = 100m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 26)
+            },
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = retirement.Id, Type = BasicFinance.Web.Models.TransactionType.Deposit,
+                Description = "Future contribution", Amount = 700m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 28)
+            });
+        await db.SaveChangesAsync();
+
+        var provider = new FinancialPlanningDataProvider(db, new AccountBalanceService(db));
+        var result = await provider.GetPlanningDataAsync(new DateOnly(2026, 11, 27), "USD");
+
+        var debt = Assert.Single(result.Debts);
+        Assert.Equal(4900m, debt.Balance);
+        var debtAccount = Assert.Single(result.Accounts.Where(x => x.AccountId == loan.Id));
+        Assert.Equal(4900m, debtAccount.Balance);
+        var retirementAccount = Assert.Single(result.Accounts.Where(x => x.AccountId == retirement.Id));
+        Assert.Equal(10400m, retirementAccount.Balance);
+    }
+
 }
