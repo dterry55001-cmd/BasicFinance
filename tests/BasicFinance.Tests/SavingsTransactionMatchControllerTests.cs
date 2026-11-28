@@ -51,7 +51,7 @@ public sealed class SavingsTransactionMatchControllerTests
         });
         await database.SaveChangesAsync();
 
-        var controller = new SavingsGoalsController(database, new SavingsGoalService());
+        var controller = new SavingsGoalsController(database, new SavingsGoalService(), new SavingsGoalProjectionCalculator());
         var result = Assert.IsType<ViewResult>(await controller.Index(CancellationToken.None));
         var model = Assert.IsType<SavingsGoalsIndexViewModel>(result.Model);
 
@@ -101,7 +101,7 @@ public sealed class SavingsTransactionMatchControllerTests
         });
         await database.SaveChangesAsync();
 
-        var controller = new SavingsGoalsController(database, new SavingsGoalService());
+        var controller = new SavingsGoalsController(database, new SavingsGoalService(), new SavingsGoalProjectionCalculator());
         var result = Assert.IsType<ViewResult>(await controller.Index(CancellationToken.None));
         var model = Assert.IsType<SavingsGoalsIndexViewModel>(result.Model);
 
@@ -141,7 +141,7 @@ public sealed class SavingsTransactionMatchControllerTests
         });
         await database.SaveChangesAsync();
 
-        var controller = new SavingsGoalsController(database, new SavingsGoalService());
+        var controller = new SavingsGoalsController(database, new SavingsGoalService(), new SavingsGoalProjectionCalculator());
         var result = Assert.IsType<ViewResult>(await controller.Index(CancellationToken.None));
         var model = Assert.IsType<SavingsGoalsIndexViewModel>(result.Model);
 
@@ -186,7 +186,7 @@ public sealed class SavingsTransactionMatchControllerTests
         database.Transactions.Add(transaction);
         await database.SaveChangesAsync();
 
-        var controller = new SavingsGoalsController(database, new SavingsGoalService())
+        var controller = new SavingsGoalsController(database, new SavingsGoalService(), new SavingsGoalProjectionCalculator())
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
@@ -238,7 +238,7 @@ public sealed class SavingsTransactionMatchControllerTests
         database.Transactions.Add(transaction);
         await database.SaveChangesAsync();
 
-        var controller = new SavingsGoalsController(database, new SavingsGoalService())
+        var controller = new SavingsGoalsController(database, new SavingsGoalService(), new SavingsGoalProjectionCalculator())
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
