@@ -66,9 +66,9 @@ public sealed class FinancialPlanningDataProvider(ApplicationDbContext database,
                 period.Id, period.Year, period.Month, period.CurrencyCode,
                 line.CategoryId, line.Category.Name, line.PlannedAmount, line.RolloverAmount)))
             .ToArray();
-        sources.Add(new("Budget Management", budgets.Count == 0 ? PlanningSourceStatus.Missing :
+        sources.Add(new("Budget Management", budgets.Length == 0 ? PlanningSourceStatus.Missing :
             budgets.Any(x => x.CurrencyCode != reportingCurrency) ? PlanningSourceStatus.Partial : PlanningSourceStatus.Available,
-            retrievedUtc, budgets.Count == 0 ? $"No budget lines were found for {budgetStart:yyyy-MM}." :
+            retrievedUtc, budgets.Length == 0 ? $"No budget lines were found for {budgetStart:yyyy-MM}." :
             budgets.Any(x => x.CurrencyCode != reportingCurrency) ? "Budget data includes other currencies; amounts are not converted." : null));
 
         var goals = await database.SavingsGoals.AsNoTracking().Where(x => x.Status != SavingsGoalStatus.Archived)
