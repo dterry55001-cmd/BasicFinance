@@ -69,6 +69,23 @@ else
             </select>
         </div>
     </div>
+    @if (Model.Status == StatementImportStatus.Preview)
+    {
+        <form asp-action="BulkAssignCategory" asp-route-id="@Model.Id" method="post" id="bulk-category-form" class="row-review-form">
+            <div class="form-field">
+                <label for="bulk-category-id">Apply category to selected transactions</label>
+                <select id="bulk-category-id" name="categoryId" required>
+                    <option value="">Choose category</option>
+                    @foreach (SelectListItem item in (IEnumerable<SelectListItem>)ViewBag.Categories)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <button type="submit" class="button button-secondary" id="bulk-category-submit" disabled>Apply to selected</button>
+            <span id="bulk-category-selection" class="muted" aria-live="polite">No transactions selected.</span>
+        </form>
+    }
     <p id="import-filter-count" class="muted" aria-live="polite">Showing @Model.Rows.Count transaction(s).</p>
 </section>
 <div class="table-card">
