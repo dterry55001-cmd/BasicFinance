@@ -1,8 +1,23 @@
 @model BasicFinance.Web.Models.StatementImport
 @using BasicFinance.Web.Models
 @using Microsoft.AspNetCore.Mvc.Rendering
-@{ ViewData["Title"] = "Import preview"; var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate && !x.IsImported && !x.RequiresReview); var errors = Model.Rows.Count(x => x.ValidationError is not null); var duplicates = Model.Rows.Count(x => x.IsDuplicate); var review = Model.Rows.Count(x => x.RequiresReview && x.ValidationError is null); }
-<section class="page-heading"><div><p class="eyebrow">IMPORT REVIEW</p><h1>@Model.FileName</h1><p class="page-description">@Model.Account.Name · @Model.Profile · Uploaded @Model.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</p></div><a class="button button-secondary" asp-action="Index">Back to imports</a></section>
+@{
+    ViewData["Title"] = "Import preview";
+    var valid = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate && !x.IsImported && !x.RequiresReview);
+    var errors = Model.Rows.Count(x => x.ValidationError is not null);
+    var duplicates = Model.Rows.Count(x => x.IsDuplicate);
+    var review = Model.Rows.Count(x => x.RequiresReview && x.ValidationError is null);
+    var categorized = Model.Rows.Count(x => x.CategoryId.HasValue);
+    var uncategorized = Model.Rows.Count(x => x.ValidationError is null && !x.IsDuplicate && !x.IsImported && !x.CategoryId.HasValue);
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">IMPORT REVIEW</p>
+        <h1>@Model.FileName</h1>
+        <p class="page-description">@Model.Account.Name · @Model.Profile · Uploaded @Model.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</p>
+    </div>
+    <a class="button button-secondary" asp-action="Index">Back to imports</a>
+</section>
 @if (TempData["SuccessMessage"] is string successMessage) { <div class="notice notice-success" role="status">@successMessage</div> }
 @if (Model.FriendlyAccountName is not null || Model.ExternalAccountNumberLast4 is not null)
 {
@@ -11,82 +26,176 @@
 <div class="summary-grid">
     <div class="summary-card"><span>Rows detected</span><strong>@Model.Rows.Count</strong></div>
     <div class="summary-card"><span>Ready to import</span><strong>@valid</strong></div>
+    <div class="summary-card"><span>Categories assigned</span><strong>@categorized</strong></div>
+    <div class="summary-card"><span>Needs a category</span><strong>@uncategorized</strong></div>
     <div class="summary-card"><span>Duplicates</span><strong>@duplicates</strong></div>
-    <div class="summary-card"><span>Errors</span><strong>@errors</strong></div>
-    <div class="summary-card"><span>Needs review</span><strong>@review</strong></div>
+    <div class="summary-card"><span>Needs review / errors</span><strong>@(review + errors)</strong></div>
 </div>
 @if (Model.Status == StatementImportStatus.Preview)
 {
-    <div class="notice">Review the rows below. Only valid, non-duplicate rows that do not require additional review will be posted after confirmation. This action cannot be undone from the import screen; individual ledger entries can be deleted later.</div>
+    <div class="notice">
+        Review the rows below. Only valid, non-duplicate rows that do not require additional review will be posted after confirmation.
+        @if (uncategorized > 0) { <strong>@uncategorized transaction(s) still need a category.</strong> They can be imported, but assigning categories improves budget totals and spending reports. }
+    </div>
 }
 else
 {
     <div class="notice notice-success">Import status: @Model.Status. Completed @Model.CompletedUtc?.ToLocalTime().ToString("MMM d, yyyy h:mm tt").</div>
 }
-<div class="table-card"><div class="table-scroll"><table>
-    <thead><tr><th>CSV row</th><th>Date</th><th>Activity</th><th>Description</th><th>Symbol / CUSIP</th><th>Security type</th><th>Quantity</th><th>Price</th><th>Amount</th><th>BasicFinance category</th><th>Review status</th></tr></thead>
-    <tbody>@foreach (var row in Model.Rows.OrderBy(x => x.RowNumber))
-    {
-        <tr><td>@row.RowNumber</td><td>@(row.TransactionDate?.ToString("MMM d, yyyy") ?? "—")
-            @if (row.PostingDate is not null && row.PostingDate != row.TransactionDate) { <div class="table-subtext">Post: @row.PostingDate.Value.ToString("MMM d")</div> }
-            @if (row.EffectiveDate is not null) { <div class="table-subtext">Effective: @row.EffectiveDate.Value.ToString("MMM d")</div> }
-            @if (row.ProcessDate is not null) { <div class="table-subtext">Processed: @row.ProcessDate.Value.ToString("MMM d")</div> }
-            @if (row.SettlementDate is not null) { <div class="table-subtext">Settled: @row.SettlementDate.Value.ToString("MMM d")</div> }
-        </td><td>@(row.Activity ?? row.Type.ToString())</td><td>@row.Description<div class="table-subtext">@(row.Source ?? row.SourceType ?? "") · @(row.SourceSubType ?? row.TransactionCode ?? "")</div>
-            <div class="table-subtext">@(row.FundName ?? row.Instrument ?? "") · @(row.SourceStatus ?? "")</div>
-            @if (!string.IsNullOrWhiteSpace(row.SourceCategory)) { <div class="table-subtext">Source category: @row.SourceCategory</div> }
-            @if (!string.IsNullOrWhiteSpace(row.Memo) || !string.IsNullOrWhiteSpace(row.ExtendedDescription)) { <div class="table-subtext">@(row.Memo ?? row.ExtendedDescription)</div> }</td><td>@(row.Symbol ?? "—")<div class="table-subtext">@(row.Cusip ?? "")</div></td><td>@(row.SecurityType ?? "—")</td><td>@(row.Quantity?.ToString("N6") ?? row.UnitCount?.ToString("N6") ?? "—")</td><td>@(row.Price?.ToString("N4") ?? row.UnitValue?.ToString("N6") ?? "—")</td><td>@(row.SourceSignedAmount?.ToString("N2") ?? row.Amount.ToString("N2")) @Model.Account.CurrencyCode</td>
-        <td>
-            @if (Model.Status == StatementImportStatus.Preview && row.ValidationError is null && !row.IsDuplicate && !row.IsImported)
+<section class="section-block import-review-tools" aria-label="Filter imported transactions">
+    <div class="form-grid">
+        <div class="form-field">
+            <label for="import-row-search">Find a transaction</label>
+            <input id="import-row-search" type="search" placeholder="Search description, merchant, memo or category" autocomplete="off" />
+        </div>
+        <div class="form-field">
+            <label for="import-category-filter">Category status</label>
+            <select id="import-category-filter">
+                <option value="all">All transactions</option>
+                <option value="uncategorized">Needs a category</option>
+                <option value="suggested">Suggested by a rule</option>
+                <option value="assigned">Category assigned</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="import-status-filter">Import status</label>
+            <select id="import-status-filter">
+                <option value="all">All statuses</option>
+                <option value="ready">Ready</option>
+                <option value="review">Needs review</option>
+                <option value="duplicate">Duplicate</option>
+                <option value="error">Error</option>
+                <option value="imported">Imported</option>
+            </select>
+        </div>
+    </div>
+    <p id="import-filter-count" class="muted" aria-live="polite">Showing @Model.Rows.Count transaction(s).</p>
+</section>
+<div class="table-card">
+    <div class="table-scroll">
+        <table id="import-preview-table">
+            <thead><tr><th>CSV row</th><th>Date</th><th>Activity</th><th>Description</th><th>Symbol / CUSIP</th><th>Security type</th><th>Quantity</th><th>Price</th><th>Amount</th><th>BasicFinance category</th><th>Review status</th></tr></thead>
+            <tbody>
+            @foreach (var row in Model.Rows.OrderBy(x => x.RowNumber))
             {
-                <form asp-action="SaveCategoryMapping" asp-route-id="@Model.Id" method="post" class="row-review-form">
-                    <input type="hidden" name="rowId" value="@row.Id" />
-                    <select name="categoryId" aria-label="BasicFinance category for row @row.RowNumber">
-                        <option value="">Uncategorized</option>
-                        @foreach (SelectListItem item in (IEnumerable<SelectListItem>)ViewBag.Categories)
+                var categoryState = row.CategorySuggestedByRule ? "suggested" : row.CategoryId.HasValue ? "assigned" : "uncategorized";
+                var importState = row.ValidationError is not null ? "error" : row.IsDuplicate ? "duplicate" : row.IsImported ? "imported" : row.RequiresReview ? "review" : "ready";
+                <tr data-category-state="@categoryState" data-import-state="@importState">
+                    <td>@row.RowNumber</td>
+                    <td>
+                        @(row.TransactionDate?.ToString("MMM d, yyyy") ?? "—")
+                        @if (row.PostingDate is not null && row.PostingDate != row.TransactionDate) { <div class="table-subtext">Post: @row.PostingDate.Value.ToString("MMM d")</div> }
+                        @if (row.EffectiveDate is not null) { <div class="table-subtext">Effective: @row.EffectiveDate.Value.ToString("MMM d")</div> }
+                        @if (row.ProcessDate is not null) { <div class="table-subtext">Processed: @row.ProcessDate.Value.ToString("MMM d")</div> }
+                        @if (row.SettlementDate is not null) { <div class="table-subtext">Settled: @row.SettlementDate.Value.ToString("MMM d")</div> }
+                    </td>
+                    <td>@(row.Activity ?? row.Type.ToString())</td>
+                    <td>
+                        @row.Description
+                        <div class="table-subtext">@(row.Source ?? row.SourceType ?? "") · @(row.SourceSubType ?? row.TransactionCode ?? "")</div>
+                        <div class="table-subtext">@(row.FundName ?? row.Instrument ?? "") · @(row.SourceStatus ?? "")</div>
+                        @if (!string.IsNullOrWhiteSpace(row.SourceCategory)) { <div class="table-subtext">Source category: @row.SourceCategory</div> }
+                        @if (!string.IsNullOrWhiteSpace(row.Memo) || !string.IsNullOrWhiteSpace(row.ExtendedDescription)) { <div class="table-subtext">@(row.Memo ?? row.ExtendedDescription)</div> }
+                    </td>
+                    <td>@(row.Symbol ?? "—")<div class="table-subtext">@(row.Cusip ?? "")</div></td>
+                    <td>@(row.SecurityType ?? "—")</td>
+                    <td>@(row.Quantity?.ToString("N6") ?? row.UnitCount?.ToString("N6") ?? "—")</td>
+                    <td>@(row.Price?.ToString("N4") ?? row.UnitValue?.ToString("N6") ?? "—")</td>
+                    <td>@(row.SourceSignedAmount?.ToString("N2") ?? row.Amount.ToString("N2")) @Model.Account.CurrencyCode</td>
+                    <td>
+                        @if (Model.Status == StatementImportStatus.Preview && row.ValidationError is null && !row.IsDuplicate && !row.IsImported)
                         {
-                            <option value="@item.Value" selected="@(int.TryParse(item.Value, out var optionId) && row.CategoryId == optionId)">@item.Text</option>
+                            <form asp-action="SaveCategoryMapping" asp-route-id="@Model.Id" method="post" class="row-review-form">
+                                <input type="hidden" name="rowId" value="@row.Id" />
+                                <select name="categoryId" aria-label="BasicFinance category for row @row.RowNumber">
+                                    <option value="">Uncategorized</option>
+                                    @foreach (SelectListItem item in (IEnumerable<SelectListItem>)ViewBag.Categories)
+                                    {
+                                        <option value="@item.Value" selected="@(int.TryParse(item.Value, out var optionId) && row.CategoryId == optionId)">@item.Text</option>
+                                    }
+                                </select>
+                                @if (row.CategorySuggestedByRule) { <div class="table-subtext">Suggested by a transaction rule — review before confirming</div> }
+                                @if (!string.IsNullOrWhiteSpace(row.SourceCategory) && Model.Profile != StatementImportProfile.Unknown)
+                                {
+                                    <label><input type="checkbox" name="applyToFutureImports" value="true" /> Remember this mapping for future imports</label>
+                                }
+                                <button type="submit" class="button button-secondary">Save category</button>
+                            </form>
                         }
-                    </select>
-                    @if (row.CategorySuggestedByRule)
-                    {
-                        <div class="table-subtext">Suggested by a transaction rule — review before confirming</div>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(row.SourceCategory) && Model.Profile != StatementImportProfile.Unknown)
-                    {
-                        <label><input type="checkbox" name="applyToFutureImports" value="true" /> Remember this mapping for future imports</label>
-                    }
-                    <button type="submit" class="button button-secondary">Save category</button>
-                </form>
+                        else
+                        {
+                            @(row.CategoryId.HasValue ? ((IEnumerable<SelectListItem>)ViewBag.Categories).FirstOrDefault(item => item.Value == row.CategoryId.Value.ToString())?.Text ?? "Assigned" : "—")
+                        }
+                    </td>
+                    <td>
+                        @if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> }
+                        else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> }
+                        else if (row.IsImported) { <span class="status-success">Imported</span> }
+                        else if (row.RequiresReview)
+                        {
+                            <span class="status-warning">Needs review — not posted</span>
+                            @if (Model.Profile == StatementImportProfile.RobinhoodBrokerage)
+                            {
+                                <form asp-action="ReviewRobinhoodRow" asp-route-id="@Model.Id" method="post" class="row-review-form">
+                                    <input type="hidden" name="rowId" value="@row.Id" />
+                                    <label class="visually-hidden" for="type-@row.Id">Map @row.TransactionCode to</label>
+                                    <select id="type-@row.Id" name="normalizedType" required>
+                                        <option value="" selected disabled>Choose type</option>
+                                        <option value="Income">Income</option>
+                                        <option value="Expense">Expense</option>
+                                        <option value="Deposit">Deposit</option>
+                                        <option value="Withdrawal">Withdrawal</option>
+                                    </select>
+                                    <button type="submit" class="button button-secondary">Approve mapping</button>
+                                </form>
+                            }
+                        }
+                        else { <span class="status-ready">Ready</span> }
+                    </td>
+                </tr>
             }
-            else
-            {
-                @(row.CategoryId.HasValue ? ((IEnumerable<SelectListItem>)ViewBag.Categories).FirstOrDefault(item => item.Value == row.CategoryId.Value.ToString())?.Text ?? "Assigned" : "—")
-            }
-        </td>
-        <td>@if (row.ValidationError is not null) { <span class="status-error">Error: @row.ValidationError</span> } else if (row.IsDuplicate) { <span class="status-warning">Duplicate — skipped</span> } else if (row.IsImported) { <span class="status-success">Imported</span> } else if (row.RequiresReview) {
-            <span class="status-warning">Needs review — not posted</span>
-            @if (Model.Profile == StatementImportProfile.RobinhoodBrokerage) {
-                <form asp-action="ReviewRobinhoodRow" asp-route-id="@Model.Id" method="post" class="row-review-form">
-                    <input type="hidden" name="rowId" value="@row.Id" />
-                    <label class="visually-hidden" for="type-@row.Id">Map @row.TransactionCode to</label>
-                    <select id="type-@row.Id" name="normalizedType" required>
-                        <option value="" selected disabled>Choose type</option>
-                        <option value="Income">Income</option>
-                        <option value="Expense">Expense</option>
-                        <option value="Deposit">Deposit</option>
-                        <option value="Withdrawal">Withdrawal</option>
-                    </select>
-                    <button type="submit" class="button button-secondary">Approve mapping</button>
-                </form>
-            }
-        } else { <span class="status-ready">Ready</span> }</td></tr>
-    }</tbody>
-</table></div></div>
+            </tbody>
+        </table>
+    </div>
+    <p id="import-no-matches" class="notice" hidden>No transactions match these filters. Try a different search or filter.</p>
+</div>
 @if (Model.Status == StatementImportStatus.Preview)
 {
     <form asp-action="Confirm" asp-route-id="@Model.Id" method="post" class="form-actions confirm-import" onsubmit="return confirm('Import all valid, non-duplicate rows into the selected account?');">
         <button type="submit" class="button button-primary" disabled="@(valid == 0)">Confirm import (@valid rows)</button>
         <a class="button button-secondary" asp-action="Index">Cancel</a>
     </form>
+}
+@section Scripts {
+<script>
+(() => {
+    const table = document.getElementById('import-preview-table');
+    if (!table) return;
+    const search = document.getElementById('import-row-search');
+    const category = document.getElementById('import-category-filter');
+    const status = document.getElementById('import-status-filter');
+    const count = document.getElementById('import-filter-count');
+    const empty = document.getElementById('import-no-matches');
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+    function applyFilters() {
+        const term = search.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        for (const row of rows) {
+            const matchesText = !term || row.textContent.toLocaleLowerCase().includes(term);
+            const matchesCategory = category.value === 'all' || row.dataset.categoryState === category.value;
+            const matchesStatus = status.value === 'all' || row.dataset.importState === status.value;
+            const show = matchesText && matchesCategory && matchesStatus;
+            row.hidden = !show;
+            if (show) visible++;
+        }
+        count.textContent = `Showing ${visible} of ${rows.length} transaction(s).`;
+        empty.hidden = visible !== 0;
+    }
+
+    search.addEventListener('input', applyFilters);
+    category.addEventListener('change', applyFilters);
+    status.addEventListener('change', applyFilters);
+})();
+</script>
 }
