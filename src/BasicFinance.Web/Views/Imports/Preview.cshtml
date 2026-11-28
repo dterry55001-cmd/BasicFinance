@@ -91,7 +91,7 @@ else
 <div class="table-card">
     <div class="table-scroll">
         <table id="import-preview-table">
-            <thead><tr><th>CSV row</th><th>Date</th><th>Activity</th><th>Description</th><th>Symbol / CUSIP</th><th>Security type</th><th>Quantity</th><th>Price</th><th>Amount</th><th>BasicFinance category</th><th>Review status</th></tr></thead>
+            <thead><tr>@if (Model.Status == StatementImportStatus.Preview) { <th><span class="visually-hidden">Select transaction</span></th> }<th>CSV row</th><th>Date</th><th>Activity</th><th>Description</th><th>Symbol / CUSIP</th><th>Security type</th><th>Quantity</th><th>Price</th><th>Amount</th><th>BasicFinance category</th><th>Review status</th></tr></thead>
             <tbody>
             @foreach (var row in Model.Rows.OrderBy(x => x.RowNumber))
             {
@@ -194,6 +194,19 @@ else
     const count = document.getElementById('import-filter-count');
     const empty = document.getElementById('import-no-matches');
     const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const bulkForm = document.getElementById('bulk-category-form');
+    const bulkChecks = Array.from(document.querySelectorAll('.bulk-category-row'));
+    const bulkSubmit = document.getElementById('bulk-category-submit');
+    const bulkSelection = document.getElementById('bulk-category-selection');
+
+    function updateBulkSelection() {
+        if (!bulkForm) return;
+        const selected = bulkChecks.filter(check => check.checked);
+        bulkSubmit.disabled = selected.length === 0;
+        bulkSelection.textContent = selected.length === 0
+            ? 'No transactions selected.'
+            : `${selected.length} transaction(s) selected.`;
+    }
 
     function applyFilters() {
         const term = search.value.trim().toLocaleLowerCase();
@@ -213,6 +226,19 @@ else
     search.addEventListener('input', applyFilters);
     category.addEventListener('change', applyFilters);
     status.addEventListener('change', applyFilters);
+    for (const checkbox of bulkChecks) checkbox.addEventListener('change', updateBulkSelection);
+    if (bulkForm) {
+        bulkForm.addEventListener('submit', event => {
+            const selected = bulkChecks.filter(check => check.checked);
+            if (selected.length === 0) {
+                event.preventDefault();
+                return;
+            }
+            if (!window.confirm(`Apply the selected category to ${selected.length} transaction(s)?`))
+                event.preventDefault();
+        });
+    }
+    updateBulkSelection();
 })();
 </script>
 }
