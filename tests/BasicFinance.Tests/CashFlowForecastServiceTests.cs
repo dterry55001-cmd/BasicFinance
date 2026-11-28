@@ -296,4 +296,83 @@ public sealed class CashFlowForecastServiceTests
             _service.BuildForecast([schedule], 0m, new DateTime(2026, 12, 1), 1));
     }
 
+
+    [Fact]
+    public void BuildVariableForecast_UsesCompletedMonthsAndExcludesTransfersAndOtherCurrencies()
+    {
+        var transactions = new List<FinancialTransaction>();
+        for (var month = 1; month <= 6; month++)
+        {
+            transactions.Add(new FinancialTransaction
+            {
+                Type = TransactionType.Income, Amount = month * 100m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, month, 10)
+            });
+            transactions.Add(new FinancialTransaction
+            {
+                Type = TransactionType.Expense, Amount = 50m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, month, 15)
+            });
+        }
+        transactions.Add(new FinancialTransaction
+        {
+            Type = TransactionType.Transfer, Amount = 9000m, CurrencyCode = "USD",
+            TransactionDate = new DateTime(2026, 6, 20)
+        });
+        transactions.Add(new FinancialTransaction
+        {
+            Type = TransactionType.Income, Amount = 8000m, CurrencyCode = "EUR",
+            TransactionDate = new DateTime(2026, 6, 20)
+        });
+        transactions.Add(new FinancialTransaction
+        {
+            Type = TransactionType.Income, Amount = 50000m, CurrencyCode = "USD",
+            TransactionDate = new DateTime(2026, 7, 1)
+        });
+
+        var result = _service.BuildVariableForecast(
+            transactions, new DateTime(2026, 7, 1), 3, "USD", 6);
+
+        Assert.Equal(ForecastConfidence.Medium, result.Confidence);
+        Assert.Equal(6, result.HistoricalMonths);
+        Assert.Equal(350m, result.AverageMonthlyIncome);
+        Assert.Equal(50m, result.AverageMonthlyExpenses);
+        Assert.Equal(3, result.Months.Count);
+        Assert.Equal(100m, result.Months[0].HistoricalLowIncome);
+        Assert.Equal(600m, result.Months[0].HistoricalHighIncome);
+    }
+
+    [Fact]
+    public void BuildVariableForecast_ReportsLowConfidenceForShortHistoryAndSupportsOtherCurrencies()
+    {
+        var transactions = new[]
+        {
+            new FinancialTransaction
+            {
+                Type = TransactionType.Income, Amount = 250m, CurrencyCode = "EUR",
+                TransactionDate = new DateTime(2026, 10, 10)
+            }
+        };
+
+        var result = _service.BuildVariableForecast(
+            transactions, new DateTime(2026, 11, 1), 2, "EUR", 3);
+
+        Assert.Equal(ForecastConfidence.Low, result.Confidence);
+        Assert.Equal(3, result.HistoricalMonths);
+        Assert.Equal(250m / 3m, result.AverageMonthlyIncome);
+        Assert.Equal(0m, result.AverageMonthlyExpenses);
+    }
+
+    [Fact]
+    public void BuildVariableForecast_RejectsInvalidCurrencyAndHorizons()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            _service.BuildVariableForecast([], DateTime.Today, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            _service.BuildVariableForecast([], DateTime.Today, 1, "USD", 0));
+        Assert.Throws<ArgumentException>(() =>
+            _service.BuildVariableForecast([], DateTime.Today, 1, "usd", 6));
+    }
+
+
 }
