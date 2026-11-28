@@ -97,6 +97,33 @@ public sealed class FinancialPlanningDashboardServiceTests
         Assert.Contains(result.Sources, x => x.Status == PlanningSourceStatus.Partial);
     }
 
+    [Fact]
+    public async Task BuildAsync_MatchesBudgetAndSavingsCurrencyCodesWithoutCaseSensitivity()
+    {
+        var data = CreateData(
+            accounts: [Account(1, AccountType.Checking, "usd", 100m)],
+            budgets:
+            [
+                new PlanningBudgetInput(1, 2026, 11, "usd", 1, "Food", 300m, 20m),
+                new PlanningBudgetInput(2, 2026, 11, "EUR", 2, "Travel", 900m, 0m)
+            ],
+            savings:
+            [
+                new PlanningSavingsGoalInput(1, "Reserve", "uSd", 1000m, 250m, null, false, null),
+                new PlanningSavingsGoalInput(2, "Foreign goal", "EUR", 2000m, 700m, null, false, null)
+            ]);
+
+        var result = await new FinancialPlanningDashboardService(new StubProvider(data))
+            .BuildAsync(new DateOnly(2026, 11, 27), "USD");
+
+        Assert.Equal(1, result.BudgetLineCount);
+        Assert.Equal(320m, result.PlannedBudgetTotal);
+        Assert.Equal(1, result.SavingsGoalCount);
+        Assert.Equal(250m, result.SavingsGoalProgressTotal);
+        Assert.Equal(1000m, result.SavingsGoalTargetTotal);
+        Assert.Equal(100m, Assert.Single(result.CurrencySummaries).TotalAssets);
+    }
+
     private static PlanningAccountInput Account(int id, AccountType type, string currency, decimal balance) =>
         new(id, $"Account {id}", type, currency, balance, null, null, null, null, null, null, null);
 

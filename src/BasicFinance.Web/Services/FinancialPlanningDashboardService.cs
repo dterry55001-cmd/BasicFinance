@@ -26,8 +26,10 @@ public sealed class FinancialPlanningDashboardService(IFinancialPlanningDataProv
                     liabilities.Length);
             }).ToArray();
 
-        var matchingBudgets = data.Budgets.Where(x => x.CurrencyCode == reportingCurrency).ToArray();
-        var matchingGoals = data.SavingsGoals.Where(x => x.CurrencyCode == reportingCurrency).ToArray();
+        var matchingBudgets = data.Budgets
+            .Where(x => string.Equals(x.CurrencyCode, reportingCurrency, StringComparison.OrdinalIgnoreCase)).ToArray();
+        var matchingGoals = data.SavingsGoals
+            .Where(x => string.Equals(x.CurrencyCode, reportingCurrency, StringComparison.OrdinalIgnoreCase)).ToArray();
         return new FinancialPlanningDashboardViewModel
         {
             AsOfDate = asOfDate,
