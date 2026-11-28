@@ -323,7 +323,7 @@ public sealed class InstitutionStatementParser
             DateTime? date = null;
             string[] formats = ["M/d/yyyy", "M/d/yy", "MM/dd/yyyy", "MM/dd/yy",
                 "d/M/yyyy", "d-MMM-yyyy", "yyyy-MM-dd", "MMM d yyyy"];
-            if (DateTime.TryParseExact(dateText.Trim(), formats, CultureInfo.InvariantCulture,
+            if (DateTime.TryParseExact(dateText.Trim().Replace("'", "/"), formats, CultureInfo.InvariantCulture,
                 DateTimeStyles.AllowWhiteSpaces, out var parsedDate))
                 date = parsedDate.Date;
             else if (DateTime.TryParse(dateText, CultureInfo.InvariantCulture,
@@ -339,7 +339,7 @@ public sealed class InstitutionStatementParser
                 Description = FirstNonEmpty(fields.GetValueOrDefault('P') ?? string.Empty,
                     fields.GetValueOrDefault('M') ?? string.Empty),
                 Memo = fields.GetValueOrDefault('M'),
-                SourceReference = fields.GetValueOrDefault('N'),
+                CheckNumber = fields.GetValueOrDefault('N'),
                 SourceCategory = fields.GetValueOrDefault('L'),
                 SourceType = fields.GetValueOrDefault('C'),
                 SignedAmount = amount
