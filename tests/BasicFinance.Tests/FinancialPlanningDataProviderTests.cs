@@ -58,4 +58,71 @@ public sealed class FinancialPlanningDataProviderTests
         await Assert.ThrowsAsync<ArgumentException>(() =>
             provider.GetPlanningDataAsync(new DateOnly(2026, 11, 27), "usd"));
     }
+    [Fact]
+    public async Task GetPlanningDataAsync_PreservesDebtGapsAndSavingsAsOfProgressWithoutDoubleCounting()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var debt = new BasicFinance.Web.Models.Account
+        {
+            Name = "Unspecified loan", Type = BasicFinance.Web.Models.AccountType.Debt,
+            DebtType = BasicFinance.Web.Models.DebtAccountType.PersonalLoan,
+            CurrencyCode = "USD", OpeningBalance = 2500m,
+            InterestRatePercent = null, MinimumPayment = null
+        };
+        var retirement = new BasicFinance.Web.Models.Account
+        {
+            Name = "Retirement", Type = BasicFinance.Web.Models.AccountType.Retirement,
+            RetirementType = BasicFinance.Web.Models.RetirementAccountType.RothIra,
+            CurrencyCode = "EUR", OpeningBalance = 12000m
+        };
+        var goal = new BasicFinance.Web.Models.SavingsGoal
+        {
+            Name = "Emergency reserve", TargetAmount = 6000m, CurrencyCode = "EUR",
+            IsEmergencyFund = true, LinkedAccount = retirement,
+            Contributions =
+            [
+                new BasicFinance.Web.Models.SavingsContribution
+                {
+                    Amount = 700m, Type = BasicFinance.Web.Models.SavingsContributionType.Contribution,
+                    ContributionDate = new DateTime(2026, 11, 20)
+                },
+                new BasicFinance.Web.Models.SavingsContribution
+                {
+                    Amount = 100m, Type = BasicFinance.Web.Models.SavingsContributionType.Withdrawal,
+                    ContributionDate = new DateTime(2026, 11, 21)
+                },
+                new BasicFinance.Web.Models.SavingsContribution
+                {
+                    Amount = 900m, Type = BasicFinance.Web.Models.SavingsContributionType.Contribution,
+                    ContributionDate = new DateTime(2026, 11, 28)
+                }
+            ]
+        };
+        db.Accounts.AddRange(debt, retirement);
+        db.SavingsGoals.Add(goal);
+        await db.SaveChangesAsync();
+
+        var provider = new FinancialPlanningDataProvider(db, new AccountBalanceService(db));
+        var result = await provider.GetPlanningDataAsync(new DateOnly(2026, 11, 27), "USD");
+
+        var debtInput = Assert.Single(result.Debts);
+        Assert.Null(debtInput.AnnualRatePercent);
+        Assert.Null(debtInput.MinimumPayment);
+        var savings = Assert.Single(result.SavingsGoals);
+        Assert.Equal(600m, savings.CurrentAmount);
+        Assert.Equal("EUR", savings.CurrencyCode);
+        Assert.Contains(result.Warnings, warning => warning.Contains("interest rate and minimum payment"));
+        Assert.Contains(result.Warnings, warning => warning.Contains("No FX conversion"));
+        Assert.Contains(result.Warnings, warning => warning.Contains("progress metadata"));
+        Assert.Contains(result.Warnings, warning => warning.Contains("Retirement balances"));
+        Assert.Empty(result.FutureSavingsSchedules);
+        Assert.Empty(result.FutureCashFlowSchedules);
+        Assert.Empty(db.ChangeTracker.Entries().Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted));
+    }
+
 }
