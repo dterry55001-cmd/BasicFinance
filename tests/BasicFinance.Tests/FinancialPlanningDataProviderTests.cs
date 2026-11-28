@@ -125,4 +125,83 @@ public sealed class FinancialPlanningDataProviderTests
         Assert.Empty(db.ChangeTracker.Entries().Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted));
     }
 
+    [Fact]
+    public async Task GetPlanningDataAsync_IncludesOnlyActiveFutureSchedulesAndDoesNotMutateSources()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var cash = new BasicFinance.Web.Models.Account
+        {
+            Name = "Cash", Type = BasicFinance.Web.Models.AccountType.Checking,
+            CurrencyCode = "USD", OpeningBalance = 500m
+        };
+        var goal = new BasicFinance.Web.Models.SavingsGoal
+        {
+            Name = "Holiday", TargetAmount = 2000m, CurrencyCode = "USD",
+            Status = BasicFinance.Web.Models.SavingsGoalStatus.Active
+        };
+        db.Accounts.Add(cash);
+        db.SavingsGoals.Add(goal);
+        await db.SaveChangesAsync();
+
+        db.RecurringSavingsContributions.AddRange(
+            new BasicFinance.Web.Models.RecurringSavingsContribution
+            {
+                SavingsGoalId = goal.Id, Amount = 100m,
+                Frequency = BasicFinance.Web.Models.SavingsScheduleFrequency.Monthly,
+                NextDueDate = new DateTime(2026, 12, 5), IsActive = true
+            },
+            new BasicFinance.Web.Models.RecurringSavingsContribution
+            {
+                SavingsGoalId = goal.Id, Amount = 75m,
+                Frequency = BasicFinance.Web.Models.SavingsScheduleFrequency.Monthly,
+                NextDueDate = new DateTime(2026, 12, 5), IsActive = false
+            },
+            new BasicFinance.Web.Models.RecurringSavingsContribution
+            {
+                SavingsGoalId = goal.Id, Amount = 50m,
+                Frequency = BasicFinance.Web.Models.SavingsScheduleFrequency.Monthly,
+                NextDueDate = new DateTime(2026, 12, 5), EndDate = new DateTime(2026, 12, 4), IsActive = true
+            });
+        db.RecurringCashFlows.AddRange(
+            new BasicFinance.Web.Models.RecurringCashFlow
+            {
+                AccountId = cash.Id, Type = BasicFinance.Web.Models.TransactionType.Income,
+                Description = "Pay", Amount = 3000m, CurrencyCode = "USD",
+                Frequency = BasicFinance.Web.Models.CashFlowFrequency.Biweekly,
+                NextDueDate = new DateTime(2026, 12, 1), IsActive = true
+            },
+            new BasicFinance.Web.Models.RecurringCashFlow
+            {
+                AccountId = cash.Id, Type = BasicFinance.Web.Models.TransactionType.Expense,
+                Description = "Inactive", Amount = 200m, CurrencyCode = "USD",
+                Frequency = BasicFinance.Web.Models.CashFlowFrequency.Monthly,
+                NextDueDate = new DateTime(2026, 12, 1), IsActive = false
+            },
+            new BasicFinance.Web.Models.RecurringCashFlow
+            {
+                AccountId = cash.Id, Type = BasicFinance.Web.Models.TransactionType.Expense,
+                Description = "Expired", Amount = 200m, CurrencyCode = "USD",
+                Frequency = BasicFinance.Web.Models.CashFlowFrequency.Monthly,
+                NextDueDate = new DateTime(2026, 12, 1), EndDate = new DateTime(2026, 11, 30), IsActive = true
+            });
+        await db.SaveChangesAsync();
+
+        var provider = new FinancialPlanningDataProvider(db, new AccountBalanceService(db));
+        var result = await provider.GetPlanningDataAsync(new DateOnly(2026, 11, 27), "USD");
+
+        var savingsSchedule = Assert.Single(result.FutureSavingsSchedules);
+        Assert.Equal(100m, savingsSchedule.Amount);
+        Assert.Equal("Holiday", savingsSchedule.GoalName);
+        var cashSchedule = Assert.Single(result.FutureCashFlowSchedules);
+        Assert.Equal(3000m, cashSchedule.Amount);
+        Assert.Equal(BasicFinance.Web.Models.TransactionType.Income, cashSchedule.Type);
+        Assert.DoesNotContain(db.ChangeTracker.Entries(), entry =>
+            entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted);
+    }
+
 }
