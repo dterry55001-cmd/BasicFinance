@@ -1,0 +1,84 @@
+@model BasicFinance.Web.Models.FinancialPlanningDashboardViewModel
+@{
+    ViewData["Title"] = "Financial Planning";
+}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Planning workspace</p>
+        <h1>Financial Planning</h1>
+        <p class="muted">A read-only view of your financial position and planning inputs as of @Model.AsOfDate.ToString("MMMM d, yyyy").</p>
+    </div>
+</section>
+
+@if (Model.Warnings.Count > 0)
+{
+    <section class="panel" aria-labelledby="planning-warnings">
+        <h2 id="planning-warnings">Data quality and planning notes</h2>
+        <ul>
+        @foreach (var warning in Model.Warnings) { <li>@warning</li> }
+        </ul>
+    </section>
+}
+
+<section class="panel">
+    <h2>Financial position by currency</h2>
+    <p class="muted">Currencies are kept separate. No exchange-rate conversion or combined cross-currency net worth is assumed.</p>
+    @if (Model.CurrencySummaries.Count == 0)
+    {
+        <p>No active financial accounts were found for this date.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>Currency</th><th>Total assets</th><th>Liabilities</th><th>Net worth</th><th>Available cash</th><th>Retirement balances</th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.CurrencySummaries)
+                {
+                    <tr>
+                        <td>@item.CurrencyCode</td>
+                        <td>@item.TotalAssets.ToString("N2")</td>
+                        <td>@item.TotalLiabilities.ToString("N2")</td>
+                        <td>@item.NetWorth.ToString("N2")</td>
+                        <td>@item.AvailableCash.ToString("N2")</td>
+                        <td>@item.RetirementBalances.ToString("N2")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<div class="dashboard-grid">
+    <section class="panel">
+        <h2>Budget overview</h2>
+        <p class="metric-value">@Model.PlannedBudgetTotal.ToString("N2") @Model.ReportingCurrency</p>
+        <p class="muted">@Model.BudgetLineCount budget lines for the current month, including rollover amounts.</p>
+    </section>
+    <section class="panel">
+        <h2>Savings goals</h2>
+        <p class="metric-value">@Model.SavingsGoalProgressTotal.ToString("N2") / @Model.SavingsGoalTargetTotal.ToString("N2") @Model.ReportingCurrency</p>
+        <p class="muted">@Model.SavingsGoalCount goals. Progress is informational and is not added to account assets.</p>
+    </section>
+    <section class="panel">
+        <h2>Debt data quality</h2>
+        <p class="metric-value">@Model.DebtAccountsMissingDetails</p>
+        <p class="muted">Debt accounts missing an interest rate or minimum payment.</p>
+    </section>
+</div>
+
+<section class="panel">
+    <h2>Connected data sources</h2>
+    <div class="table-responsive">
+        <table>
+            <thead><tr><th>Source</th><th>Status</th><th>Retrieved (UTC)</th><th>Note</th></tr></thead>
+            <tbody>
+            @foreach (var source in Model.Sources)
+            {
+                <tr><td>@source.SourceName</td><td>@source.Status</td><td>@source.RetrievedUtc.ToString("u")</td><td>@source.Warning</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
