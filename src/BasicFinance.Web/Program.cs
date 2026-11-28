@@ -16,6 +16,7 @@ builder.Services.AddScoped<TransactionRuleService>();
 builder.Services.AddScoped<DebtManagementService>();
 builder.Services.AddScoped<CashFlowForecastService>();
 builder.Services.AddScoped<SavingsGoalService>();
+builder.Services.AddSingleton<SavingsGoalProjectionCalculator>();
 builder.Services.AddSingleton<RetirementProjectionCalculator>();
 builder.Services.AddScoped<SavingsNotificationService>();
 builder.Services.AddHostedService<SavingsNotificationBackgroundService>();
