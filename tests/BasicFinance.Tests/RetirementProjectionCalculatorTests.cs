@@ -27,7 +27,8 @@ public sealed class RetirementProjectionCalculatorTests
         var result = _calculator.Calculate(new RetirementProjectionInput(
             30, 32, 0m, 100m, 0m, null, 0m, 0m, 2m, 10m));
 
-        Assert.Equal(1200m, result.TotalEmployeeContributions);
+        Assert.Equal(2520m, result.TotalEmployeeContributions);
+        Assert.Equal(1200m, result.Years[0].EmployeeContributions);
         Assert.Equal(1320m, result.Years[1].EmployeeContributions);
         Assert.True(result.InflationAdjustedBalance < result.ProjectedBalance);
     }
