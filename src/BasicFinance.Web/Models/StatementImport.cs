@@ -6,7 +6,7 @@ public enum StatementImportStatus { Preview, Completed, CompletedWithErrors }
 public enum StatementImportProfile
 {
     Unknown, UbsBrokerage, LifeSightRetirement, AtomicBanking,
-    RobinhoodBrokerage, RobinhoodBank, ChaseBanking
+    RobinhoodBrokerage, RobinhoodBank, ChaseBanking, OfxBanking
 }
 
 public sealed class StatementImport
