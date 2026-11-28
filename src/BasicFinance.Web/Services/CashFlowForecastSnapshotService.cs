@@ -11,11 +11,12 @@ public sealed class CashFlowForecastSnapshotService(ApplicationDbContext databas
         ArgumentNullException.ThrowIfNull(schedules);
         ValidateCurrency(currencyCode);
         if (months is < 1 or > 24) throw new ArgumentOutOfRangeException(nameof(months));
+        var normalizedStart = new DateTime(startDate.Year, startDate.Month, 1);
         var scheduleList = schedules.Where(x => x.IsActive && x.CurrencyCode == currencyCode).ToList();
-        var rows = new CashFlowForecastService().BuildForecastForCurrency(scheduleList, openingBalance, startDate, months, currencyCode);
+        var rows = new CashFlowForecastService().BuildForecastForCurrency(scheduleList, openingBalance, normalizedStart, months, currencyCode);
         var snapshot = new CashFlowForecastSnapshot
         {
-            CreatedUtc = DateTime.UtcNow, ForecastStartMonth = new DateTime(startDate.Year, startDate.Month, 1),
+            CreatedUtc = DateTime.UtcNow, ForecastStartMonth = normalizedStart,
             ForecastMonths = months, CurrencyCode = currencyCode, OpeningBalance = openingBalance, CalculationVersion = "1",
             AssumptionsJson = JsonSerializer.Serialize(new { currencyCode, openingBalance, startDate, months,
                 schedules = scheduleList.Select(x => new { x.Id, x.Type, x.Amount, x.CurrencyCode, x.Frequency, x.NextDueDate, x.EndDate }) }, JsonOptions),

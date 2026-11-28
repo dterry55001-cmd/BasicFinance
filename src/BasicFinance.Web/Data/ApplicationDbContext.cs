@@ -31,6 +31,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<BudgetAlert> BudgetAlerts => Set<BudgetAlert>();
     public DbSet<RecurringCashFlow> RecurringCashFlows => Set<RecurringCashFlow>();
     public DbSet<CashFlowForecastSnapshot> CashFlowForecastSnapshots => Set<CashFlowForecastSnapshot>();
+    public DbSet<CashFlowForecastEvaluation> CashFlowForecastEvaluations => Set<CashFlowForecastEvaluation>();
     public DbSet<CashFlowAlertPreference> CashFlowAlertPreferences => Set<CashFlowAlertPreference>();
     public DbSet<CashFlowAlert> CashFlowAlerts => Set<CashFlowAlert>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
@@ -295,6 +296,13 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasKey(x => x.Id);
             entity.Property(x => x.LowBalanceThreshold).HasColumnType("TEXT");
             entity.Property(x => x.UpdatedUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<CashFlowForecastEvaluation>(entity =>
+        {
+            entity.Property(x => x.ResultsJson).HasColumnType("TEXT").IsRequired();
+            entity.HasIndex(x => new { x.ForecastSnapshotId, x.EvaluatedUtc });
+            entity.HasOne<CashFlowForecastSnapshot>().WithMany().HasForeignKey(x => x.ForecastSnapshotId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CashFlowForecastSnapshot>(entity =>
