@@ -33,9 +33,13 @@ public sealed class StatementImportPreparationService(
         if (profile == StatementSourceProfile.Unknown)
             throw new InvalidDataException("The statement format could not be identified. Select the institution profile manually.");
 
-        var parsedRows = profile == StatementSourceProfile.OfxBanking
-            ? parser.ParseOfx(csv, account.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))
-            : parser.Parse(csv, profile, account.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var accountKey = account.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var parsedRows = profile switch
+        {
+            StatementSourceProfile.OfxBanking => parser.ParseOfx(csv, accountKey),
+            StatementSourceProfile.QifBanking => parser.ParseQif(csv, accountKey),
+            _ => parser.Parse(csv, profile, accountKey)
+        };
         var import = new StatementImport
         {
             FileName = Path.GetFileName(fileName),
@@ -116,6 +120,7 @@ public sealed class StatementImportPreparationService(
         StatementSourceProfile.RobinhoodBank => StatementImportProfile.RobinhoodBank,
         StatementSourceProfile.ChaseBanking => StatementImportProfile.ChaseBanking,
         StatementSourceProfile.OfxBanking => StatementImportProfile.OfxBanking,
+        StatementSourceProfile.QifBanking => StatementImportProfile.QifBanking,
         _ => StatementImportProfile.Unknown
     };
 }
