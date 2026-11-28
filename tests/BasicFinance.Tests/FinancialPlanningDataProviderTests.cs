@@ -204,4 +204,57 @@ public sealed class FinancialPlanningDataProviderTests
             entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted);
     }
 
+
+    [Fact]
+    public async Task GetPlanningDataAsync_AppliesTransfersToBothAccountsAndHonorsEndOfDayCutoff()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var checking = new BasicFinance.Web.Models.Account
+        {
+            Name = "Checking", Type = BasicFinance.Web.Models.AccountType.Checking,
+            CurrencyCode = "USD", OpeningBalance = 1000m
+        };
+        var savings = new BasicFinance.Web.Models.Account
+        {
+            Name = "Savings", Type = BasicFinance.Web.Models.AccountType.Savings,
+            CurrencyCode = "USD", OpeningBalance = 100m
+        };
+        db.Accounts.AddRange(checking, savings);
+        await db.SaveChangesAsync();
+
+        db.Transactions.AddRange(
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = checking.Id, RelatedAccountId = savings.Id,
+                Type = BasicFinance.Web.Models.TransactionType.Transfer,
+                Description = "Transfer to savings", Amount = 200m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 27, 12, 0, 0)
+            },
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = checking.Id, Type = BasicFinance.Web.Models.TransactionType.Income,
+                Description = "Same-day income", Amount = 50m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 27, 23, 59, 59)
+            },
+            new BasicFinance.Web.Models.FinancialTransaction
+            {
+                AccountId = checking.Id, Type = BasicFinance.Web.Models.TransactionType.Income,
+                Description = "Next-day income", Amount = 900m, CurrencyCode = "USD",
+                TransactionDate = new DateTime(2026, 11, 28)
+            });
+        await db.SaveChangesAsync();
+
+        var provider = new FinancialPlanningDataProvider(db, new AccountBalanceService(db));
+        var result = await provider.GetPlanningDataAsync(new DateOnly(2026, 11, 27), "USD");
+
+        Assert.Equal(850m, Assert.Single(result.Accounts.Where(x => x.AccountId == checking.Id)).Balance);
+        Assert.Equal(300m, Assert.Single(result.Accounts.Where(x => x.AccountId == savings.Id)).Balance);
+        Assert.Equal(1150m, result.Accounts.Sum(x => x.Balance));
+    }
+
 }
