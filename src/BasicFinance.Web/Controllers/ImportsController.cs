@@ -167,6 +167,50 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> BulkAssignCategory(
+        int id, int[]? rowIds, int? categoryId, CancellationToken cancellationToken)
+    {
+        var batch = await database.StatementImports.Include(x => x.Rows)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (batch is null) return NotFound();
+        if (batch.Status != StatementImportStatus.Preview)
+            return BadRequest("Categories can only be changed while an import is awaiting confirmation.");
+        if (rowIds is null || rowIds.Length == 0)
+        {
+            TempData["SuccessMessage"] = "Select at least one eligible transaction.";
+            return RedirectToAction(nameof(Preview), new { id });
+        }
+        if (!categoryId.HasValue)
+            return BadRequest("Choose a category before applying the bulk update.");
+
+        var category = await database.TransactionCategories
+            .FirstOrDefaultAsync(item => item.Id == categoryId.Value && item.IsActive, cancellationToken);
+        if (category is null) return BadRequest("Choose an active category.");
+
+        var selectedIds = rowIds.Distinct().ToHashSet();
+        var rows = batch.Rows.Where(row => selectedIds.Contains(row.Id)).ToList();
+        if (rows.Count != selectedIds.Count)
+            return BadRequest("One or more selected rows do not belong to this import.");
+
+        var eligibleRows = rows.Where(row =>
+            row.ValidationError is null && !row.IsDuplicate && !row.IsImported && !row.RequiresReview).ToList();
+        if (eligibleRows.Count != rows.Count)
+            return BadRequest("Remove rows with errors, duplicates, or unresolved review items from your selection.");
+        if (eligibleRows.Any(row => !CategoryMatchesTransaction(category.Type, row.Type)))
+            return BadRequest("The selected category is not compatible with every selected transaction. Select a compatible group.");
+
+        foreach (var row in eligibleRows)
+        {
+            row.CategoryId = category.Id;
+            row.CategorySuggestedByRule = false;
+        }
+
+        await database.SaveChangesAsync(cancellationToken);
+        TempData["SuccessMessage"] = $"Applied {category.Name} to {eligibleRows.Count} selected transaction(s).";
+        return RedirectToAction(nameof(Preview), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveCategoryMapping(
         int id, int rowId, int? categoryId, bool applyToFutureImports, CancellationToken cancellationToken)
     {
