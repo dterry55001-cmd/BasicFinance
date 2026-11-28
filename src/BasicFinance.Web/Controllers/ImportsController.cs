@@ -32,8 +32,12 @@ public sealed class ImportsController(ApplicationDbContext database, StatementIm
         if (account is null) ModelState.AddModelError(nameof(accountId), "Choose an existing, non-archived account.");
         if (file is null || file.Length == 0) ModelState.AddModelError("file", "Choose a CSV statement file.");
         if (file is not null && file.Length > 10_000_000) ModelState.AddModelError("file", "The file must be 10 MB or smaller.");
-        if (file is not null && !Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
-            ModelState.AddModelError("file", "Only CSV files are supported in this phase.");
+        var extension = file is null ? string.Empty : Path.GetExtension(file.FileName);
+        var isOfx = extension.Equals(".ofx", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".qfx", StringComparison.OrdinalIgnoreCase);
+        if (file is not null && !extension.Equals(".csv", StringComparison.OrdinalIgnoreCase) && !isOfx)
+            ModelState.AddModelError("file", "Choose a CSV, OFX, or QFX statement file.");
+        if (isOfx) profile = StatementSourceProfile.OfxBanking;
         if (!ModelState.IsValid) return View();
 
         try
