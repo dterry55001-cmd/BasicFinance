@@ -75,8 +75,19 @@ public sealed class AccountManagementController(
                 MinimumPayment = account.MinimumPayment ?? 0
             });
         }
-        ViewBag.Snowball = debtService.CalculatePayoff(debts, input.ExtraMonthlyPayment, false);
-        ViewBag.Avalanche = debtService.CalculatePayoff(debts, input.ExtraMonthlyPayment, true);
+        try
+        {
+            ViewBag.PayoffPlans = debtService.ComparePayoffStrategies(
+                debts, input.ExtraMonthlyPayment, input.CustomMonthlyBudget);
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError(nameof(input.CustomMonthlyBudget), ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+        }
         ViewBag.EstimatedMinimums = debts.Any(d => d.MinimumPayment <= 0);
         return View(input);
     }

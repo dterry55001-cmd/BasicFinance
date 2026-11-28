@@ -12,6 +12,10 @@ public sealed class DebtPayoffInputModel
     [Range(typeof(decimal), "0", "999999999999")]
     [Display(Name = "Additional monthly payment")]
     public decimal ExtraMonthlyPayment { get; set; }
+
+    [Range(typeof(decimal), "0", "999999999999")]
+    [Display(Name = "Custom total monthly budget (optional)")]
+    public decimal? CustomMonthlyBudget { get; set; }
 }
 
 public sealed class DebtPayoffDebtInput

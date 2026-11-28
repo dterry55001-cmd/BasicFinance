@@ -214,6 +214,47 @@ public sealed class DebtManagementService
         };
     }
 
+    public IReadOnlyList<DebtPayoffPlan> ComparePayoffStrategies(
+        IReadOnlyCollection<DebtPayoffDebtInput> debts,
+        decimal extraMonthlyPayment,
+        decimal? customMonthlyBudget = null,
+        DateTime? startDate = null,
+        bool applyMinimumPaymentFloor = true)
+    {
+        ArgumentNullException.ThrowIfNull(debts);
+        if (customMonthlyBudget is < 0m)
+            throw new ArgumentOutOfRangeException(nameof(customMonthlyBudget));
+
+        var minimumBudget = debts.Sum(debt =>
+        {
+            if (debt.Balance <= 0m) return 0m;
+            var minimum = applyMinimumPaymentFloor
+                ? Math.Max(debt.MinimumPayment, Math.Max(1m,
+                    decimal.Round(debt.Balance * 0.01m, 2, MidpointRounding.AwayFromZero)))
+                : debt.MinimumPayment;
+            return Math.Min(decimal.Round(debt.Balance, 2, MidpointRounding.AwayFromZero), minimum);
+        });
+
+        if (customMonthlyBudget.HasValue && customMonthlyBudget.Value < minimumBudget)
+            throw new ArgumentException("The custom monthly budget must cover the combined scheduled minimum payments.", nameof(customMonthlyBudget));
+
+        var minimumOnly = CalculatePayoff(debts, 0m, avalanche: false, startDate, applyMinimumPaymentFloor);
+        minimumOnly.Strategy = "Minimum only";
+        var snowball = CalculatePayoff(debts, extraMonthlyPayment, avalanche: false, startDate, applyMinimumPaymentFloor);
+        var avalanche = CalculatePayoff(debts, extraMonthlyPayment, avalanche: true, startDate, applyMinimumPaymentFloor);
+
+        var plans = new List<DebtPayoffPlan> { minimumOnly, snowball, avalanche };
+        if (customMonthlyBudget.HasValue)
+        {
+            var customExtra = customMonthlyBudget.Value - minimumBudget;
+            var custom = CalculatePayoff(debts, customExtra, avalanche: true, startDate, applyMinimumPaymentFloor);
+            custom.Strategy = "Custom budget";
+            plans.Add(custom);
+        }
+
+        return plans;
+    }
+
     public IReadOnlyList<EarlyPayoffScenarioResult> CalculateEarlyPayoffScenarios(
         decimal startingBalance, decimal annualRatePercent, decimal minimumPayment,
         decimal oneTimePayment, int oneTimePaymentMonth, decimal extraMonthlyPayment,
